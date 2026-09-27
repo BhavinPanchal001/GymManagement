@@ -14,6 +14,7 @@ import 'auth_service.dart';
 enum MemberLifecycleStage {
   paid,
   newMember,
+  notEnrolled,
   due;
 
   String get label {
@@ -22,6 +23,8 @@ enum MemberLifecycleStage {
         return 'Paid';
       case MemberLifecycleStage.newMember:
         return 'New Member';
+      case MemberLifecycleStage.notEnrolled:
+        return 'Not Enrolled';
       case MemberLifecycleStage.due:
         return 'Payment Due';
     }
@@ -29,6 +32,7 @@ enum MemberLifecycleStage {
 
   bool get isPaid => this == MemberLifecycleStage.paid;
   bool get isNew => this == MemberLifecycleStage.newMember;
+  bool get isNotEnrolled => this == MemberLifecycleStage.notEnrolled;
   bool get isDue => this == MemberLifecycleStage.due;
 }
 
@@ -549,13 +553,7 @@ class GymService extends ChangeNotifier {
   /// - NEW: Unpaid + 0 attendance days + Joined within last 3 days
   /// - DUE: Unpaid attended days or expired / lacking plan
   MemberLifecycleStage getMemberLifecycleStage(Customer customer, String monthYear) {
-    // 1. If this month has any attended days that are NOT covered by payment -> DUE!
-    final unpaidAttendedDays = getUnpaidAttendedDaysInMonth(customer.id, monthYear);
-    if (unpaidAttendedDays > 0) {
-      return MemberLifecycleStage.due;
-    }
-
-    // 2. Check if a paid payment covers this month
+    // 1. Check if a paid payment covers this month
     final parts = monthYear.split('-');
     if (parts.length == 2) {
       final y = int.tryParse(parts[0]) ?? 2026;
@@ -584,16 +582,30 @@ class GymService extends ChangeNotifier {
       }
     }
 
+    // 2. If month is before the customer joined and not paid, they weren't enrolled yet
+    final joinMonthKey = GymDateUtils.toMonthKey(customer.joinDate);
+    if (monthYear.compareTo(joinMonthKey) < 0) {
+      return MemberLifecycleStage.notEnrolled;
+    }
+
+    // 3. If this month has any attended days that are NOT covered by payment -> DUE!
+    final unpaidAttendedDays = getUnpaidAttendedDaysInMonth(customer.id, monthYear);
+    if (unpaidAttendedDays > 0) {
+      return MemberLifecycleStage.due;
+    }
+
+    // 4. New member check (only applies to current month of joining with 0 attendance within 3 days)
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final joinDay = DateTime(customer.joinDate.year, customer.joinDate.month, customer.joinDate.day);
     final daysSinceJoined = today.difference(joinDay).inDays;
+    final currentMonthKey = GymDateUtils.toMonthKey(now);
 
     final hasAttended = _attendanceMap.values.any(
       (a) => a.customerId == customer.id && a.status == AttendanceStatus.present,
     );
 
-    if (!hasAttended && daysSinceJoined <= 3) {
+    if (!hasAttended && daysSinceJoined <= 3 && monthYear == currentMonthKey) {
       return MemberLifecycleStage.newMember;
     }
 

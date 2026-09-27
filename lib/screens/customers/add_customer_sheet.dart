@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/customer.dart';
 import '../../models/payment.dart';
 import '../../models/plan_package.dart';
@@ -61,7 +62,16 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.customerToEdit?.name ?? '');
-    _phoneController = TextEditingController(text: widget.customerToEdit?.phone ?? '');
+    String initialPhone = widget.customerToEdit?.phone ?? '';
+    if (initialPhone.isNotEmpty) {
+      final digits = initialPhone.replaceAll(RegExp(r'\D'), '');
+      if (digits.length == 12 && digits.startsWith('91')) {
+        initialPhone = digits.substring(2);
+      } else if (digits.length >= 10) {
+        initialPhone = digits.substring(digits.length - 10);
+      }
+    }
+    _phoneController = TextEditingController(text: initialPhone);
     _notesController = TextEditingController(text: widget.customerToEdit?.notes ?? '');
     _cardNumberController = TextEditingController(
       text: widget.customerToEdit?.cardNumber.isNotEmpty == true
@@ -324,18 +334,26 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  _PhoneNumberFormatter(),
+                ],
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
                 decoration: InputDecoration(
-                  hintText: 'e.g. +91 98765 43210',
+                  hintText: 'e.g. 9876543210',
                   prefixIcon: Icon(Icons.phone_rounded, color: AppColors.secondary, size: 20),
                 ),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
                     return 'Please enter phone number';
                   }
+                  final trimmed = val.trim();
+                  if (trimmed.length != 10 || !RegExp(r'^\d{10}$').hasMatch(trimmed)) {
+                    return 'Please enter a valid 10-digit phone number';
+                  }
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
               // Card Number & Joining Date Row
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1145,6 +1163,37 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    String digits = text.replaceAll(RegExp(r'\D'), '');
+
+    if (digits.length == 12 && digits.startsWith('91')) {
+      digits = digits.substring(2);
+    } else if (digits.length == 11 && digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+
+    if (digits.length > 10) {
+      digits = digits.substring(0, 10);
+    }
+
+    int newOffset = digits.length;
+    if (newValue.selection.end <= text.length) {
+      newOffset = newValue.selection.end.clamp(0, digits.length);
+    }
+
+    return TextEditingValue(
+      text: digits,
+      selection: TextSelection.collapsed(offset: newOffset),
     );
   }
 }

@@ -3,7 +3,6 @@ import '../../services/auth_service.dart';
 import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/gym_logo_widget.dart';
-import '../home_screen.dart';
 import 'forgot_password_sheet.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -153,72 +152,6 @@ class _AuthScreenState extends State<AuthScreen>
                         ? _buildSignInCard()
                         : _buildSignUpCard(),
                   ),
-                  const SizedBox(height: 18),
-
-                  // Offline / Guest Mode Card
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.surfaceBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.flash_on_rounded, color: AppColors.primary, size: 18),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Explore Without Firebase',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Offline mode with full member management',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (_) => const HomeScreen()),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.primaryOn,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text(
-                            'Open App',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -285,6 +218,8 @@ class _AuthScreenState extends State<AuthScreen>
       child: TabBar(
         controller: _tabController,
         onTap: (index) => setState(() {}),
+        dividerColor: Colors.transparent,
+        dividerHeight: 0,
         indicator: BoxDecoration(
           color: AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(12),

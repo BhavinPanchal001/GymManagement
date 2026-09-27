@@ -230,9 +230,9 @@ void main() {
     expect(gym.getAttendedDaysCoveredByPayment(kajal.id, octPayment), equals(0),
         reason: 'No attendance has been marked yet between 27 Sep and 26 Oct');
 
-    // 8. Verify June 2026 is UNPAID with NO coverage
+    // 8. Verify June 2026 is UNPAID with NO coverage and NOT ENROLLED (joined in August)
     expect(gym.isMonthCoveredByPaidPayment(kajal.id, '2026-06'), isFalse);
-    expect(gym.getMemberLifecycleStage(kajal, '2026-06'), equals(MemberLifecycleStage.due));
+    expect(gym.getMemberLifecycleStage(kajal, '2026-06'), equals(MemberLifecycleStage.notEnrolled));
 
     // 9. Verify bill lookup for October resolves to the 27 Sep - 26 Oct bill
     final resolvedBill = gym.getOrCreateBillForPayment(kajal, octPayment);
@@ -379,4 +379,30 @@ void main() {
     expect(history.first.monthYear, equals('2026-09'));
     expect(history.first.isPaid, isTrue);
   });
+
+  test('Pre-join months return notEnrolled and past months distinguish 0 vs positive attendance', () async {
+    final gym = GymService();
+    // Member enrolled on September 27, 2026
+    final member = await gym.addCustomer(
+      name: 'Mayank PreJoin Test',
+      phone: '9704949494',
+      joinDate: DateTime(2026, 9, 27),
+      markAsPaidNow: false,
+    );
+
+    // 1. August 2026 is prior to enrollment month (2026-09) -> notEnrolled
+    final augStage = gym.getMemberLifecycleStage(member, '2026-08');
+    expect(augStage, equals(MemberLifecycleStage.notEnrolled));
+    expect(augStage.isNotEnrolled, isTrue);
+
+    // 2. July 2026 is also prior to enrollment -> notEnrolled
+    final julStage = gym.getMemberLifecycleStage(member, '2026-07');
+    expect(julStage, equals(MemberLifecycleStage.notEnrolled));
+
+    // 3. Current or enrollment month (September 2026) with 0 attendance
+    // is within 3-day grace period if within 3 days, or due
+    final sepStage = gym.getMemberLifecycleStage(member, '2026-09');
+    expect(sepStage.isNotEnrolled, isFalse);
+  });
 }
+

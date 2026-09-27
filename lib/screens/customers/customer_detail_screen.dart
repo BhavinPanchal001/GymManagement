@@ -771,7 +771,43 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     final stage = GymService().getMemberLifecycleStage(customer, monthKey);
     final isPaid = stage.isPaid;
     final isNew = stage.isNew;
+    final isNotEnrolled = stage.isNotEnrolled;
     final presentDays = attendanceSummary['present'] ?? 0;
+    final now = DateTime.now();
+    final currentMonthKey = GymDateUtils.toMonthKey(now);
+    final isPastMonth = monthKey.compareTo(currentMonthKey) < 0;
+
+    Color badgeColor;
+    IconData badgeIcon;
+    String badgeText;
+    String subtitleText;
+
+    if (isPaid) {
+      badgeColor = AppColors.paid;
+      badgeIcon = Icons.check_circle_rounded;
+      badgeText = 'PAID';
+      subtitleText = 'Monthly gym fee • Settled & Active';
+    } else if (isNotEnrolled) {
+      badgeColor = AppColors.textMuted;
+      badgeIcon = Icons.person_off_rounded;
+      badgeText = 'NOT ENROLLED';
+      subtitleText = 'Member joined ${GymDateUtils.formatDate(customer.joinDate)} • Not enrolled this month';
+    } else if (isPastMonth && presentDays == 0) {
+      badgeColor = AppColors.pending;
+      badgeIcon = Icons.event_busy_rounded;
+      badgeText = '0 ATTENDANCE';
+      subtitleText = '0 days attended in ${GymDateUtils.formatMonthYearKey(monthKey)} • Mark attendance first';
+    } else if (isNew) {
+      badgeColor = const Color(0xFF00B4D8);
+      badgeIcon = Icons.waving_hand_rounded;
+      badgeText = 'NEW';
+      subtitleText = 'New registration • 3-day grace period (0 days attended)';
+    } else {
+      badgeColor = AppColors.pending;
+      badgeIcon = Icons.pending_rounded;
+      badgeText = 'DUE';
+      subtitleText = 'Monthly gym fee • $presentDays ${presentDays == 1 ? "day" : "days"} attended';
+    }
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -780,14 +816,22 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           colors: AppColors.isDark
               ? (isPaid
                   ? [const Color(0xFF10281E), const Color(0xFF161B24)]
-                  : (isNew
-                      ? [const Color(0xFF0C2433), const Color(0xFF161B24)]
-                      : [const Color(0xFF281C10), const Color(0xFF161B24)]))
+                  : (isNotEnrolled
+                      ? [const Color(0xFF181C24), const Color(0xFF161B24)]
+                      : (isPastMonth && presentDays == 0
+                          ? [const Color(0xFF261D12), const Color(0xFF161B24)]
+                          : (isNew
+                              ? [const Color(0xFF0C2433), const Color(0xFF161B24)]
+                              : [const Color(0xFF281C10), const Color(0xFF161B24)]))))
               : (isPaid
                   ? [const Color(0xFFE8F8EE), const Color(0xFFFFFFFF)]
-                  : (isNew
-                      ? [const Color(0xFFE0F7FA), const Color(0xFFFFFFFF)]
-                      : [const Color(0xFFFFF3E0), const Color(0xFFFFFFFF)])),
+                  : (isNotEnrolled
+                      ? [const Color(0xFFF1F3F5), const Color(0xFFFFFFFF)]
+                      : (isPastMonth && presentDays == 0
+                          ? [const Color(0xFFFFF8E1), const Color(0xFFFFFFFF)]
+                          : (isNew
+                              ? [const Color(0xFFE0F7FA), const Color(0xFFFFFFFF)]
+                              : [const Color(0xFFFFF3E0), const Color(0xFFFFFFFF)])))),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -795,9 +839,13 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         border: Border.all(
           color: isPaid
               ? AppColors.paid.withValues(alpha: 0.4)
-              : (isNew
-                  ? const Color(0xFF00B4D8).withValues(alpha: 0.45)
-                  : AppColors.pending.withValues(alpha: 0.4)),
+              : (isNotEnrolled
+                  ? AppColors.surfaceBorder
+                  : (isPastMonth && presentDays == 0
+                      ? AppColors.pending.withValues(alpha: 0.35)
+                      : (isNew
+                          ? const Color(0xFF00B4D8).withValues(alpha: 0.45)
+                          : AppColors.pending.withValues(alpha: 0.4)))),
           width: 1.5,
         ),
       ),
@@ -823,11 +871,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isPaid
-                          ? 'Monthly gym fee • Settled & Active'
-                          : (isNew
-                              ? 'New registration • 3-day grace period (0 days attended)'
-                              : 'Monthly gym fee • $presentDays ${presentDays == 1 ? "day" : "days"} attended'),
+                      subtitleText,
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -839,37 +883,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isPaid
-                      ? AppColors.paid.withValues(alpha: 0.2)
-                      : (isNew
-                          ? const Color(0xFF00B4D8).withValues(alpha: 0.2)
-                          : AppColors.pending.withValues(alpha: 0.2)),
+                  color: badgeColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isPaid
-                        ? AppColors.paid
-                        : (isNew ? const Color(0xFF00B4D8) : AppColors.pending),
-                  ),
+                  border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isPaid
-                          ? Icons.check_circle_rounded
-                          : (isNew ? Icons.waving_hand_rounded : Icons.pending_rounded),
-                      color: isPaid
-                          ? AppColors.paid
-                          : (isNew ? const Color(0xFF00B4D8) : AppColors.pending),
-                      size: 14,
-                    ),
+                    Icon(badgeIcon, color: badgeColor, size: 14),
                     const SizedBox(width: 5),
                     Text(
-                      isPaid ? 'PAID' : (isNew ? 'NEW' : 'DUE'),
+                      badgeText,
                       style: TextStyle(
-                        color: isPaid
-                            ? AppColors.paid
-                            : (isNew ? const Color(0xFF00B4D8) : AppColors.pending),
+                        color: badgeColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
@@ -923,9 +949,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       foregroundColor: AppColors.paid,
                       side: BorderSide(color: AppColors.paid.withValues(alpha: 0.5)),
                       elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                     ),
                     icon: const Icon(Icons.receipt_long_rounded, size: 17, color: AppColors.paid),
@@ -956,10 +980,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                     ),
-                    icon: const Icon(
-                      Icons.edit_note_rounded,
-                      size: 18,
-                    ),
+                    icon: const Icon(Icons.edit_note_rounded, size: 18),
                     label: const Text(
                       'Edit Payment',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
@@ -969,6 +990,107 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () {
+                final bill = GymService().getOrCreateBillForPayment(customer, record);
+                WhatsAppService().sendBillReceipt(context: context, bill: bill);
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.whatsapp.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.whatsapp.withValues(alpha: 0.5), width: 1.2),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.receipt_long_rounded, color: AppColors.whatsapp, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Send Receipt on WhatsApp',
+                      style: TextStyle(color: AppColors.whatsapp, fontSize: 13, fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ] else if (isNotEnrolled) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.surfaceBorder),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: AppColors.textMuted, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'This member was not enrolled in ${GymDateUtils.formatMonthYearKey(monthKey)}. Enrollment started on ${GymDateUtils.formatDate(customer.joinDate)}.',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (isPastMonth && presentDays == 0) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.pending.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.pending.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.event_busy_rounded, color: AppColors.pending, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '0 Days Attended in ${GymDateUtils.formatMonthYearKey(monthKey)}',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Please mark attendance first for this past month before recording payment.',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      _tabController.animateTo(1);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.primaryOn,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    ),
+                    icon: const Icon(Icons.calendar_month_rounded, size: 16),
+                    label: const Text(
+                      'Mark Attendance First',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ] else ...[
             Row(
@@ -987,12 +1109,32 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  onPressed: () => MarkPaymentDialog.show(
-                    context,
-                    customer: customer,
-                    monthYear: monthKey,
-                    currentRecord: record,
-                  ),
+                  onPressed: () {
+                    if (isPastMonth && presentDays > 0) {
+                      final parts = monthKey.split('-');
+                      final y = int.tryParse(parts[0]) ?? DateTime.now().year;
+                      final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? DateTime.now().month) : DateTime.now().month;
+                      final startOfMonth = DateTime(y, m, 1);
+                      final endOfMonth = DateTime(y, m, GymDateUtils.daysInMonth(y, m));
+                      MarkPaymentDialog.show(
+                        context,
+                        customer: customer,
+                        monthYear: monthKey,
+                        currentRecord: record.copyWith(
+                          startDate: startOfMonth,
+                          endDate: endOfMonth,
+                          notes: 'Settlement for $presentDays attended days in ${GymDateUtils.formatMonthYearKey(monthKey)}',
+                        ),
+                      );
+                    } else {
+                      MarkPaymentDialog.show(
+                        context,
+                        customer: customer,
+                        monthYear: monthKey,
+                        currentRecord: record,
+                      );
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.primaryOn,
@@ -1013,118 +1155,83 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ),
               ],
             ),
-          ],
-          if (isPaid) ...[
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () {
-                final bill = GymService().getOrCreateBillForPayment(customer, record);
-                WhatsAppService().sendBillReceipt(context: context, bill: bill);
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.whatsapp.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.whatsapp.withValues(alpha: 0.5),
-                    width: 1.2,
+            if (isNew) ...[
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: () {
+                  WhatsAppService().showWelcomeSheet(
+                    context: context,
+                    customer: customer,
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00B4D8).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF00B4D8).withValues(alpha: 0.5),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.waving_hand_rounded, color: Color(0xFF00B4D8), size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'Send Welcome Message on WhatsApp',
+                        style: TextStyle(
+                          color: Color(0xFF00B4D8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.receipt_long_rounded, color: AppColors.whatsapp, size: 16),
-                    SizedBox(width: 8),
-                    Text(
-                      'Send Receipt on WhatsApp',
-                      style: TextStyle(
-                        color: AppColors.whatsapp,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
               ),
-            ),
-          ] else if (isNew) ...[
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () {
-                WhatsAppService().showWelcomeSheet(
-                  context: context,
-                  customer: customer,
-                );
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00B4D8).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF00B4D8).withValues(alpha: 0.5),
-                    width: 1.2,
+            ] else if (presentDays > 0 || !isPastMonth) ...[
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: () {
+                  WhatsAppService().showReminderSheet(
+                    context: context,
+                    customer: customer,
+                    monthYear: monthKey,
+                    amount: record.amount,
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.whatsapp.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.whatsapp.withValues(alpha: 0.5),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.chat_bubble_rounded, color: AppColors.whatsapp, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'Send WhatsApp Fee Reminder',
+                        style: TextStyle(
+                          color: AppColors.whatsapp,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.waving_hand_rounded, color: Color(0xFF00B4D8), size: 16),
-                    SizedBox(width: 8),
-                    Text(
-                      'Send Welcome Message on WhatsApp',
-                      style: TextStyle(
-                        color: Color(0xFF00B4D8),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
               ),
-            ),
-          ] else ...[
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () {
-                WhatsAppService().showReminderSheet(
-                  context: context,
-                  customer: customer,
-                  monthYear: monthKey,
-                  amount: record.amount,
-                );
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.whatsapp.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.whatsapp.withValues(alpha: 0.5),
-                    width: 1.2,
-                  ),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.chat_bubble_rounded, color: AppColors.whatsapp, size: 16),
-                    SizedBox(width: 8),
-                    Text(
-                      'Send WhatsApp Fee Reminder',
-                      style: TextStyle(
-                        color: AppColors.whatsapp,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            ],
           ],
           if (isPaid && record.method != null) ...[
             const SizedBox(height: 10),
@@ -1289,6 +1396,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     final coveringPayment = gym.getPaymentCoveringMonth(customer.id, monthKey);
     final isCovered = coveringPayment != null && coveringPayment.isPaid;
     final isFullyPaid = isCovered && unpaidAttendedDays == 0;
+    final currentMonthKey = GymDateUtils.toMonthKey(DateTime.now());
+    final isPastMonth = monthKey.compareTo(currentMonthKey) < 0;
+    final joinMonthKey = GymDateUtils.toMonthKey(customer.joinDate);
+    final isBeforeJoinMonth = monthKey.compareTo(joinMonthKey) < 0;
 
     final effectivePayment = (paymentRecord.isPaid ? paymentRecord : (coveringPayment ?? paymentRecord));
     final fee = effectivePayment.amount > 0
@@ -1442,16 +1553,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             decoration: BoxDecoration(
               color: isFullyPaid
                   ? AppColors.paid.withValues(alpha: 0.1)
-                  : (unpaidAttendedDays > 0 || present > 0
-                      ? AppColors.pending.withValues(alpha: 0.12)
-                      : AppColors.surfaceElevated),
+                  : (isBeforeJoinMonth || (isPastMonth && present == 0)
+                      ? AppColors.surfaceElevated
+                      : (unpaidAttendedDays > 0 || present > 0
+                          ? AppColors.pending.withValues(alpha: 0.12)
+                          : AppColors.surfaceElevated)),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isFullyPaid
                     ? AppColors.paid.withValues(alpha: 0.35)
-                    : (unpaidAttendedDays > 0 || present > 0
-                        ? AppColors.pending.withValues(alpha: 0.45)
-                        : AppColors.surfaceBorder),
+                    : (isBeforeJoinMonth || (isPastMonth && present == 0)
+                        ? AppColors.surfaceBorder
+                        : (unpaidAttendedDays > 0 || present > 0
+                            ? AppColors.pending.withValues(alpha: 0.45)
+                            : AppColors.surfaceBorder)),
               ),
             ),
             child: Row(
@@ -1459,14 +1574,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 Icon(
                   isFullyPaid
                       ? Icons.verified_rounded
-                      : (unpaidAttendedDays > 0 || present > 0
-                          ? Icons.warning_amber_rounded
-                          : Icons.info_outline_rounded),
+                      : (isBeforeJoinMonth
+                          ? Icons.info_outline_rounded
+                          : (isPastMonth && present == 0
+                              ? Icons.event_busy_rounded
+                              : (unpaidAttendedDays > 0 || present > 0
+                                  ? Icons.warning_amber_rounded
+                                  : Icons.info_outline_rounded))),
                   color: isFullyPaid
                       ? AppColors.paid
-                      : (unpaidAttendedDays > 0 || present > 0
-                          ? AppColors.pending
-                          : AppColors.textSecondary),
+                      : (isBeforeJoinMonth || (isPastMonth && present == 0)
+                          ? AppColors.textSecondary
+                          : (unpaidAttendedDays > 0 || present > 0
+                              ? AppColors.pending
+                              : AppColors.textSecondary)),
                   size: 20,
                 ),
                 const SizedBox(width: 10),
@@ -1477,17 +1598,23 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       Text(
                         isFullyPaid
                             ? 'FEES PAID • ACTIVE COVERAGE'
-                            : (unpaidAttendedDays > 0
-                                ? '$unpaidAttendedDays ATTENDED DAYS • DUE'
-                                : (present > 0
-                                    ? '$present ATTENDED DAYS • DUE'
-                                    : 'UNPAID • 0 DAYS ATTENDED')),
+                            : (isBeforeJoinMonth
+                                ? 'NOT ENROLLED • JOINED ${GymDateUtils.formatMonthYearKey(joinMonthKey).toUpperCase()}'
+                                : (isPastMonth && present == 0
+                                    ? 'NO ATTENDANCE • 0 DAYS'
+                                    : (unpaidAttendedDays > 0
+                                        ? '$unpaidAttendedDays ATTENDED DAYS • DUE'
+                                        : (present > 0
+                                            ? '$present ATTENDED DAYS • DUE'
+                                            : 'UNPAID • 0 DAYS ATTENDED')))),
                         style: TextStyle(
                           color: isFullyPaid
                               ? AppColors.paid
-                              : (unpaidAttendedDays > 0 || present > 0
-                                  ? AppColors.pending
-                                  : AppColors.textSecondary),
+                              : (isBeforeJoinMonth || (isPastMonth && present == 0)
+                                  ? AppColors.textSecondary
+                                  : (unpaidAttendedDays > 0 || present > 0
+                                      ? AppColors.pending
+                                      : AppColors.textSecondary)),
                           fontWeight: FontWeight.w900,
                           fontSize: 11.5,
                           letterSpacing: 0.3,
@@ -1496,7 +1623,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       Text(
                         isFullyPaid
                             ? 'Payment of ${GymDateUtils.formatCurrency(effectivePayment.amount, symbol: currency)} settled (${effectivePayment.formattedDateRange})'
-                            : 'Subscription fee: ${GymDateUtils.formatCurrency(fee, symbol: currency)}',
+                            : (isBeforeJoinMonth
+                                ? 'Member enrolled on ${GymDateUtils.formatDate(customer.joinDate)}'
+                                : (isPastMonth && present == 0
+                                    ? 'Mark attendance to record dues for this month'
+                                    : 'Subscription fee: ${GymDateUtils.formatCurrency(fee, symbol: currency)}')),
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 11,
@@ -1519,14 +1650,36 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       BillReceiptDialog.show(context, bill: bill);
                     },
                   ),
+                ] else if (isBeforeJoinMonth || (isPastMonth && present == 0)) ...[
+                  // No payment button for pre-join or past months with 0 attendance
                 ] else ...[
                   ElevatedButton.icon(
-                    onPressed: () => MarkPaymentDialog.show(
-                      context,
-                      customer: customer,
-                      monthYear: monthKey,
-                      currentRecord: paymentRecord,
-                    ),
+                    onPressed: () {
+                      if (isPastMonth && present > 0) {
+                        final parts = monthKey.split('-');
+                        final y = int.tryParse(parts[0]) ?? DateTime.now().year;
+                        final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? DateTime.now().month) : DateTime.now().month;
+                        final startOfMonth = DateTime(y, m, 1);
+                        final endOfMonth = DateTime(y, m, GymDateUtils.daysInMonth(y, m));
+                        MarkPaymentDialog.show(
+                          context,
+                          customer: customer,
+                          monthYear: monthKey,
+                          currentRecord: paymentRecord.copyWith(
+                            startDate: startOfMonth,
+                            endDate: endOfMonth,
+                            notes: 'Settlement for $present attended days in ${GymDateUtils.formatMonthYearKey(monthKey)}',
+                          ),
+                        );
+                      } else {
+                        MarkPaymentDialog.show(
+                          context,
+                          customer: customer,
+                          monthYear: monthKey,
+                          currentRecord: paymentRecord,
+                        );
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: (unpaidAttendedDays > 0 || present > 0)
                           ? AppColors.pending
