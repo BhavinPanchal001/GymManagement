@@ -81,8 +81,8 @@ class GymService extends ChangeNotifier {
   List<Customer> _customers = [];
   List<ExpenseRecord> _expenses = [];
   Map<String, AttendanceRecord> _attendanceMap = {}; // key: "${customerId}_${dateKey}"
-  Map<String, PaymentRecord> _paymentMap = {}; // key: "${customerId}_${monthYear}"
-  Map<String, BillRecord> _billsMap = {}; // key: "${customerId}_${monthYear}"
+  Map<String, PaymentRecord> _paymentMap = {}; // key: payment record id
+  Map<String, BillRecord> _billsMap = {}; // key: bill record id
   GymSettings _settings = const GymSettings();
   bool _isInitialized = false;
   bool _isCloudAttached = false;
@@ -117,6 +117,7 @@ class GymService extends ChangeNotifier {
   static const String _keyPayments = 'gym_payments_v1';
   static const String _keyBills = 'gym_bills_v1';
   static const String _keySettings = 'gym_settings_v1';
+  static const String _keyPaymentsSchemaV2 = 'payments_schema_v2';
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -148,7 +149,7 @@ class GymService extends ChangeNotifier {
         final list = json.decode(paymentsJson) as List<dynamic>;
         _paymentMap = {
           for (var item in list)
-            "${item['customerId']}_${item['monthYear']}": PaymentRecord.fromMap(item as Map<String, dynamic>)
+            (item['id'] as String? ?? ''): PaymentRecord.fromMap(item as Map<String, dynamic>)
         };
       }
 
@@ -157,11 +158,14 @@ class GymService extends ChangeNotifier {
         final list = json.decode(billsJson) as List<dynamic>;
         _billsMap = {
           for (var item in list)
-            "${item['customerId']}_${item['monthYear']}": BillRecord.fromMap(item as Map<String, dynamic>)
+            (item['id'] as String? ?? ''): BillRecord.fromMap(item as Map<String, dynamic>)
         };
       }
 
-      await _normalizePaymentRecords();
+      if (prefs.getBool(_keyPaymentsSchemaV2) != true) {
+        await _migrateLegacyPayments();
+        await prefs.setBool(_keyPaymentsSchemaV2, true);
+      }
 
       final expensesJson = prefs.getString(_keyExpenses);
       if (expensesJson != null) {
@@ -241,8 +245,8 @@ class GymService extends ChangeNotifier {
       changed = true;
     }
 
-    if (paymentMap != null || billsMap != null) {
-      _normalizePaymentRecords();
+    if ((paymentMap != null || billsMap != null) && _hasLegacyPaymentShapes()) {
+      _migrateLegacyPayments();
     }
 
     if (changed) {
@@ -304,7 +308,7 @@ class GymService extends ChangeNotifier {
 
       // Determine true isPaid for this specific calendar month:
       bool isPaidForMonth = payment.isPaid;
-      if (isPaidForMonth && payment.endDate != null && !payment.isCoveredInPackage) {
+      if (isPaidForMonth && payment.endDate != null) {
         final monthStart = DateTime(year, m, 1);
         if (payment.endDate!.isBefore(monthStart)) {
           isPaidForMonth = false;
@@ -313,16 +317,13 @@ class GymService extends ChangeNotifier {
 
       DateTime? effStart;
       DateTime? effEnd;
-      final bool isCovered = payment.isCoveredInPackage;
+      // A month covered by a multi-month package whose cycle started earlier.
+      final bool isCovered = isPaidForMonth &&
+          payment.durationMonths > 1 &&
+          payment.monthYear != monthKey;
       if (isPaidForMonth) {
-        if (isCovered && payment.coveredByMonthYear != null) {
-          final parentPay = getPaymentRecord(customerId, payment.coveredByMonthYear!);
-          effStart = parentPay.effectiveStartDate;
-          effEnd = parentPay.effectiveEndDate;
-        } else {
-          effStart = payment.effectiveStartDate;
-          effEnd = payment.effectiveEndDate;
-        }
+        effStart = payment.effectiveStartDate;
+        effEnd = payment.effectiveEndDate;
       }
 
       result.add(MonthCardData(
@@ -368,6 +369,7 @@ class GymService extends ChangeNotifier {
         ? cardNumber.trim()
         : getNextCardNumber();
     final newId = 'cust_${DateTime.now().millisecondsSinceEpoch}';
+    // Pending dues are derived from attendance — no stored pending record needed.
     final customer = Customer(
       id: newId,
       name: name.trim(),
@@ -388,8 +390,6 @@ class GymService extends ChangeNotifier {
     );
     _customers.insert(0, customer);
 
-    final currentMonth = GymDateUtils.toMonthKey(DateTime.now());
-
     if (markAsPaidNow) {
       final fee = _settings.getPriceForDuration(planType, planDurationMonths);
       final actualStart = membershipStartDate ?? customer.joinDate;
@@ -401,20 +401,12 @@ class GymService extends ChangeNotifier {
         monthYear: paymentMonthKey,
         method: initialPaymentMethod ?? PaymentMethod.cash,
         amount: fee,
+        totalDue: fee,
         durationMonths: planDurationMonths,
         startDate: actualStart,
         endDate: actualEnd,
         notes: 'Initial registration payment',
       );
-      if (actualEnd.isBefore(DateTime(DateTime.now().year, DateTime.now().month, 1))) {
-        _ensurePaymentRecordExists(customer.id, currentMonth);
-      }
-    } else {
-      // Also ensure current month pending payment record exists
-      _ensurePaymentRecordExists(customer.id, currentMonth);
-      final payKey = _payKey(customer.id, currentMonth);
-      final pendingPay = _paymentMap[payKey];
-      if (pendingPay != null) await _cloudSavePayment(pendingPay);
     }
 
     notifyListeners();
@@ -496,56 +488,38 @@ class GymService extends ChangeNotifier {
 
   /// Checks whether a calendar month is covered by a valid paid payment.
   bool isMonthCoveredByPaidPayment(String customerId, String monthKey) {
+    return getPaymentCoveringMonth(customerId, monthKey) != null;
+  }
+
+  /// Returns the PaymentRecord covering a specific month, if any.
+  /// Among paid records whose [effectiveStartDate, effectiveEndDate] overlaps the
+  /// calendar month, prefers one whose cycle starts in that month (latest start
+  /// first), else the one with the latest start.
+  PaymentRecord? getPaymentCoveringMonth(String customerId, String monthKey) {
     final parts = monthKey.split('-');
-    if (parts.length != 2) return false;
+    if (parts.length != 2) return null;
     final y = int.tryParse(parts[0]) ?? DateTime.now().year;
     final m = int.tryParse(parts[1]) ?? DateTime.now().month;
     final monthStart = DateTime(y, m, 1);
     final monthEnd = DateTime(y, m, GymDateUtils.daysInMonth(y, m));
 
+    final covering = <PaymentRecord>[];
     for (final p in _paymentMap.values) {
       if (p.customerId == customerId && p.isPaid) {
         final start = DateTime(p.effectiveStartDate.year, p.effectiveStartDate.month, p.effectiveStartDate.day);
         final end = DateTime(p.effectiveEndDate.year, p.effectiveEndDate.month, p.effectiveEndDate.day);
         if (!start.isAfter(monthEnd) && !end.isBefore(monthStart)) {
-          return true;
+          covering.add(p);
         }
       }
     }
-    return false;
-  }
+    if (covering.isEmpty) return null;
 
-  /// Returns the PaymentRecord covering a specific month, if any.
-  PaymentRecord? getPaymentCoveringMonth(String customerId, String monthKey) {
-    // 1. Direct payment for this monthKey
-    final key = _payKey(customerId, monthKey);
-    final direct = _paymentMap[key];
-    if (direct != null && direct.isPaid) {
-      return direct;
+    covering.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
+    for (final p in covering) {
+      if (p.monthYear == monthKey) return p;
     }
-    // 2. Direct payment covered under a parent package
-    if (direct?.coveredByMonthYear != null && direct!.coveredByMonthYear!.isNotEmpty) {
-      final parent = _paymentMap[_payKey(customerId, direct.coveredByMonthYear!)];
-      if (parent != null && parent.isPaid) return parent;
-    }
-    // 3. Any paid payment whose effective validity overlaps with this month
-    final parts = monthKey.split('-');
-    if (parts.length == 2) {
-      final y = int.tryParse(parts[0]) ?? DateTime.now().year;
-      final m = int.tryParse(parts[1]) ?? DateTime.now().month;
-      final monthStart = DateTime(y, m, 1);
-      final monthEnd = DateTime(y, m, GymDateUtils.daysInMonth(y, m));
-      for (final p in _paymentMap.values) {
-        if (p.customerId == customerId && p.isPaid) {
-          final start = DateTime(p.effectiveStartDate.year, p.effectiveStartDate.month, p.effectiveStartDate.day);
-          final end = DateTime(p.effectiveEndDate.year, p.effectiveEndDate.month, p.effectiveEndDate.day);
-          if (!start.isAfter(monthEnd) && !end.isBefore(monthStart)) {
-            return p;
-          }
-        }
-      }
-    }
-    return null;
+    return covering.first;
   }
 
   /// Evaluates member lifecycle stage for a given month:
@@ -615,23 +589,7 @@ class GymService extends ChangeNotifier {
   Future<void> updateCustomer(Customer updated) async {
     final index = _customers.indexWhere((c) => c.id == updated.id);
     if (index != -1) {
-      final old = _customers[index];
       _customers[index] = updated;
-
-      // If plan or duration changed, update any unpaid pending payment for current month
-      if (old.planType != updated.planType || old.planDurationMonths != updated.planDurationMonths) {
-        final currentMonth = GymDateUtils.toMonthKey(DateTime.now());
-        final key = _payKey(updated.id, currentMonth);
-        final existing = _paymentMap[key];
-        if (existing != null && !existing.isPaid) {
-          _paymentMap[key] = existing.copyWith(
-            amount: _settings.getPriceForDuration(updated.planType, updated.planDurationMonths),
-            durationMonths: updated.planDurationMonths,
-          );
-          await _savePayments();
-          await _cloudSavePayment(_paymentMap[key]!);
-        }
-      }
 
       notifyListeners();
       await _saveCustomers();
@@ -711,10 +669,6 @@ class GymService extends ChangeNotifier {
       );
     }
 
-    if (status == AttendanceStatus.present && dateKey.length >= 7) {
-      _ensurePaymentRecordExists(customerId, dateKey.substring(0, 7));
-    }
-
     notifyListeners();
     await _saveAttendance();
     await _cloudSaveAttendance(_attendanceMap[key]!);
@@ -786,11 +740,6 @@ class GymService extends ChangeNotifier {
       final key = _attKey(customerId, dateKey);
       final record = _attendanceMap[key];
       if (record != null) modifiedRecords.add(record);
-    }
-
-    final monthKey = '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}';
-    if (status == AttendanceStatus.present) {
-      _ensurePaymentRecordExists(customerId, monthKey);
     }
 
     notifyListeners();
@@ -965,261 +914,182 @@ class GymService extends ChangeNotifier {
 
   // ==================== PAYMENT OPERATIONS ====================
 
-  String _payKey(String customerId, String monthYear) => "${customerId}_$monthYear";
+  /// The plan fee used for derived pending records and as default total due.
+  double _feeForCustomer(Customer? customer, {int? durationMonths}) {
+    if (customer == null) return _settings.standardMonthlyFee;
+    return _settings.getPriceForDuration(
+        customer.planType, durationMonths ?? customer.planDurationMonths);
+  }
 
+  /// All paid payment records for a customer, latest cycle start first.
+  List<PaymentRecord> getPaidPaymentsForCustomer(String customerId) {
+    final list = _paymentMap.values
+        .where((p) => p.customerId == customerId && p.isPaid)
+        .toList();
+    list.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
+    return list;
+  }
+
+  PaymentRecord? getPaymentById(String id) => _paymentMap[id];
+
+  /// Amount still owed for a record: the remaining balance for partially paid
+  /// records, the full fee for pending ones.
+  double pendingAmountOf(PaymentRecord r) => r.isPaid ? r.balanceDue : r.totalDue;
+
+  /// Pure read: the paid payment covering [monthYear], or a transient pending
+  /// record when none exists. Transient records are never stored.
   PaymentRecord getPaymentRecord(String customerId, String monthYear) {
-    final key = _payKey(customerId, monthYear);
-    if (_paymentMap.containsKey(key)) {
-      final p = _paymentMap[key]!;
-      // Auto-relocation guard: If this payment has an exact startDate belonging to another month
-      if (p.isPaid && p.startDate != null && !p.isCoveredInPackage) {
-        final startMonth = GymDateUtils.toMonthKey(p.effectiveStartDate);
-        final endMonth = GymDateUtils.toMonthKey(p.effectiveEndDate);
-        final startUnpaid = getUnpaidAttendedDaysInMonth(customerId, startMonth);
-
-        // Case A: Misplaced in endMonth by old logic, but startMonth had 0 unpaid attendance days
-        if (monthYear == endMonth && startMonth != endMonth && startUnpaid == 0) {
-          final trueMonth = startMonth;
-          final trueKey = _payKey(customerId, trueMonth);
-          _paymentMap.remove(key);
-          _paymentMap[trueKey] = p.copyWith(monthYear: trueMonth);
-          if (_billsMap.containsKey(key)) {
-            final b = _billsMap.remove(key)!;
-            _billsMap[trueKey] = b.copyWith(monthYear: trueMonth);
-          }
-          _savePayments();
-          _saveBills();
-          return _paymentMap[trueKey]!;
-        }
-
-        // Case B: Payment stored under completely unrelated month (neither startMonth nor endMonth)
-        if (monthYear != startMonth && monthYear != endMonth) {
-          final trueMonth = (startMonth != endMonth && startUnpaid > 0) ? endMonth : startMonth;
-          final trueKey = _payKey(customerId, trueMonth);
-          _paymentMap.remove(key);
-          _paymentMap[trueKey] = p.copyWith(monthYear: trueMonth);
-          if (_billsMap.containsKey(key)) {
-            final b = _billsMap.remove(key)!;
-            _billsMap[trueKey] = b.copyWith(monthYear: trueMonth);
-          }
-          _savePayments();
-          _saveBills();
-
-          final customer = getCustomerById(customerId);
-          final fee = customer != null
-              ? _settings.getPriceForDuration(customer.planType, customer.planDurationMonths)
-              : _settings.standardMonthlyFee;
-          final pendingRecord = PaymentRecord(
-            id: 'pay_${customerId}_$monthYear',
-            customerId: customerId,
-            monthYear: monthYear,
-            amount: fee,
-            status: PaymentStatus.pending,
-            durationMonths: customer?.planDurationMonths ?? 1,
-          );
-          _paymentMap[key] = pendingRecord;
-          return pendingRecord;
-        }
-      }
-      return p;
-    }
-
-    // Check if there is a misplaced payment in endMonth that actually belongs to monthYear:
-    for (final other in _paymentMap.values.toList()) {
-      if (other.customerId == customerId &&
-          other.isPaid &&
-          other.startDate != null &&
-          !other.isCoveredInPackage &&
-          other.durationMonths <= 1) {
-        final sMonth = GymDateUtils.toMonthKey(other.effectiveStartDate);
-        final eMonth = GymDateUtils.toMonthKey(other.effectiveEndDate);
-        if (sMonth == monthYear && other.monthYear == eMonth) {
-          final startUnpaid = getUnpaidAttendedDaysInMonth(customerId, sMonth);
-          if (startUnpaid == 0) {
-            final oldKey = _payKey(customerId, eMonth);
-            final targetKey = _payKey(customerId, sMonth);
-            _paymentMap.remove(oldKey);
-            final updatedPay = other.copyWith(monthYear: sMonth);
-            _paymentMap[targetKey] = updatedPay;
-            if (_billsMap.containsKey(oldKey)) {
-              final b = _billsMap.remove(oldKey)!;
-              _billsMap[targetKey] = b.copyWith(monthYear: sMonth);
-            }
-            _savePayments();
-            _saveBills();
-            return updatedPay;
-          }
-        }
-      }
-    }
+    final covering = getPaymentCoveringMonth(customerId, monthYear);
+    if (covering != null) return covering;
 
     final customer = getCustomerById(customerId);
-    final fee = customer != null
-        ? _settings.getPriceForDuration(customer.planType, customer.planDurationMonths)
-        : _settings.standardMonthlyFee;
     return PaymentRecord(
-      id: 'pay_${customerId}_$monthYear',
+      id: 'pending_${customerId}_$monthYear',
       customerId: customerId,
       monthYear: monthYear,
-      amount: fee,
+      amount: 0.0,
+      totalDue: _feeForCustomer(customer),
       status: PaymentStatus.pending,
       durationMonths: customer?.planDurationMonths ?? 1,
     );
   }
 
-  void _ensurePaymentRecordExists(String customerId, String monthYear) {
-    final key = _payKey(customerId, monthYear);
-    if (!_paymentMap.containsKey(key)) {
-      final customer = getCustomerById(customerId);
-      final fee = customer != null
-          ? _settings.getPriceForDuration(customer.planType, customer.planDurationMonths)
-          : _settings.standardMonthlyFee;
-      _paymentMap[key] = PaymentRecord(
-        id: 'pay_${customerId}_$monthYear',
-        customerId: customerId,
-        monthYear: monthYear,
-        amount: fee,
-        status: PaymentStatus.pending,
-        durationMonths: customer?.planDurationMonths ?? 1,
+  // ---------- Bills ----------
+
+  /// The primary (non-BALANCE) PAID bill issued for a payment.
+  BillRecord? getBillForPayment(String paymentId) {
+    for (final b in _billsMap.values) {
+      if (b.paymentId == paymentId &&
+          b.status == 'PAID' &&
+          b.billType != 'BALANCE') {
+        return b;
+      }
+    }
+    return null;
+  }
+
+  /// All PAID bills for a payment, oldest first.
+  List<BillRecord> getBillsForPayment(String paymentId) {
+    final list = _billsMap.values
+        .where((b) => b.paymentId == paymentId && b.status == 'PAID')
+        .toList();
+    list.sort((a, b) => a.issuedAt.compareTo(b.issuedAt));
+    return list;
+  }
+
+  /// Primary bill covering a customer+month (UI compatibility shim).
+  BillRecord? getBill(String customerId, String monthYear) {
+    final p = getPaymentCoveringMonth(customerId, monthYear);
+    if (p == null) return null;
+    return getBillForPayment(p.id);
+  }
+
+  BillRecord getOrCreateBillForPayment(Customer customer, PaymentRecord payment) {
+    if (payment.isPaid && !payment.id.startsWith('pending_')) {
+      final existing = getBillForPayment(payment.id);
+      if (existing != null) return existing;
+
+      // Legacy gap: a paid payment with no persisted bill — create + persist once.
+      final bill = BillRecord(
+        id: 'bill_${customer.id}_${DateTime.now().millisecondsSinceEpoch}',
+        billNumber: generateBillNumber(payment.monthYear),
+        customerId: customer.id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        planType: customer.planType,
+        monthYear: payment.monthYear,
+        amount: payment.amount,
+        paymentId: payment.id,
+        billType: payment.balanceDue > 0 ? 'PARTIAL' : 'FULL',
+        method: payment.method ?? PaymentMethod.cash,
+        paidAt: payment.paidAt ?? DateTime.now(),
+        notes: payment.notes,
+        transactionRef: payment.transactionRef,
+        gymName: _settings.gymName,
+        issuedAt: payment.paidAt ?? DateTime.now(),
+        status: 'PAID',
+        durationMonths: payment.durationMonths,
+        startDate: payment.startDate ?? payment.effectiveStartDate,
+        endDate: payment.endDate ?? payment.effectiveEndDate,
+        coveragePeriod: payment.formattedDateRange,
       );
+      _billsMap[bill.id] = bill;
+      _saveBills();
+      _cloudSaveBill(bill);
+      return bill;
     }
+
+    // Transient/pending payment: return a non-persisted preview bill.
+    final effectiveAmount = payment.amount > 0.0
+        ? payment.amount
+        : _feeForCustomer(customer, durationMonths: payment.durationMonths);
+    return BillRecord(
+      id: 'bill_${customer.id}_${payment.monthYear}',
+      billNumber: generateBillNumber(payment.monthYear),
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      planType: customer.planType,
+      monthYear: payment.monthYear,
+      amount: effectiveAmount,
+      paymentId: payment.id,
+      method: payment.method ?? PaymentMethod.cash,
+      paidAt: payment.paidAt ?? DateTime.now(),
+      notes: payment.notes,
+      transactionRef: payment.transactionRef,
+      gymName: _settings.gymName,
+      issuedAt: payment.paidAt ?? DateTime.now(),
+      status: payment.isPaid ? 'PAID' : 'PENDING',
+      durationMonths: payment.durationMonths,
+      startDate: payment.startDate ?? payment.effectiveStartDate,
+      endDate: payment.endDate ?? payment.effectiveEndDate,
+      coveragePeriod: payment.formattedDateRange,
+    );
   }
 
-  /// Automatically relocates any payment record whose effective start date belongs to a
-  /// different month (e.g. August payment erroneously stored under September key).
-  Future<void> _normalizePaymentRecords() async {
-    bool modified = false;
-    final entries = Map<String, PaymentRecord>.from(_paymentMap);
-    for (final entry in entries.entries) {
-      final p = entry.value;
-      if (p.isPaid && p.startDate != null && !p.isCoveredInPackage && p.durationMonths <= 1) {
-        final startMonth = GymDateUtils.toMonthKey(p.effectiveStartDate);
-        final endMonth = GymDateUtils.toMonthKey(p.effectiveEndDate);
-
-        // Case 1: Mid-month renewal (e.g. 27 Sep - 26 Oct) was placed in startMonth,
-        // but startMonth has unpaid attendance days prior to start date!
-        final startUnpaidAttended = getUnpaidAttendedDaysInMonth(p.customerId, startMonth);
-        if (p.monthYear == startMonth && startMonth != endMonth && startUnpaidAttended > 0) {
-          final targetKey = _payKey(p.customerId, endMonth);
-          _paymentMap.remove(entry.key);
-          final updatedPay = p.copyWith(monthYear: endMonth);
-          _paymentMap[targetKey] = updatedPay;
-          _ensurePaymentRecordExists(p.customerId, startMonth);
-
-          BillRecord? updatedBill;
-          if (_billsMap.containsKey(entry.key)) {
-            final bill = _billsMap.remove(entry.key)!;
-            updatedBill = bill.copyWith(monthYear: endMonth);
-            _billsMap[targetKey] = updatedBill;
-          }
-
-          if (_isCloudAttached) {
-            await _cloudSavePayment(updatedPay);
-            final vacatedPay = _paymentMap[entry.key];
-            if (vacatedPay != null) await _cloudSavePayment(vacatedPay);
-
-            if (updatedBill != null) {
-              await _cloudSaveBill(updatedBill);
-              await _cloudDeleteBill(p.customerId, startMonth);
-            }
-          }
-
-          modified = true;
-          continue;
-        }
-
-        // Case 2: Mid-month payment (e.g. 27 Sep - 26 Oct) was placed in endMonth ('2026-10')
-        // by the old daysInEnd > daysInStart logic, BUT startMonth has 0 unpaid attended days!
-        // It properly belongs to startMonth ('2026-09').
-        if (p.monthYear == endMonth && startMonth != endMonth && startUnpaidAttended == 0) {
-          final targetKey = _payKey(p.customerId, startMonth);
-          _paymentMap.remove(entry.key);
-          final updatedPay = p.copyWith(monthYear: startMonth);
-          _paymentMap[targetKey] = updatedPay;
-
-          BillRecord? updatedBill;
-          if (_billsMap.containsKey(entry.key)) {
-            final bill = _billsMap.remove(entry.key)!;
-            updatedBill = bill.copyWith(monthYear: startMonth);
-            _billsMap[targetKey] = updatedBill;
-          }
-
-          if (_isCloudAttached) {
-            await _cloudSavePayment(updatedPay);
-            await _cloudDeletePayment(p.customerId, endMonth);
-
-            if (updatedBill != null) {
-              await _cloudSaveBill(updatedBill);
-              await _cloudDeleteBill(p.customerId, endMonth);
-            }
-          }
-
-          modified = true;
-          continue;
-        }
-
-        // Case 3: Payment stored under completely unrelated month (neither startMonth nor endMonth)
-        if (p.monthYear != startMonth && p.monthYear != endMonth) {
-          final trueMonth = (startMonth != endMonth && startUnpaidAttended > 0) ? endMonth : startMonth;
-          final trueKey = _payKey(p.customerId, trueMonth);
-          _paymentMap.remove(entry.key);
-          final updatedPay = p.copyWith(monthYear: trueMonth);
-          _paymentMap[trueKey] = updatedPay;
-          _ensurePaymentRecordExists(p.customerId, p.monthYear);
-
-          BillRecord? updatedBill;
-          if (_billsMap.containsKey(entry.key)) {
-            final bill = _billsMap.remove(entry.key)!;
-            updatedBill = bill.copyWith(monthYear: trueMonth);
-            _billsMap[trueKey] = updatedBill;
-          }
-
-          if (_isCloudAttached) {
-            await _cloudSavePayment(updatedPay);
-            final vacatedPay = _paymentMap[entry.key];
-            if (vacatedPay != null) await _cloudSavePayment(vacatedPay);
-
-            if (updatedBill != null) {
-              await _cloudSaveBill(updatedBill);
-              await _cloudDeleteBill(p.customerId, p.monthYear);
-            }
-          }
-
-          modified = true;
-        }
-      }
-    }
-
-    // Clean up any stale/ghost pending records with 0 attended days that are covered by an active paid cycle
-    final pendingEntries = Map<String, PaymentRecord>.from(_paymentMap);
-    for (final entry in pendingEntries.entries) {
-      final p = entry.value;
-      if (!p.isPaid) {
-        final unpaid = getUnpaidAttendedDaysInMonth(p.customerId, p.monthYear);
-        if (unpaid == 0 && isMonthCoveredByPaidPayment(p.customerId, p.monthYear)) {
-          _paymentMap.remove(entry.key);
-          modified = true;
-        }
-      }
-    }
-    if (modified) {
-      await _savePayments();
-      await _saveBills();
-    }
-  }
-
+  /// Sequential bill number BILL-YYYYMM-NNNN where NNNN = max sequence parsed
+  /// from existing bill numbers with the same prefix (any status) + 1.
+  /// Cancelled bills keep their numbers forever, so numbers are never reused.
   String generateBillNumber(String monthYear) {
     final cleanMonth = monthYear.replaceAll('-', '');
-    final count = _billsMap.values.where((b) => b.monthYear == monthYear).length + 1;
-    final seq = count.toString().padLeft(4, '0');
-    return 'BILL-$cleanMonth-$seq';
+    final prefix = 'BILL-$cleanMonth-';
+    final seqRe = RegExp('^${RegExp.escape(prefix)}(\\d+)\$');
+    int maxSeq = 0;
+    for (final b in _billsMap.values) {
+      final match = seqRe.firstMatch(b.billNumber);
+      if (match != null) {
+        final seq = int.tryParse(match.group(1)!) ?? 0;
+        if (seq > maxSeq) maxSeq = seq;
+      }
+    }
+    return '$prefix${(maxSeq + 1).toString().padLeft(4, '0')}';
   }
 
+  String _newPaymentId(String customerId) {
+    var id = 'pay_${customerId}_${DateTime.now().millisecondsSinceEpoch}';
+    while (_paymentMap.containsKey(id)) {
+      id = '${id}x';
+    }
+    return id;
+  }
+
+  String _newBillId(String customerId) {
+    var id = 'bill_${customerId}_${DateTime.now().millisecondsSinceEpoch}';
+    while (_billsMap.containsKey(id)) {
+      id = '${id}x';
+    }
+    return id;
+  }
+
+  /// Records a payment. Always creates a NEW PaymentRecord with a fresh id —
+  /// never overwrites an existing one. [monthYear] is only a hint kept for
+  /// callers; the record's monthYear is the month the cycle starts in.
   Future<BillRecord> markPaymentAsPaid({
     required String customerId,
     required String monthYear,
     required PaymentMethod method,
     required double amount,
+    double? totalDue,
     int durationMonths = 1,
     DateTime? startDate,
     DateTime? endDate,
@@ -1234,57 +1104,36 @@ class GymService extends ChangeNotifier {
     DateTime computedStartDate;
     if (startDate != null) {
       computedStartDate = startDate;
-    } else {
-      if (customer != null) {
-        final currentExpiry = getCustomerExpiryDate(customer);
-        final now = DateTime.now();
-        final today = DateTime(now.year, now.month, now.day);
-        if (hasPaidMembership(customer) && currentExpiry.isAfter(today)) {
-          // Member is currently active -> advance payment starts day after expiry
-          computedStartDate = currentExpiry.add(const Duration(days: 1));
-        } else {
-          computedStartDate = DateTime(effectivePaidAt.year, effectivePaidAt.month, effectivePaidAt.day);
-        }
+    } else if (customer != null) {
+      final currentExpiry = getCustomerExpiryDate(customer);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      if (hasPaidMembership(customer) && currentExpiry.isAfter(today)) {
+        // Member is currently active -> advance payment starts day after expiry
+        computedStartDate = currentExpiry.add(const Duration(days: 1));
       } else {
-        computedStartDate = DateTime(effectivePaidAt.year, effectivePaidAt.month, effectivePaidAt.day);
+        computedStartDate = DateTime(
+            effectivePaidAt.year, effectivePaidAt.month, effectivePaidAt.day);
       }
+    } else {
+      computedStartDate = DateTime(
+          effectivePaidAt.year, effectivePaidAt.month, effectivePaidAt.day);
     }
 
     final computedEndDate = endDate ??
         GymDateUtils.computeAnniversaryEndDate(computedStartDate, durationMonths);
-    final coveragePeriod = GymDateUtils.formatDateRange(computedStartDate, computedEndDate);
-
+    final coveragePeriod =
+        GymDateUtils.formatDateRange(computedStartDate, computedEndDate);
     final startMonthKey = GymDateUtils.toMonthKey(computedStartDate);
-    final endMonthKey = GymDateUtils.toMonthKey(computedEndDate);
+    final effectiveTotalDue =
+        totalDue ?? _feeForCustomer(customer, durationMonths: durationMonths);
 
-    String targetMonthKey;
-    if (startMonthKey == endMonthKey || durationMonths > 1) {
-      targetMonthKey = startMonthKey;
-    } else {
-      // Cross-month payment for single month (e.g. 27 Sep - 26 Oct):
-      final startUnpaidAttended = getUnpaidAttendedDaysInMonth(customerId, startMonthKey);
-      if (monthYear == endMonthKey) {
-        targetMonthKey = endMonthKey;
-      } else if (startUnpaidAttended > 0) {
-        // Start month has unpaid attended days prior to this payment!
-        // Storing this payment under startMonthKey would overwrite the pending dues of start month!
-        targetMonthKey = endMonthKey;
-      } else {
-        // Member has 0 unpaid attended days in startMonthKey.
-        // This payment covers the cycle beginning in startMonthKey.
-        // It belongs to startMonthKey.
-        targetMonthKey = startMonthKey;
-      }
-    }
-
-    final targetKey = _payKey(customerId, targetMonthKey);
-    final existing = _paymentMap[targetKey];
-
-    _paymentMap[targetKey] = PaymentRecord(
-      id: existing?.id ?? 'pay_${customerId}_$targetMonthKey',
+    final record = PaymentRecord(
+      id: _newPaymentId(customerId),
       customerId: customerId,
-      monthYear: targetMonthKey,
+      monthYear: startMonthKey,
       amount: amount,
+      totalDue: effectiveTotalDue,
       status: PaymentStatus.paid,
       method: method,
       paidAt: effectivePaidAt,
@@ -1294,88 +1143,19 @@ class GymService extends ChangeNotifier {
       transactionRef: transactionRef,
       durationMonths: durationMonths,
     );
-
-    // Ensure startMonthKey retains its pending record if this payment was placed in endMonthKey
-    // and startMonthKey actually has unpaid attendance dues
-    if (targetMonthKey != startMonthKey) {
-      final startUnpaid = getUnpaidAttendedDaysInMonth(customerId, startMonthKey);
-      if (startUnpaid > 0) {
-        _ensurePaymentRecordExists(customerId, startMonthKey);
-      } else {
-        final startKey = _payKey(customerId, startMonthKey);
-        if (_paymentMap.containsKey(startKey) && !_paymentMap[startKey]!.isPaid) {
-          _paymentMap.remove(startKey);
-        }
-      }
-    }
-
-    // If caller passed a different monthYear, ensure caller month is not falsely marked paid
-    if (monthYear != targetMonthKey) {
-      final callerKey = _payKey(customerId, monthYear);
-      final callerUnpaid = getUnpaidAttendedDaysInMonth(customerId, monthYear);
-      if (callerUnpaid > 0) {
-        _ensurePaymentRecordExists(customerId, monthYear);
-      }
-      if (_paymentMap.containsKey(callerKey) &&
-          _paymentMap[callerKey]!.isPaid &&
-          _paymentMap[callerKey]!.coveredByMonthYear != targetMonthKey) {
-        _paymentMap[callerKey] = PaymentRecord(
-          id: 'pay_${customerId}_$monthYear',
-          customerId: customerId,
-          monthYear: monthYear,
-          amount: _settings.getPriceForDuration(
-            customer?.planType ?? CustomerPlan.normal,
-            customer?.planDurationMonths ?? 1,
-          ),
-          status: PaymentStatus.pending,
-          durationMonths: customer?.planDurationMonths ?? 1,
-        );
-        _billsMap.remove(callerKey);
-      }
-    }
-
-    // Compute coverage period string and mark forward covered months if duration > 1
-    final parts = targetMonthKey.split('-');
-    final startYear = int.tryParse(parts[0]) ?? DateTime.now().year;
-    final startMonth = parts.length > 1 ? (int.tryParse(parts[1]) ?? DateTime.now().month) : DateTime.now().month;
-
-    if (durationMonths > 1) {
-      // Mark forward months as prepaid/covered under this multi-month package
-      for (int i = 1; i < durationMonths; i++) {
-        final forwardDate = DateTime(startYear, startMonth + i, 1);
-        final forwardMonthKey = GymDateUtils.toMonthKey(forwardDate);
-        final forwardKey = _payKey(customerId, forwardMonthKey);
-
-        _paymentMap[forwardKey] = PaymentRecord(
-          id: 'pay_${customerId}_$forwardMonthKey',
-          customerId: customerId,
-          monthYear: forwardMonthKey,
-          amount: 0.0,
-          status: PaymentStatus.paid,
-          method: method,
-          paidAt: effectivePaidAt,
-          startDate: computedStartDate,
-          endDate: computedEndDate,
-          notes: 'Covered under $durationMonths-Month Package ($coveragePeriod)',
-          transactionRef: transactionRef,
-          durationMonths: 1,
-          coveredByMonthYear: targetMonthKey,
-        );
-      }
-    }
-
-    final existingBill = _billsMap[targetKey];
-    final billNumber = existingBill?.billNumber ?? generateBillNumber(targetMonthKey);
+    _paymentMap[record.id] = record;
 
     final bill = BillRecord(
-      id: existingBill?.id ?? 'bill_${customerId}_$targetMonthKey',
-      billNumber: billNumber,
+      id: _newBillId(customerId),
+      billNumber: generateBillNumber(startMonthKey),
       customerId: customerId,
       customerName: customer?.name ?? 'Member',
       customerPhone: customer?.phone ?? '',
       planType: customer?.planType ?? CustomerPlan.normal,
-      monthYear: targetMonthKey,
+      monthYear: startMonthKey,
       amount: amount,
+      paymentId: record.id,
+      billType: amount + 0.005 >= effectiveTotalDue ? 'FULL' : 'PARTIAL',
       method: method,
       paidAt: effectivePaidAt,
       startDate: computedStartDate,
@@ -1388,232 +1168,405 @@ class GymService extends ChangeNotifier {
       durationMonths: durationMonths,
       coveragePeriod: coveragePeriod,
     );
-    _billsMap[targetKey] = bill;
+    _billsMap[bill.id] = bill;
 
     notifyListeners();
     await _savePayments();
     await _saveBills();
-    // Sync payment + bill to cloud
-    await _cloudSavePayment(_paymentMap[targetKey]!);
+    await _cloudSavePayment(record);
     await _cloudSaveBill(bill);
-    if (monthYear != targetMonthKey) {
-      final callerKey = _payKey(customerId, monthYear);
-      if (_paymentMap.containsKey(callerKey)) {
-        await _cloudSavePayment(_paymentMap[callerKey]!);
-        await _cloudDeleteBill(customerId, monthYear);
-      }
-    }
-    // Also sync forward covered months to cloud
-    if (durationMonths > 1) {
-      for (int i = 1; i < durationMonths; i++) {
-        final forwardDate = DateTime(startYear, startMonth + i, 1);
-        final forwardMonthKey = GymDateUtils.toMonthKey(forwardDate);
-        final forwardKey = _payKey(customerId, forwardMonthKey);
-        final forwardPay = _paymentMap[forwardKey];
-        if (forwardPay != null) await _cloudSavePayment(forwardPay);
-      }
-    }
 
     return bill;
   }
 
-  Future<void> revertPaymentToPending(String customerId, String monthYear) async {
-    final key = _payKey(customerId, monthYear);
-    if (_paymentMap.containsKey(key)) {
-      final old = _paymentMap[key]!;
-      _paymentMap[key] = PaymentRecord(
-        id: old.id,
-        customerId: old.customerId,
-        monthYear: old.monthYear,
-        amount: old.amount,
-        status: PaymentStatus.pending,
-        durationMonths: old.durationMonths,
-      );
-      _billsMap.remove(key);
-
-      // Also clean up any forward months covered under this month's multi-month package
-      final coveredKeys = _paymentMap.entries
-          .where((e) => e.value.customerId == customerId && e.value.coveredByMonthYear == monthYear)
-          .map((e) => e.key)
-          .toList();
-
-      for (final covKey in coveredKeys) {
-        // Extract customerId and monthYear from covKey for cloud delete
-        final covParts = covKey.split('_');
-        if (covParts.length >= 2) {
-          final covMonth = covParts.sublist(1).join('_');
-          await _cloudDeletePayment(customerId, covMonth);
-          await _cloudDeleteBill(customerId, covMonth);
-        }
-        _paymentMap.remove(covKey);
-        _billsMap.remove(covKey);
-      }
-
-      notifyListeners();
-      await _savePayments();
-      await _saveBills();
-      // Sync reverted payment + removed bill to cloud
-      await _cloudSavePayment(_paymentMap[key]!);
-      await _cloudDeleteBill(customerId, monthYear);
+  /// Collects (part of) the remaining balance on a paid payment. Issues its own
+  /// BALANCE bill with its own bill number.
+  Future<BillRecord> collectBalance({
+    required String paymentId,
+    required double amount,
+    required PaymentMethod method,
+    DateTime? paidAt,
+    String? notes,
+    String? transactionRef,
+  }) async {
+    final record = _paymentMap[paymentId];
+    if (record == null || !record.isPaid) {
+      throw ArgumentError('No paid payment found for id $paymentId');
     }
-  }
-
-  BillRecord? getBill(String customerId, String monthYear) {
-    final key = _payKey(customerId, monthYear);
-    return _billsMap[key];
-  }
-
-  BillRecord getOrCreateBillForPayment(Customer customer, PaymentRecord payment) {
-    // 1. If this month is covered under another month's multi-month package (e.g. Oct/Nov covered by Sept):
-    if (payment.coveredByMonthYear != null && payment.coveredByMonthYear!.isNotEmpty) {
-      final parentKey = _payKey(customer.id, payment.coveredByMonthYear!);
-      final parentBill = _billsMap[parentKey];
-      if (parentBill != null && parentBill.amount > 0) {
-        return parentBill;
-      }
-      final parentPayment = _paymentMap[parentKey];
-      if (parentPayment != null && parentPayment.amount > 0) {
-        return getOrCreateBillForPayment(customer, parentPayment);
-      }
+    if (amount <= 0) {
+      throw ArgumentError('Amount must be positive');
     }
+    final collected =
+        amount > record.balanceDue ? record.balanceDue : amount;
+    final effectivePaidAt = paidAt ?? DateTime.now();
+    final customer = getCustomerById(record.customerId);
 
-    // 2. If this payment is not paid or has amount <= 0, check if covered by any paid payment
-    if (!payment.isPaid || payment.amount <= 0.0) {
-      final covering = getPaymentCoveringMonth(customer.id, payment.monthYear);
-      if (covering != null && covering.isPaid && covering.monthYear != payment.monthYear) {
-        return getOrCreateBillForPayment(customer, covering);
-      }
-      for (final p in _paymentMap.values) {
-        if (p.customerId == customer.id && p.isPaid && p.amount > 0) {
-          if (p.startDate != null && p.endDate != null) {
-            final monthDate = DateTime.tryParse('${payment.monthYear}-01');
-            if (monthDate != null &&
-                !monthDate.isBefore(DateTime(p.startDate!.year, p.startDate!.month, 1)) &&
-                !monthDate.isAfter(p.endDate!)) {
-              return getOrCreateBillForPayment(customer, p);
-            }
-          }
-        }
-      }
-    }
-
-    final key = _payKey(customer.id, payment.monthYear);
-    if (_billsMap.containsKey(key)) {
-      final existing = _billsMap[key]!;
-      if (existing.amount > 0) {
-        return existing;
-      }
-      if (payment.coveredByMonthYear != null && payment.coveredByMonthYear!.isNotEmpty) {
-        final parentKey = _payKey(customer.id, payment.coveredByMonthYear!);
-        if (_billsMap.containsKey(parentKey) && _billsMap[parentKey]!.amount > 0) {
-          return _billsMap[parentKey]!;
-        }
-      }
-    }
-
-    double effectiveAmount = payment.amount;
-    if (effectiveAmount <= 0.0) {
-      effectiveAmount = _settings.getPriceForDuration(customer.planType, payment.durationMonths);
-    }
+    final updated = record.copyWith(amount: record.amount + collected);
+    _paymentMap[paymentId] = updated;
 
     final bill = BillRecord(
-      id: 'bill_${customer.id}_${payment.monthYear}',
-      billNumber: generateBillNumber(payment.monthYear),
-      customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      planType: customer.planType,
-      monthYear: payment.monthYear,
-      amount: effectiveAmount,
-      method: payment.method ?? PaymentMethod.cash,
-      paidAt: payment.paidAt ?? DateTime.now(),
-      notes: payment.notes,
-      transactionRef: payment.transactionRef,
+      id: _newBillId(record.customerId),
+      billNumber: generateBillNumber(record.monthYear),
+      customerId: record.customerId,
+      customerName: customer?.name ?? 'Member',
+      customerPhone: customer?.phone ?? '',
+      planType: customer?.planType ?? CustomerPlan.normal,
+      monthYear: record.monthYear,
+      amount: collected,
+      paymentId: record.id,
+      billType: 'BALANCE',
+      method: method,
+      paidAt: effectivePaidAt,
+      startDate: record.startDate,
+      endDate: record.endDate,
+      notes: notes,
+      transactionRef: transactionRef,
       gymName: _settings.gymName,
-      issuedAt: payment.paidAt ?? DateTime.now(),
-      status: payment.isPaid ? 'PAID' : 'PENDING',
-      durationMonths: payment.durationMonths,
-      startDate: payment.startDate ?? payment.effectiveStartDate,
-      endDate: payment.endDate ?? payment.effectiveEndDate,
-      coveragePeriod: payment.formattedDateRange,
+      issuedAt: DateTime.now(),
+      status: 'PAID',
+      durationMonths: record.durationMonths,
+      coveragePeriod: record.formattedDateRange,
     );
+    _billsMap[bill.id] = bill;
 
-    if (payment.isPaid) {
-      _billsMap[key] = bill;
-      _saveBills();
-      _cloudSaveBill(bill);
-    }
+    notifyListeners();
+    await _savePayments();
+    await _saveBills();
+    await _cloudSavePayment(updated);
+    await _cloudSaveBill(bill);
+
     return bill;
   }
 
-  List<PaymentRecord> getCustomerPaymentHistory(String customerId) {
-    // Auto-relocation guard for any misplaced endMonth payment for this customer
-    for (final p in _paymentMap.values.toList()) {
-      if (p.customerId == customerId &&
-          p.isPaid &&
-          p.startDate != null &&
-          !p.isCoveredInPackage &&
-          p.durationMonths <= 1) {
-        final startMonth = GymDateUtils.toMonthKey(p.effectiveStartDate);
-        final endMonth = GymDateUtils.toMonthKey(p.effectiveEndDate);
-        if (p.monthYear == endMonth && startMonth != endMonth) {
-          final startUnpaid = getUnpaidAttendedDaysInMonth(customerId, startMonth);
-          if (startUnpaid == 0) {
-            final oldKey = _payKey(customerId, endMonth);
-            final targetKey = _payKey(customerId, startMonth);
-            _paymentMap.remove(oldKey);
-            final updatedPay = p.copyWith(monthYear: startMonth);
-            _paymentMap[targetKey] = updatedPay;
-            if (_billsMap.containsKey(oldKey)) {
-              final b = _billsMap.remove(oldKey)!;
-              _billsMap[targetKey] = b.copyWith(monthYear: startMonth);
-            }
-            _savePayments();
-            _saveBills();
-          }
+  /// Updates an existing paid payment in place (same record id) and syncs its
+  /// primary (non-BALANCE) bill in place, keeping the bill's id and billNumber.
+  /// PAID BALANCE bills are untouched: the primary bill's amount becomes the
+  /// record's paid amount minus what BALANCE bills already collected.
+  Future<BillRecord> updatePayment({
+    required String paymentId,
+    double? amount,
+    double? totalDue,
+    PaymentMethod? method,
+    DateTime? paidAt,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? durationMonths,
+    String? notes,
+    String? transactionRef,
+  }) async {
+    final record = _paymentMap[paymentId];
+    if (record == null || !record.isPaid) {
+      throw ArgumentError('No paid payment found for id $paymentId');
+    }
+
+    final newStart = startDate ?? record.startDate;
+    final newDuration = durationMonths ?? record.durationMonths;
+    final DateTime? newEnd;
+    if (endDate != null) {
+      newEnd = endDate;
+    } else if (startDate != null || durationMonths != null) {
+      newEnd = newStart != null
+          ? GymDateUtils.computeAnniversaryEndDate(newStart, newDuration)
+          : null;
+    } else {
+      newEnd = record.endDate;
+    }
+    final newMonthYear = newStart != null
+        ? GymDateUtils.toMonthKey(newStart)
+        : record.monthYear;
+
+    final updated = record.copyWith(
+      amount: amount,
+      totalDue: totalDue,
+      method: method,
+      paidAt: paidAt,
+      startDate: newStart,
+      endDate: newEnd,
+      durationMonths: durationMonths,
+      notes: notes,
+      transactionRef: transactionRef,
+      monthYear: newMonthYear,
+    );
+    _paymentMap[paymentId] = updated;
+
+    final customer = getCustomerById(record.customerId);
+    BillRecord bill;
+    final existing = getBillForPayment(paymentId);
+    if (existing != null) {
+      var balanceCollected = 0.0;
+      for (final b in _billsMap.values) {
+        if (b.paymentId == paymentId &&
+            b.status == 'PAID' &&
+            b.billType == 'BALANCE') {
+          balanceCollected += b.amount;
         }
+      }
+      final primaryAmount = updated.amount - balanceCollected;
+      bill = existing.copyWith(
+        amount: primaryAmount > 0 ? primaryAmount : 0.0,
+        monthYear: updated.monthYear,
+        billType: updated.balanceDue > 0 ? 'PARTIAL' : 'FULL',
+        method: updated.method ?? existing.method,
+        paidAt: updated.paidAt ?? existing.paidAt,
+        startDate: updated.startDate,
+        endDate: updated.endDate,
+        durationMonths: updated.durationMonths,
+        coveragePeriod: updated.formattedDateRange,
+        notes: updated.notes,
+        transactionRef: updated.transactionRef,
+      );
+      _billsMap[bill.id] = bill;
+    } else {
+      bill = getOrCreateBillForPayment(
+          customer ??
+              Customer(
+                id: record.customerId,
+                name: 'Member',
+                phone: '',
+                joinDate: DateTime.now(),
+              ),
+          updated);
+    }
+
+    notifyListeners();
+    await _savePayments();
+    await _saveBills();
+    await _cloudSavePayment(updated);
+    await _cloudSaveBill(bill);
+
+    return bill;
+  }
+
+  /// Removes a payment record entirely (pending state is derived, so nothing
+  /// needs to be kept) and marks all of its bills CANCELLED. Bills are never
+  /// deleted so bill numbers are never reissued.
+  Future<void> revertPayment(String paymentId) async {
+    final record = _paymentMap[paymentId];
+    if (record == null) return;
+    _paymentMap.remove(paymentId);
+
+    final cancelled = <BillRecord>[];
+    for (final entry in _billsMap.entries.toList()) {
+      if (entry.value.paymentId == paymentId && entry.value.status != 'CANCELLED') {
+        final c = entry.value.copyWith(status: 'CANCELLED');
+        _billsMap[entry.key] = c;
+        cancelled.add(c);
       }
     }
 
-    final list = _paymentMap.values
-        .where((p) => p.customerId == customerId)
-        .where((p) {
-          if (p.isPaid) return true;
-          // For unpaid records, only show in payment history if member actually attended (has real dues)
-          final unpaid = getUnpaidAttendedDaysInMonth(customerId, p.monthYear);
-          return unpaid > 0;
-        })
-        .toList();
-    list.sort((a, b) => b.monthYear.compareTo(a.monthYear));
+    notifyListeners();
+    await _savePayments();
+    await _saveBills();
+    await _cloudDeletePayment(record.id);
+    for (final b in cancelled) {
+      await _cloudSaveBill(b);
+    }
+  }
+
+  /// Thin compatibility wrapper: resolves the payment covering [monthYear]
+  /// and reverts it by id.
+  Future<void> revertPaymentToPending(String customerId, String monthYear) async {
+    final covering = getPaymentCoveringMonth(customerId, monthYear);
+    if (covering != null) {
+      await revertPayment(covering.id);
+    }
+  }
+
+  /// Paid records (latest cycle start first) plus transient pending records for
+  /// each month with unpaid attended days where no paid cycle starts.
+  List<PaymentRecord> getCustomerPaymentHistory(String customerId) {
+    final list = getPaidPaymentsForCustomer(customerId);
+    for (final monthKey in getUnpaidAttendedMonthKeys(customerId)) {
+      final hasCycleStartingHere = list.any((p) => p.monthYear == monthKey);
+      if (!hasCycleStartingHere) {
+        list.add(getPaymentRecord(customerId, monthKey));
+      }
+    }
+    list.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
     return list;
   }
 
   Map<String, dynamic> getMonthlyFinancialSummary(String monthYear) {
-    double totalExpected = 0;
+    // Collected = all PAID bills paid within this calendar month
+    // (includes BALANCE collections).
     double totalCollected = 0;
-    int paidCount = 0;
-    int pendingCount = 0;
+    for (final b in _billsMap.values) {
+      if (b.status == 'PAID' && GymDateUtils.toMonthKey(b.paidAt) == monthYear) {
+        totalCollected += b.amount;
+      }
+    }
 
-    for (var customer in _customers) {
-      if (!customer.isActive) continue;
-      final record = getPaymentRecord(customer.id, monthYear);
-      totalExpected += record.amount;
-      if (record.isPaid) {
-        totalCollected += record.amount;
+    double totalPending = 0;
+    int pendingCount = 0;
+    final parts = monthYear.split('-');
+    if (parts.length == 2) {
+      final y = int.tryParse(parts[0]) ?? DateTime.now().year;
+      final m = int.tryParse(parts[1]) ?? DateTime.now().month;
+      final groups = getPendingDuesByMonth(
+          DateTime(y, m, 1), DateTime(y, m, GymDateUtils.daysInMonth(y, m)));
+      for (final g in groups) {
+        if (g.monthKey == monthYear) {
+          totalPending += g.totalAmount;
+          pendingCount += g.items.length;
+        }
+      }
+    }
+
+    int paidCount = 0;
+    for (final customer in _customers) {
+      if (customer.isActive &&
+          isMonthCoveredByPaidPayment(customer.id, monthYear)) {
         paidCount++;
-      } else {
-        pendingCount++;
       }
     }
 
     return {
       'totalMembers': _customers.where((c) => c.isActive).length,
-      'totalExpected': totalExpected,
+      'totalExpected': totalCollected + totalPending,
       'totalCollected': totalCollected,
-      'totalPending': totalExpected - totalCollected,
+      'totalPending': totalPending,
       'paidCount': paidCount,
       'pendingCount': pendingCount,
     };
+  }
+
+  // ==================== LEGACY MIGRATION ====================
+
+  bool _migrating = false;
+
+  @visibleForTesting
+  bool get hasLegacyPaymentShapes => _hasLegacyPaymentShapes();
+
+  /// Cheap detection of legacy payment/bill shapes needing migration.
+  bool _hasLegacyPaymentShapes() {
+    for (final p in _paymentMap.values) {
+      if (p.isCoveredInPackage) return true;
+      if (p.status != PaymentStatus.paid) return true;
+      if (p.startDate == null ||
+          p.monthYear != GymDateUtils.toMonthKey(p.effectiveStartDate)) {
+        return true;
+      }
+    }
+    for (final b in _billsMap.values) {
+      if (b.paymentId.isEmpty) return true;
+    }
+    return false;
+  }
+
+  /// Idempotent migration to schema v2:
+  /// 1. Drop ₹0 coveredByMonthYear placeholder records.
+  /// 2. Drop stored pending/overdue records (pending is now derived).
+  /// 3. Freeze start/end dates and fix the monthYear label on paid records.
+  /// 4. Link legacy bills (empty paymentId) to their payment.
+  /// 5. Re-key Firestore docs to record.id / bill.id; delete legacy doc ids.
+  Future<void> _migrateLegacyPayments() async {
+    if (_migrating) return;
+    if (!_hasLegacyPaymentShapes()) return;
+    _migrating = true;
+    try {
+      bool modified = false;
+      final paymentsToUpsert = <PaymentRecord>[];
+      final billsToUpsert = <BillRecord>[];
+      final paymentDocsToDelete = <String>{};
+      final billDocsToDelete = <String>{};
+
+      // Steps 1 & 2: remove placeholders and stored pending/overdue records.
+      for (final p in _paymentMap.values.toList()) {
+        if (p.isCoveredInPackage || p.status != PaymentStatus.paid) {
+          _paymentMap.remove(p.id);
+          paymentDocsToDelete.add('${p.customerId}_${p.monthYear}');
+          if (p.id != '${p.customerId}_${p.monthYear}') {
+            paymentDocsToDelete.add(p.id);
+          }
+          modified = true;
+        }
+      }
+
+      // Step 3: freeze dates + fix monthYear labels on remaining paid records.
+      for (final p in _paymentMap.values.toList()) {
+        final frozenStart = p.startDate ?? p.effectiveStartDate;
+        final frozenEnd = p.endDate ?? p.effectiveEndDate;
+        final correctMonth = GymDateUtils.toMonthKey(frozenStart);
+        var migrated = p;
+        if (p.startDate == null ||
+            p.endDate == null ||
+            p.monthYear != correctMonth) {
+          migrated = p.copyWith(
+            startDate: frozenStart,
+            endDate: frozenEnd,
+            monthYear: correctMonth,
+          );
+          _paymentMap[p.id] = migrated;
+          modified = true;
+        }
+        paymentsToUpsert.add(migrated);
+        final legacyDocId = '${p.customerId}_${p.monthYear}';
+        if (legacyDocId != p.id) paymentDocsToDelete.add(legacyDocId);
+      }
+
+      // Step 4: link bills with empty paymentId to their payment.
+      for (final b in _billsMap.values.toList()) {
+        var migrated = b;
+        if (b.paymentId.isEmpty) {
+          PaymentRecord? linked;
+          for (final p in _paymentMap.values) {
+            if (p.customerId == b.customerId &&
+                p.isPaid &&
+                p.monthYear == b.monthYear) {
+              linked = p;
+              break;
+            }
+          }
+          if (linked == null) {
+            final monthStart = DateTime.tryParse('${b.monthYear}-01');
+            if (monthStart != null) {
+              for (final p in _paymentMap.values) {
+                if (p.customerId == b.customerId && p.isPaid) {
+                  if (!monthStart.isBefore(p.effectiveStartDate) &&
+                      !monthStart.isAfter(p.effectiveEndDate)) {
+                    linked = p;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+          migrated = b.copyWith(
+            paymentId: linked?.id ?? 'legacy-unlinked',
+            billType: 'FULL',
+          );
+          _billsMap[b.id] = migrated;
+          modified = true;
+        }
+        billsToUpsert.add(migrated);
+        final legacyDocId = '${b.customerId}_${b.monthYear}';
+        if (legacyDocId != b.id) billDocsToDelete.add(legacyDocId);
+      }
+
+      if (modified) {
+        await _savePayments();
+        await _saveBills();
+      }
+
+      // Step 5: re-key cloud docs. Legacy doc ids were `${customerId}_${monthYear}`.
+      if (_isCloudAttached) {
+        _suppressCloudUpdates = true;
+        try {
+          await FirestoreService().batchUpsertPayments(paymentsToUpsert);
+          await FirestoreService().batchUpsertBills(billsToUpsert);
+          for (final docId in paymentDocsToDelete) {
+            await FirestoreService().deletePayment(docId);
+          }
+          for (final docId in billDocsToDelete) {
+            await FirestoreService().deleteBill(docId);
+          }
+        } finally {
+          _suppressCloudUpdates = false;
+        }
+      }
+    } finally {
+      _migrating = false;
+    }
   }
 
   // ==================== PENDING RANGE OPERATIONS ====================
@@ -1660,8 +1613,19 @@ class GymService extends ChangeNotifier {
         }
       }
 
+      // Partial balances: paid cycles with an outstanding balance whose
+      // start month falls inside the range still owe money.
+      for (final p in _paymentMap.values) {
+        if (p.customerId == customer.id &&
+            p.isPaid &&
+            p.balanceDue > 0 &&
+            monthKeys.contains(p.monthYear)) {
+          pendingRecords.add(p);
+        }
+      }
+
       if (pendingRecords.isNotEmpty) {
-        final total = pendingRecords.fold<double>(0.0, (sum, r) => sum + r.amount);
+        final total = pendingRecords.fold<double>(0.0, (sum, r) => sum + pendingAmountOf(r));
         results.add(MemberPendingSummary(
           customer: customer,
           pendingRecords: pendingRecords,
@@ -1696,7 +1660,18 @@ class GymService extends ChangeNotifier {
         if (stage == MemberLifecycleStage.due) {
           final record = getPaymentRecord(customer.id, monthKey);
           items.add(MonthPendingItem(customer: customer, payment: record));
-          monthTotal += record.amount;
+          monthTotal += pendingAmountOf(record);
+        }
+
+        // Partial balances owed on paid cycles starting in this month.
+        for (final p in _paymentMap.values) {
+          if (p.customerId == customer.id &&
+              p.isPaid &&
+              p.balanceDue > 0 &&
+              p.monthYear == monthKey) {
+            items.add(MonthPendingItem(customer: customer, payment: p));
+            monthTotal += p.balanceDue;
+          }
         }
       }
 
@@ -2037,13 +2012,12 @@ class GymService extends ChangeNotifier {
       }
     }
 
-    // Today's collections
+    // Today's collections (PAID bills — includes BALANCE collections)
     double todayCollection = 0;
-    for (final p in _paymentMap.values) {
-      if (p.isPaid && p.paidAt != null) {
-        if (GymDateUtils.toDateKey(p.paidAt!) == todayKey) {
-          todayCollection += p.amount;
-        }
+    for (final b in _billsMap.values) {
+      if (b.status == 'PAID' &&
+          GymDateUtils.toDateKey(b.paidAt) == todayKey) {
+        todayCollection += b.amount;
       }
     }
 
@@ -2188,10 +2162,10 @@ class GymService extends ChangeNotifier {
     _suppressCloudUpdates = false;
   }
 
-  Future<void> _cloudDeletePayment(String customerId, String monthYear) async {
+  Future<void> _cloudDeletePayment(String docId) async {
     if (!_isCloudAttached) return;
     _suppressCloudUpdates = true;
-    await FirestoreService().deletePayment(customerId, monthYear);
+    await FirestoreService().deletePayment(docId);
     _suppressCloudUpdates = false;
   }
 
@@ -2199,13 +2173,6 @@ class GymService extends ChangeNotifier {
     if (!_isCloudAttached) return;
     _suppressCloudUpdates = true;
     await FirestoreService().upsertBill(record);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudDeleteBill(String customerId, String monthYear) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().deleteBill(customerId, monthYear);
     _suppressCloudUpdates = false;
   }
 
@@ -2246,8 +2213,6 @@ class GymService extends ChangeNotifier {
 
   void _seedDemoData() {
     final now = DateTime.now();
-    final currentMonth = GymDateUtils.toMonthKey(now);
-    final prevMonth = GymDateUtils.toMonthKey(DateTime(now.year, now.month - 1, 1));
 
     _customers = [
       Customer(
@@ -2350,53 +2315,67 @@ class GymService extends ChangeNotifier {
       }
     }
 
-    // Seed payments for previous month (all paid)
-    _paymentMap[_payKey('cust_1', prevMonth)] = PaymentRecord(
-      id: 'pay_cust_1_$prevMonth',
+    // Seed payments for previous month (all paid, unique ids, explicit ranges)
+    void demoPaid({
+      required String customerId,
+      required double amount,
+      required PaymentMethod method,
+      required DateTime paidAt,
+      int durationMonths = 1,
+      String? transactionRef,
+      String? notes,
+    }) {
+      final start = DateTime(paidAt.year, paidAt.month, paidAt.day);
+      final end = GymDateUtils.computeAnniversaryEndDate(start, durationMonths);
+      final record = PaymentRecord(
+        id: 'pay_${customerId}_${paidAt.millisecondsSinceEpoch}',
+        customerId: customerId,
+        monthYear: GymDateUtils.toMonthKey(start),
+        amount: amount,
+        totalDue: amount,
+        status: PaymentStatus.paid,
+        method: method,
+        paidAt: paidAt,
+        startDate: start,
+        endDate: end,
+        durationMonths: durationMonths,
+        transactionRef: transactionRef,
+        notes: notes,
+      );
+      _paymentMap[record.id] = record;
+    }
+
+    demoPaid(
       customerId: 'cust_1',
-      monthYear: prevMonth,
       amount: 1200,
-      status: PaymentStatus.paid,
       method: PaymentMethod.gpay,
       paidAt: DateTime(now.year, now.month - 1, 5),
       transactionRef: 'UPI-789234812',
     );
-    _paymentMap[_payKey('cust_2', prevMonth)] = PaymentRecord(
-      id: 'pay_cust_2_$prevMonth',
+    demoPaid(
       customerId: 'cust_2',
-      monthYear: prevMonth,
       amount: 1200,
-      status: PaymentStatus.paid,
       method: PaymentMethod.cash,
       paidAt: DateTime(now.year, now.month - 1, 3),
     );
-    _paymentMap[_payKey('cust_3', prevMonth)] = PaymentRecord(
-      id: 'pay_cust_3_$prevMonth',
+    demoPaid(
       customerId: 'cust_3',
-      monthYear: prevMonth,
       amount: 2500,
-      status: PaymentStatus.paid,
       method: PaymentMethod.upi,
       paidAt: DateTime(now.year, now.month - 1, 5),
     );
-    _paymentMap[_payKey('cust_4', prevMonth)] = PaymentRecord(
-      id: 'pay_cust_4_$prevMonth',
+    demoPaid(
       customerId: 'cust_4',
-      monthYear: prevMonth,
       amount: 1200,
-      status: PaymentStatus.paid,
       method: PaymentMethod.phonepe,
       paidAt: DateTime(now.year, now.month - 1, 7),
     );
 
     // Seed payments for current month
     // Rahul: Paid with GPay
-    _paymentMap[_payKey('cust_1', currentMonth)] = PaymentRecord(
-      id: 'pay_cust_1_$currentMonth',
+    demoPaid(
       customerId: 'cust_1',
-      monthYear: currentMonth,
       amount: 1200,
-      status: PaymentStatus.paid,
       method: PaymentMethod.gpay,
       paidAt: DateTime(now.year, now.month, 4),
       transactionRef: 'UPI-98210344',
@@ -2404,51 +2383,25 @@ class GymService extends ChangeNotifier {
     );
 
     // Pooja: Paid with Cash
-    _paymentMap[_payKey('cust_2', currentMonth)] = PaymentRecord(
-      id: 'pay_cust_2_$currentMonth',
+    demoPaid(
       customerId: 'cust_2',
-      monthYear: currentMonth,
       amount: 1200,
-      status: PaymentStatus.paid,
       method: PaymentMethod.cash,
       paidAt: DateTime(now.year, now.month, 6),
       notes: 'Received by coach',
     );
 
     // Ananya: Paid with PhonePe
-    _paymentMap[_payKey('cust_4', currentMonth)] = PaymentRecord(
-      id: 'pay_cust_4_$currentMonth',
+    demoPaid(
       customerId: 'cust_4',
-      monthYear: currentMonth,
       amount: 1200,
-      status: PaymentStatus.paid,
       method: PaymentMethod.phonepe,
       paidAt: DateTime(now.year, now.month, 8),
       transactionRef: 'PP-459201948',
     );
 
-    // Vikram, Karan, Sneha are Pending for current month
-    _paymentMap[_payKey('cust_3', currentMonth)] = PaymentRecord(
-      id: 'pay_cust_3_$currentMonth',
-      customerId: 'cust_3',
-      monthYear: currentMonth,
-      amount: 1200,
-      status: PaymentStatus.pending,
-    );
-    _paymentMap[_payKey('cust_5', currentMonth)] = PaymentRecord(
-      id: 'pay_cust_5_$currentMonth',
-      customerId: 'cust_5',
-      monthYear: currentMonth,
-      amount: 1200,
-      status: PaymentStatus.pending,
-    );
-    _paymentMap[_payKey('cust_6', currentMonth)] = PaymentRecord(
-      id: 'pay_cust_6_$currentMonth',
-      customerId: 'cust_6',
-      monthYear: currentMonth,
-      amount: 1200,
-      status: PaymentStatus.pending,
-    );
+    // Vikram, Karan, Sneha have no payment for the current month —
+    // pending dues are derived from attendance, nothing is stored.
   }
 
   void _seedDemoExpenses() {

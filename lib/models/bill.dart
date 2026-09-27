@@ -13,6 +13,10 @@ class BillRecord {
   /// Format: "YYYY-MM", e.g. "2026-09"
   final String monthYear;
   final double amount;
+  /// The payment record this bill was issued for ('' for un-migrated legacy bills).
+  final String paymentId;
+  /// 'FULL', 'PARTIAL' or 'BALANCE'.
+  final String billType;
   final PaymentMethod method;
   final DateTime paidAt;
   final String? notes;
@@ -34,6 +38,8 @@ class BillRecord {
     this.planType = CustomerPlan.normal,
     required this.monthYear,
     required this.amount,
+    required this.paymentId,
+    this.billType = 'FULL',
     required this.method,
     required this.paidAt,
     this.notes,
@@ -75,6 +81,8 @@ class BillRecord {
     String? planType,
     String? monthYear,
     double? amount,
+    String? paymentId,
+    String? billType,
     PaymentMethod? method,
     DateTime? paidAt,
     String? notes,
@@ -96,6 +104,8 @@ class BillRecord {
       planType: planType ?? this.planType,
       monthYear: monthYear ?? this.monthYear,
       amount: amount ?? this.amount,
+      paymentId: paymentId ?? this.paymentId,
+      billType: billType ?? this.billType,
       method: method ?? this.method,
       paidAt: paidAt ?? this.paidAt,
       notes: notes ?? this.notes,
@@ -120,6 +130,8 @@ class BillRecord {
       'planType': planType,
       'monthYear': monthYear,
       'amount': amount,
+      'paymentId': paymentId,
+      'billType': billType,
       'method': method.name,
       'paidAt': paidAt.toIso8601String(),
       'notes': notes,
@@ -144,6 +156,8 @@ class BillRecord {
       planType: map['planType'] as String? ?? CustomerPlan.normal,
       monthYear: map['monthYear'] as String? ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      paymentId: map['paymentId'] as String? ?? '',
+      billType: map['billType'] as String? ?? 'FULL',
       method: PaymentMethod.fromString(map['method'] as String?),
       paidAt: map['paidAt'] != null
           ? (DateTime.tryParse(map['paidAt'] as String) ?? DateTime.now())

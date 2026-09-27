@@ -458,7 +458,7 @@ class _CustomersTabState extends State<CustomersTab> {
                     context: context,
                     customer: customer,
                     monthYear: currentMonth,
-                    amount: payment.amount,
+                    amount: GymService().pendingAmountOf(payment),
                   );
                 },
               ),
@@ -493,7 +493,11 @@ class _CustomersTabState extends State<CustomersTab> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      isPaid ? 'PAID' : (isNew ? 'NEW' : 'DUE'),
+                      isPaid
+                          ? (payment.isPartiallyPaid
+                              ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
+                              : 'PAID')
+                          : (isNew ? 'NEW' : 'DUE'),
                       style: TextStyle(
                         color: isPaid
                             ? AppColors.paid
@@ -504,7 +508,7 @@ class _CustomersTabState extends State<CustomersTab> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      GymDateUtils.formatCurrency(payment.amount, symbol: currency),
+                      GymDateUtils.formatCurrency(payment.displayAmount, symbol: currency),
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 12,

@@ -37,16 +37,16 @@ class BalanceSheetTab extends StatelessWidget {
         final Map<ExpenseCategory, double> breakdown =
             summary['categoryBreakdown'] as Map<ExpenseCategory, double>;
 
-        // Income payment method breakdown
-        final paidPayments = gym.customers
-            .map((c) => gym.getPaymentRecord(c.id, monthKey))
-            .where((p) => p.isPaid)
+        // Income payment method breakdown (PAID bills collected this month)
+        final monthBills = gym.billsMap.values
+            .where((b) =>
+                b.status == 'PAID' &&
+                GymDateUtils.toMonthKey(b.paidAt) == monthKey)
             .toList();
 
         final methodIncome = <PaymentMethod, double>{};
-        for (final p in paidPayments) {
-          final m = p.method ?? PaymentMethod.cash;
-          methodIncome[m] = (methodIncome[m] ?? 0.0) + p.amount;
+        for (final b in monthBills) {
+          methodIncome[b.method] = (methodIncome[b.method] ?? 0.0) + b.amount;
         }
 
         return Scaffold(
@@ -72,7 +72,7 @@ class BalanceSheetTab extends StatelessWidget {
                 // Revenue Inflows Section
                 _buildSectionHeader(
                   title: 'Revenue Inflow (Collections)',
-                  subtitle: '${paidPayments.length} payments collected this month',
+                  subtitle: '${monthBills.length} payments collected this month',
                   icon: Icons.savings_outlined,
                   color: AppColors.paid,
                 ),

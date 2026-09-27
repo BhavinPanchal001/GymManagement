@@ -38,30 +38,21 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
   BillRecord get bill {
     if (widget.bill.amount > 0) return widget.bill;
     final gym = GymService();
-    final pay = gym.getPaymentRecord(widget.bill.customerId, widget.bill.monthYear);
-    if (pay.coveredByMonthYear != null && pay.coveredByMonthYear!.isNotEmpty) {
-      final parentBill = gym.getBill(widget.bill.customerId, pay.coveredByMonthYear!);
-      if (parentBill != null && parentBill.amount > 0) return parentBill;
-      final parentPay = gym.getPaymentRecord(widget.bill.customerId, pay.coveredByMonthYear!);
+    if (widget.bill.paymentId.isNotEmpty) {
+      final primary = gym.getBillForPayment(widget.bill.paymentId);
+      if (primary != null && primary.amount > 0) return primary;
+      final pay = gym.getPaymentById(widget.bill.paymentId);
       final cust = gym.getCustomerById(widget.bill.customerId);
-      if (parentPay.amount > 0 && cust != null) {
-        return gym.getOrCreateBillForPayment(cust, parentPay);
+      if (pay != null && pay.amount > 0 && cust != null) {
+        return gym.getOrCreateBillForPayment(cust, pay);
       }
     }
-    for (final p in gym.getCustomerPaymentHistory(widget.bill.customerId)) {
-      if (p.isPaid && p.amount > 0 && p.durationMonths > 1) {
-        if (p.startDate != null && p.endDate != null) {
-          final monthDate = DateTime.tryParse('${widget.bill.monthYear}-01');
-          if (monthDate != null &&
-              !monthDate.isBefore(DateTime(p.startDate!.year, p.startDate!.month, 1)) &&
-              !monthDate.isAfter(p.endDate!)) {
-            final cust = gym.getCustomerById(widget.bill.customerId);
-            if (cust != null) {
-              return gym.getOrCreateBillForPayment(cust, p);
-            }
-          }
-        }
-      }
+    // Legacy bill without paymentId: resolve via the covering payment.
+    final covering = gym.getPaymentCoveringMonth(widget.bill.customerId, widget.bill.monthYear);
+    final cust = gym.getCustomerById(widget.bill.customerId);
+    if (covering != null && cust != null) {
+      final resolved = gym.getOrCreateBillForPayment(cust, covering);
+      if (resolved.amount > 0) return resolved;
     }
     return widget.bill;
   }
@@ -326,30 +317,49 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.paid.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.paid, width: 1),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.check_circle_rounded, color: AppColors.paid, size: 14),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'PAID',
-                                    style: TextStyle(
-                                      color: AppColors.paid,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.8,
+                            Builder(builder: (context) {
+                              final cancelled = bill.status == 'CANCELLED';
+                              final chipColor = cancelled
+                                  ? AppColors.absent
+                                  : (bill.billType == 'BALANCE'
+                                      ? AppColors.primary
+                                      : (bill.billType == 'PARTIAL'
+                                          ? AppColors.pending
+                                          : AppColors.paid));
+                              final chipLabel = cancelled
+                                  ? 'CANCELLED'
+                                  : (bill.billType == 'BALANCE'
+                                      ? 'BALANCE PAID'
+                                      : (bill.billType == 'PARTIAL' ? 'PARTIAL' : 'PAID'));
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: chipColor.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: chipColor, width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      cancelled ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                                      color: chipColor,
+                                      size: 14,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      chipLabel,
+                                      style: TextStyle(
+                                        color: chipColor,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
                           ],
                         ),
                         const SizedBox(height: 14),
@@ -363,6 +373,24 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                           ),
                         ),
                         const SizedBox(height: 4),
+                        if (bill.billType == 'PARTIAL' || bill.billType == 'BALANCE')
+                          Builder(builder: (context) {
+                            final pay = GymService().getPaymentById(bill.paymentId);
+                            final label = bill.billType == 'PARTIAL'
+                                ? 'Partial payment — balance ${GymDateUtils.formatCurrency(pay?.balanceDue ?? 0, symbol: currency)}'
+                                : 'Balance payment for cycle ${bill.formattedValidityPeriod}';
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                label,
+                                style: TextStyle(
+                                  color: AppColors.pending,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            );
+                          }),
                         Text(
                           'Payment completed on $formattedDate',
                           style: TextStyle(

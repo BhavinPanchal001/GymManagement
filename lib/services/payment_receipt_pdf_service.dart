@@ -82,39 +82,28 @@ class PaymentReceiptPdfService {
     final gymSettings = settings ?? GymService().settings;
     final effectiveCustomer = customer ?? GymService().getCustomerById(bill.customerId);
 
-    // Resolve forward-covered months (e.g. Oct and Nov covered under Sept 3-month package)
+    // Resolve placeholder/preview bills to a real bill via the payment link.
     BillRecord effectiveBill = bill;
     if (effectiveBill.amount <= 0.0) {
       final gym = GymService();
-      final payRecord = gym.getPaymentRecord(effectiveBill.customerId, effectiveBill.monthYear);
-      if (payRecord.coveredByMonthYear != null && payRecord.coveredByMonthYear!.isNotEmpty) {
-        final parentBill = gym.getBill(effectiveBill.customerId, payRecord.coveredByMonthYear!);
-        if (parentBill != null && parentBill.amount > 0) {
-          effectiveBill = parentBill;
+      if (effectiveBill.paymentId.isNotEmpty) {
+        final primary = gym.getBillForPayment(effectiveBill.paymentId);
+        if (primary != null && primary.amount > 0) {
+          effectiveBill = primary;
         } else {
-          final parentPay = gym.getPaymentRecord(effectiveBill.customerId, payRecord.coveredByMonthYear!);
-          if (parentPay.amount > 0 && effectiveCustomer != null) {
-            effectiveBill = gym.getOrCreateBillForPayment(effectiveCustomer, parentPay);
+          final pay = gym.getPaymentById(effectiveBill.paymentId);
+          if (pay != null && pay.amount > 0 && effectiveCustomer != null) {
+            effectiveBill = gym.getOrCreateBillForPayment(effectiveCustomer, pay);
           }
         }
       }
 
+      // Legacy bills without paymentId: resolve via the covering payment.
       if (effectiveBill.amount <= 0.0) {
-        final history = gym.getCustomerPaymentHistory(effectiveBill.customerId);
-        for (final p in history) {
-          if (p.isPaid && p.amount > 0 && p.durationMonths > 1) {
-            if (p.startDate != null && p.endDate != null) {
-              final monthDate = DateTime.tryParse('${effectiveBill.monthYear}-01');
-              if (monthDate != null &&
-                  !monthDate.isBefore(DateTime(p.startDate!.year, p.startDate!.month, 1)) &&
-                  !monthDate.isAfter(p.endDate!)) {
-                if (effectiveCustomer != null) {
-                  effectiveBill = gym.getOrCreateBillForPayment(effectiveCustomer, p);
-                  break;
-                }
-              }
-            }
-          }
+        final covering = gym.getPaymentCoveringMonth(
+            effectiveBill.customerId, effectiveBill.monthYear);
+        if (covering != null && effectiveCustomer != null) {
+          effectiveBill = gym.getOrCreateBillForPayment(effectiveCustomer, covering);
         }
       }
 

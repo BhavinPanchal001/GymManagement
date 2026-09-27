@@ -427,10 +427,12 @@ void main() {
     final ptCustomer = gym.customers.firstWhere((c) => c.name == 'John PT Client');
     expect(ptCustomer.planType, CustomerPlan.personalTraining);
 
-    // Verify payment amount matches PT plan fee
+    // Pending record shows the PT plan fee as the amount due
     const testMonth = '2026-11';
     final payment = gym.getPaymentRecord(ptCustomer.id, testMonth);
-    expect(payment.amount, 2800.0);
+    expect(payment.isPaid, isFalse);
+    expect(payment.totalDue, 2800.0);
+    expect(payment.displayAmount, 2800.0);
 
     // Add customer with Personal Training + Diet
     await gym.addCustomer(
@@ -442,7 +444,7 @@ void main() {
     final dietCustomer = gym.customers.firstWhere((c) => c.name == 'Emma Diet Client');
     expect(dietCustomer.planType, CustomerPlan.personalTrainingDiet);
     final dietPayment = gym.getPaymentRecord(dietCustomer.id, testMonth);
-    expect(dietPayment.amount, 3900.0);
+    expect(dietPayment.totalDue, 3900.0);
   });
 
   testWidgets('AddCustomerSheet shows all 3 plan options and saves selected plan', (tester) async {
@@ -556,9 +558,10 @@ void main() {
     final member = gym.customers.firstWhere((c) => c.name == 'Package Test Member');
     expect(member.planDurationMonths, 3);
 
-    // Initial pending bill for current month should be 3-month package price (1500)
+    // Initial pending record for the month carries the 3-month package price as totalDue
     final pRecord = gym.getPaymentRecord(member.id, '2026-09');
-    expect(pRecord.amount, 1500.0);
+    expect(pRecord.isPaid, isFalse);
+    expect(pRecord.totalDue, 1500.0);
 
     // Pay 3-Month package starting September 2026
     final bill = await gym.markPaymentAsPaid(
@@ -582,25 +585,29 @@ void main() {
     expect(sepPayment.amount, 1500.0);
     expect(sepPayment.durationMonths, 3);
 
-    // October payment record should be automatically covered (Paid, 0.0 amount, coveredBy 2026-09)
+    // October is covered by the SAME single package record (no placeholders)
     final octPayment = gym.getPaymentRecord(member.id, '2026-10');
     expect(octPayment.isPaid, true);
-    expect(octPayment.amount, 0.0);
-    expect(octPayment.isCoveredInPackage, true);
-    expect(octPayment.coveredByMonthYear, '2026-09');
+    expect(octPayment.id, sepPayment.id);
+    expect(octPayment.coveredByMonthYear, isNull);
 
-    // November payment record should be automatically covered
+    // November too
     final novPayment = gym.getPaymentRecord(member.id, '2026-11');
     expect(novPayment.isPaid, true);
-    expect(novPayment.amount, 0.0);
-    expect(novPayment.isCoveredInPackage, true);
-    expect(novPayment.coveredByMonthYear, '2026-09');
+    expect(novPayment.id, sepPayment.id);
 
-    // December payment record is beyond the package and should be a fresh Pending record
+    // The cycle paid today (mid-September) runs to mid-December, so December
+    // is still covered by the same record; the next uncovered month is January.
     final decPayment = gym.getPaymentRecord(member.id, '2026-12');
-    expect(decPayment.isPaid, false);
-    expect(decPayment.status, PaymentStatus.pending);
-    expect(decPayment.amount, 1500.0); // Next cycle package amount
+    expect(decPayment.isPaid, true);
+    expect(decPayment.id, sepPayment.id);
+
+    final janPayment = gym.getPaymentRecord(member.id, '2027-01');
+    expect(janPayment.isPaid, false);
+    expect(janPayment.status, PaymentStatus.pending);
+    expect(janPayment.id, startsWith('pending_'));
+    expect(janPayment.amount, 0.0);
+    expect(janPayment.totalDue, 1500.0); // Next cycle package amount
   });
 
   test('PhoneService phone number cleaning and validation test', () {

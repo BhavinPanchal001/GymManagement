@@ -785,7 +785,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     if (isPaid) {
       badgeColor = AppColors.paid;
       badgeIcon = Icons.check_circle_rounded;
-      badgeText = 'PAID';
+      badgeText = record.isPartiallyPaid
+          ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(record.balanceDue, symbol: currency)}'
+          : 'PAID';
       subtitleText = 'Monthly gym fee • Settled & Active';
     } else if (isNotEnrolled) {
       badgeColor = AppColors.textMuted;
@@ -911,7 +913,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  GymDateUtils.formatCurrency(record.amount, symbol: currency),
+                  GymDateUtils.formatCurrency(record.displayAmount, symbol: currency),
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
@@ -1097,7 +1099,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               children: [
                 Flexible(
                   child: Text(
-                    GymDateUtils.formatCurrency(record.amount, symbol: currency),
+                    GymDateUtils.formatCurrency(record.displayAmount, symbol: currency),
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 24,
@@ -1200,7 +1202,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     context: context,
                     customer: customer,
                     monthYear: monthKey,
-                    amount: record.amount,
+                    amount: GymService().pendingAmountOf(record),
                   );
                 },
                 borderRadius: BorderRadius.circular(12),
@@ -1281,7 +1283,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     for (final mKey in unpaidMonths) {
       totalAttendedDays += gym.getUnpaidAttendedDaysInMonth(customer.id, mKey);
       final pay = gym.getPaymentRecord(customer.id, mKey);
-      totalDueAmount += pay.amount;
+      totalDueAmount += gym.pendingAmountOf(pay);
     }
 
     final earliestMonth = unpaidMonths.first;
@@ -1402,8 +1404,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     final isBeforeJoinMonth = monthKey.compareTo(joinMonthKey) < 0;
 
     final effectivePayment = (paymentRecord.isPaid ? paymentRecord : (coveringPayment ?? paymentRecord));
-    final fee = effectivePayment.amount > 0
-        ? effectivePayment.amount
+    final fee = effectivePayment.displayAmount > 0
+        ? effectivePayment.displayAmount
         : gym.settings.getPriceForDuration(customer.planType, customer.planDurationMonths);
 
     return Container(
@@ -2410,7 +2412,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          GymDateUtils.formatCurrency(item.amount, symbol: currency),
+                          GymDateUtils.formatCurrency(item.displayAmount, symbol: currency),
                           style: TextStyle(
                             color: item.isPaid ? AppColors.paid : AppColors.textPrimary,
                             fontWeight: FontWeight.w800,

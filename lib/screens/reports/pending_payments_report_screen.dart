@@ -164,7 +164,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
       }).toList();
 
       if (matchingItems.isNotEmpty) {
-        final groupTotal = matchingItems.fold<double>(0.0, (s, it) => s + it.payment.amount);
+        final groupTotal = matchingItems.fold<double>(0.0, (s, it) => s + GymService().pendingAmountOf(it.payment));
         filteredGroups.add(MonthPendingGroup(
           monthKey: group.monthKey,
           items: matchingItems,
@@ -746,7 +746,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          GymDateUtils.formatCurrency(rec.amount, symbol: currency),
+                          GymDateUtils.formatCurrency(GymService().pendingAmountOf(rec), symbol: currency),
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 10,
@@ -934,7 +934,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         ),
                       ),
                       Text(
-                        GymDateUtils.formatCurrency(payment.amount, symbol: currency),
+                        GymDateUtils.formatCurrency(GymService().pendingAmountOf(payment), symbol: currency),
                         style: const TextStyle(
                           color: AppColors.pending,
                           fontWeight: FontWeight.bold,
@@ -963,7 +963,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         onPressed: () => _openWhatsAppReminder(
                           customer,
                           group.monthKey,
-                          payment.amount,
+                          GymService().pendingAmountOf(payment),
                         ),
                       ),
 

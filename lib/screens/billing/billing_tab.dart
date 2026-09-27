@@ -627,7 +627,7 @@ class _BillingTabState extends State<BillingTab> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      GymDateUtils.formatCurrency(payment.amount, symbol: currency),
+                      GymDateUtils.formatCurrency(payment.displayAmount, symbol: currency),
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
@@ -650,7 +650,11 @@ class _BillingTabState extends State<BillingTab> {
                         ),
                       ),
                       child: Text(
-                        isPaid ? 'PAID' : 'PENDING',
+                        isPaid
+                            ? (payment.isPartiallyPaid
+                                ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
+                                : 'PAID')
+                            : 'PENDING',
                         style: TextStyle(
                           color: isPaid ? AppColors.paid : AppColors.pending,
                           fontSize: 10,
@@ -718,7 +722,7 @@ class _BillingTabState extends State<BillingTab> {
                         context: context,
                         customer: customer,
                         monthYear: monthKey,
-                        amount: payment.amount,
+                        amount: GymService().pendingAmountOf(payment),
                       );
                     },
                     style: OutlinedButton.styleFrom(

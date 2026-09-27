@@ -87,7 +87,10 @@ class PaymentRecord {
   final String customerId;
   /// Format: "YYYY-MM", e.g. "2026-09"
   final String monthYear;
+  /// Amount actually paid so far.
   final double amount;
+  /// Full fee for this cycle. Legacy records default to [amount] (fully paid).
+  final double totalDue;
   final PaymentStatus status;
   final PaymentMethod? method;
   final DateTime? paidAt;
@@ -108,6 +111,7 @@ class PaymentRecord {
     required this.customerId,
     required this.monthYear,
     required this.amount,
+    this.totalDue = 0.0,
     this.status = PaymentStatus.pending,
     this.method,
     this.paidAt,
@@ -120,6 +124,14 @@ class PaymentRecord {
   });
 
   bool get isPaid => status == PaymentStatus.paid;
+
+  /// Remaining fee still owed on a partially paid cycle.
+  double get balanceDue => (totalDue - amount) > 0.005 ? totalDue - amount : 0.0;
+
+  bool get isPartiallyPaid => isPaid && balanceDue > 0;
+
+  /// Amount to show when a single figure is displayed: paid → collected, pending → fee.
+  double get displayAmount => isPaid ? amount : totalDue;
 
   DateTime get effectiveStartDate {
     if (startDate != null) return startDate!;
@@ -152,6 +164,7 @@ class PaymentRecord {
     String? customerId,
     String? monthYear,
     double? amount,
+    double? totalDue,
     PaymentStatus? status,
     PaymentMethod? method,
     DateTime? paidAt,
@@ -167,6 +180,7 @@ class PaymentRecord {
       customerId: customerId ?? this.customerId,
       monthYear: monthYear ?? this.monthYear,
       amount: amount ?? this.amount,
+      totalDue: totalDue ?? this.totalDue,
       status: status ?? this.status,
       method: method ?? this.method,
       paidAt: paidAt ?? this.paidAt,
@@ -185,6 +199,7 @@ class PaymentRecord {
       'customerId': customerId,
       'monthYear': monthYear,
       'amount': amount,
+      'totalDue': totalDue,
       'status': status.name,
       'method': method?.name,
       'paidAt': paidAt?.toIso8601String(),
@@ -203,6 +218,8 @@ class PaymentRecord {
       customerId: map['customerId'] as String? ?? '',
       monthYear: map['monthYear'] as String? ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      totalDue: (map['totalDue'] as num?)?.toDouble() ??
+          (map['amount'] as num?)?.toDouble() ?? 0.0,
       status: PaymentStatus.fromString(map['status'] as String?),
       method: map['method'] != null
           ? PaymentMethod.fromString(map['method'] as String?)
