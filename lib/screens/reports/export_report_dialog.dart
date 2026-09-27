@@ -74,7 +74,7 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
       final join = GymDateUtils.formatDate(m.customer.joinDate);
       for (final r in m.pendingRecords) {
         final monthStr = GymDateUtils.formatMonthYearKey(r.monthYear);
-        csvBuf.writeln('"$name","$phone","$join","$monthStr",${r.amount.toStringAsFixed(2)},"Pending"');
+        csvBuf.writeln('"$name","$phone","$join","$monthStr",${gym.pendingAmountOf(r).toStringAsFixed(2)},"Pending"');
       }
     }
     _csvContent = csvBuf.toString();

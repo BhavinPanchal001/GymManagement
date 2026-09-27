@@ -55,6 +55,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   late PaymentMethod _selectedMethod;
   late DateTime _selectedDate;
   late int _selectedDurationMonths;
+  late double _totalDue;
   late DateTime _startDate;
   late DateTime _endDate;
   late bool _isCurrentlyActive;
@@ -80,13 +81,17 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         : widget.customer.planDurationMonths;
     _selectedDurationMonths = initialDuration;
 
-    final initialAmount = widget.currentRecord.amount > 0
-        ? widget.currentRecord.amount
+    _totalDue = widget.currentRecord.totalDue > 0
+        ? widget.currentRecord.totalDue
         : GymService().settings.getPriceForDuration(widget.customer.planType, _selectedDurationMonths);
+    final initialAmount = widget.currentRecord.isPaid
+        ? widget.currentRecord.amount
+        : _totalDue;
 
     _amountController = TextEditingController(
       text: initialAmount.toInt().toString(),
     );
+    _amountController.addListener(() => setState(() {}));
     _refController = TextEditingController(text: widget.currentRecord.transactionRef ?? '');
     _notesController = TextEditingController(text: widget.currentRecord.notes ?? '');
     _selectedMethod = widget.currentRecord.method ?? PaymentMethod.gpay;
@@ -221,6 +226,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       monthYear: widget.monthYear,
       method: _selectedMethod,
       amount: amount,
+      totalDue: _totalDue,
       durationMonths: _selectedDurationMonths,
       startDate: _startDate,
       endDate: _endDate,
@@ -245,9 +251,39 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     }
   }
 
+  Future<void> _collectBalance() async {
+    final balance = widget.currentRecord.balanceDue;
+    if (balance <= 0) return;
+
+    setState(() => _isLoading = true);
+    final bill = await GymService().collectBalance(
+      paymentId: widget.currentRecord.id,
+      amount: balance,
+      method: _selectedMethod,
+      paidAt: _selectedDate,
+      notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
+    );
+
+    setState(() => _isLoading = false);
+    if (mounted) {
+      Navigator.pop(context, bill);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Balance collected & Bill created for ${widget.customer.name}!',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: AppColors.paid,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _revertPayment() async {
     setState(() => _isLoading = true);
-    await GymService().revertPaymentToPending(widget.customer.id, widget.monthYear);
+    await GymService().revertPayment(widget.currentRecord.id);
     setState(() => _isLoading = false);
     if (mounted) {
       Navigator.pop(context, true);
@@ -396,9 +432,25 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             _buildDurationPackageSelector(currency),
             const SizedBox(height: 18),
 
+            // Total due (plan fee / package price, read-only)
+            Row(
+              children: [
+                Text(
+                  'Total Due',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                Text(
+                  GymDateUtils.formatCurrency(_totalDue, symbol: currency),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
             // Amount field
             Text(
-              'Payment Amount',
+              'Amount Paid Now',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -417,6 +469,35 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 hintText: 'Enter amount',
               ),
             ),
+            Builder(builder: (context) {
+              final amountNow = double.tryParse(_amountController.text.trim()) ?? 0;
+              final balance = _totalDue - amountNow;
+              if (balance <= 0.005) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  children: [
+                    Text(
+                      'Balance: ${GymDateUtils.formatCurrency(balance, symbol: currency)}',
+                      style: TextStyle(color: AppColors.pending, fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.pending.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.pending.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(
+                        'Will be recorded as PARTIAL payment',
+                        style: TextStyle(color: AppColors.pending, fontSize: 10, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
             const SizedBox(height: 20),
 
             // Payment Mode selector
@@ -574,7 +655,11 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                           const Icon(Icons.check_circle_rounded, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            isAlreadyPaid ? 'Update Payment Record' : 'Confirm & Mark as Paid',
+                            isAlreadyPaid
+                                ? 'Update Payment Record'
+                                : ((double.tryParse(_amountController.text.trim()) ?? 0) + 0.005 < _totalDue
+                                    ? 'Record Partial Payment'
+                                    : 'Confirm & Mark as Paid'),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -621,6 +706,30 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             ],
 
             if (isAlreadyPaid) ...[
+              if (widget.currentRecord.balanceDue > 0) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _collectBalance,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.pending,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.payments_rounded, size: 20),
+                    label: Text(
+                      'Collect Balance ${GymDateUtils.formatCurrency(widget.currentRecord.balanceDue, symbol: currency)}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
@@ -648,6 +757,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 ),
               ),
               const SizedBox(height: 8),
+              if (!widget.currentRecord.id.startsWith('pending_'))
               Center(
                 child: TextButton.icon(
                   onPressed: _isLoading ? null : _revertPayment,
@@ -1023,6 +1133,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   onTap: () {
                     setState(() {
                       _selectedDurationMonths = pkg.months;
+                      _totalDue = pkg.price;
                       _amountController.text = pkg.price.toInt().toString();
                       _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
                     });
