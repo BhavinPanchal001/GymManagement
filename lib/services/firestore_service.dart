@@ -165,7 +165,7 @@ class FirestoreService {
       for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final record = PaymentRecord.fromMap(data);
-        map["${record.customerId}_${record.monthYear}"] = record;
+        map[record.id.isNotEmpty ? record.id : doc.id] = record;
       }
       onDataChanged?.call(paymentMap: map);
     }, onError: (e) {
@@ -184,7 +184,7 @@ class FirestoreService {
       for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final record = BillRecord.fromMap(data);
-        map["${record.customerId}_${record.monthYear}"] = record;
+        map[record.id.isNotEmpty ? record.id : doc.id] = record;
       }
       onDataChanged?.call(billsMap: map);
     }, onError: (e) {
@@ -314,8 +314,7 @@ class FirestoreService {
   /// Upsert a single payment record.
   Future<void> upsertPayment(PaymentRecord record) async {
     try {
-      final docId = "${record.customerId}_${record.monthYear}";
-      await _paymentsCol?.doc(docId).set(record.toMap());
+      await _paymentsCol?.doc(record.id).set(record.toMap());
     } catch (e) {
       debugPrint('FirestoreService: upsertPayment error: $e');
     }
@@ -329,8 +328,7 @@ class FirestoreService {
       for (final chunk in chunks) {
         final batch = _firestore!.batch();
         for (final record in chunk) {
-          final docId = "${record.customerId}_${record.monthYear}";
-          batch.set(_paymentsCol!.doc(docId), record.toMap());
+          batch.set(_paymentsCol!.doc(record.id), record.toMap());
         }
         await batch.commit();
       }
@@ -339,10 +337,9 @@ class FirestoreService {
     }
   }
 
-  /// Delete a payment record.
-  Future<void> deletePayment(String customerId, String monthYear) async {
+  /// Delete a payment record by document id.
+  Future<void> deletePayment(String docId) async {
     try {
-      final docId = "${customerId}_$monthYear";
       await _paymentsCol?.doc(docId).delete();
     } catch (e) {
       debugPrint('FirestoreService: deletePayment error: $e');
@@ -352,17 +349,32 @@ class FirestoreService {
   /// Upsert a single bill record.
   Future<void> upsertBill(BillRecord record) async {
     try {
-      final docId = "${record.customerId}_${record.monthYear}";
-      await _billsCol?.doc(docId).set(record.toMap());
+      await _billsCol?.doc(record.id).set(record.toMap());
     } catch (e) {
       debugPrint('FirestoreService: upsertBill error: $e');
     }
   }
 
-  /// Delete a bill record.
-  Future<void> deleteBill(String customerId, String monthYear) async {
+  /// Batch upsert multiple bill records.
+  Future<void> batchUpsertBills(List<BillRecord> records) async {
+    if (records.isEmpty) return;
     try {
-      final docId = "${customerId}_$monthYear";
+      final chunks = _chunkList(records, 450);
+      for (final chunk in chunks) {
+        final batch = _firestore!.batch();
+        for (final record in chunk) {
+          batch.set(_billsCol!.doc(record.id), record.toMap());
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      debugPrint('FirestoreService: batchUpsertBills error: $e');
+    }
+  }
+
+  /// Delete a bill record by document id.
+  Future<void> deleteBill(String docId) async {
+    try {
       await _billsCol?.doc(docId).delete();
     } catch (e) {
       debugPrint('FirestoreService: deleteBill error: $e');
@@ -447,8 +459,7 @@ class FirestoreService {
       for (final chunk in billChunks) {
         final batch = _firestore!.batch();
         for (final bill in chunk) {
-          final docId = "${bill.customerId}_${bill.monthYear}";
-          batch.set(_billsCol!.doc(docId), bill.toMap());
+          batch.set(_billsCol!.doc(bill.id), bill.toMap());
         }
         await batch.commit();
       }
