@@ -81,12 +81,29 @@ void main() {
       'startDate': '2026-06-10T00:00:00.000',
       'endDate': '2026-09-09T00:00:00.000',
     };
+    // A legacy bill whose payment no longer exists — nothing can link to it.
+    final orphanBill = {
+      'id': 'bill_cust_m1_2026-12',
+      'billNumber': 'BILL-202612-0001',
+      'customerId': 'cust_m1',
+      'customerName': 'Legacy Member',
+      'customerPhone': '9800000001',
+      'planType': 'normal',
+      'monthYear': '2026-12',
+      'amount': 400.0,
+      'method': 'cash',
+      'paidAt': '2026-12-05T10:00:00.000',
+      'gymName': 'Gym',
+      'issuedAt': '2026-12-05T10:00:00.000',
+      'status': 'PAID',
+      'durationMonths': 1,
+    };
 
     SharedPreferences.setMockInitialValues({
       'gym_customers_v1': json.encode([customer.toMap()]),
       'gym_payments_v1':
           json.encode([parent, placeholder1, placeholder2, storedPending]),
-      'gym_bills_v1': json.encode([legacyBill]),
+      'gym_bills_v1': json.encode([legacyBill, orphanBill]),
     });
 
     final gym = GymService();
@@ -119,5 +136,12 @@ void main() {
     final octRecord = gym.getPaymentRecord('cust_m1', '2026-10');
     expect(octRecord.isPaid, isFalse);
     expect(octRecord.id, startsWith('pending_'));
+
+    // A bill with no linkable payment is stamped 'legacy-unlinked' so the
+    // migration detector goes quiet and does not re-run on every snapshot.
+    final orphan = gym.billsMap['bill_cust_m1_2026-12'];
+    expect(orphan, isNotNull);
+    expect(orphan!.paymentId, equals('legacy-unlinked'));
+    expect(gym.hasLegacyPaymentShapes, isFalse);
   });
 }

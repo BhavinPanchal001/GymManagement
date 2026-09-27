@@ -1238,6 +1238,105 @@ class GymService extends ChangeNotifier {
     return bill;
   }
 
+  /// Updates an existing paid payment in place (same record id) and syncs its
+  /// primary (non-BALANCE) bill in place, keeping the bill's id and billNumber.
+  /// PAID BALANCE bills are untouched: the primary bill's amount becomes the
+  /// record's paid amount minus what BALANCE bills already collected.
+  Future<BillRecord> updatePayment({
+    required String paymentId,
+    double? amount,
+    double? totalDue,
+    PaymentMethod? method,
+    DateTime? paidAt,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? durationMonths,
+    String? notes,
+    String? transactionRef,
+  }) async {
+    final record = _paymentMap[paymentId];
+    if (record == null || !record.isPaid) {
+      throw ArgumentError('No paid payment found for id $paymentId');
+    }
+
+    final newStart = startDate ?? record.startDate;
+    final newDuration = durationMonths ?? record.durationMonths;
+    final DateTime? newEnd;
+    if (endDate != null) {
+      newEnd = endDate;
+    } else if (startDate != null || durationMonths != null) {
+      newEnd = newStart != null
+          ? GymDateUtils.computeAnniversaryEndDate(newStart, newDuration)
+          : null;
+    } else {
+      newEnd = record.endDate;
+    }
+    final newMonthYear = newStart != null
+        ? GymDateUtils.toMonthKey(newStart)
+        : record.monthYear;
+
+    final updated = record.copyWith(
+      amount: amount,
+      totalDue: totalDue,
+      method: method,
+      paidAt: paidAt,
+      startDate: newStart,
+      endDate: newEnd,
+      durationMonths: durationMonths,
+      notes: notes,
+      transactionRef: transactionRef,
+      monthYear: newMonthYear,
+    );
+    _paymentMap[paymentId] = updated;
+
+    final customer = getCustomerById(record.customerId);
+    BillRecord bill;
+    final existing = getBillForPayment(paymentId);
+    if (existing != null) {
+      var balanceCollected = 0.0;
+      for (final b in _billsMap.values) {
+        if (b.paymentId == paymentId &&
+            b.status == 'PAID' &&
+            b.billType == 'BALANCE') {
+          balanceCollected += b.amount;
+        }
+      }
+      final primaryAmount = updated.amount - balanceCollected;
+      bill = existing.copyWith(
+        amount: primaryAmount > 0 ? primaryAmount : 0.0,
+        monthYear: updated.monthYear,
+        billType: updated.balanceDue > 0 ? 'PARTIAL' : 'FULL',
+        method: updated.method ?? existing.method,
+        paidAt: updated.paidAt ?? existing.paidAt,
+        startDate: updated.startDate,
+        endDate: updated.endDate,
+        durationMonths: updated.durationMonths,
+        coveragePeriod: updated.formattedDateRange,
+        notes: updated.notes,
+        transactionRef: updated.transactionRef,
+      );
+      _billsMap[bill.id] = bill;
+    } else {
+      bill = getOrCreateBillForPayment(
+          customer ??
+              Customer(
+                id: record.customerId,
+                name: 'Member',
+                phone: '',
+                joinDate: DateTime.now(),
+              ),
+          updated);
+    }
+
+    notifyListeners();
+    await _savePayments();
+    await _saveBills();
+    await _cloudSavePayment(updated);
+    await _cloudSaveBill(bill);
+
+    return bill;
+  }
+
   /// Removes a payment record entirely (pending state is derived, so nothing
   /// needs to be kept) and marks all of its bills CANCELLED. Bills are never
   /// deleted so bill numbers are never reissued.
@@ -1335,6 +1434,9 @@ class GymService extends ChangeNotifier {
 
   bool _migrating = false;
 
+  @visibleForTesting
+  bool get hasLegacyPaymentShapes => _hasLegacyPaymentShapes();
+
   /// Cheap detection of legacy payment/bill shapes needing migration.
   bool _hasLegacyPaymentShapes() {
     for (final p in _paymentMap.values) {
@@ -1430,7 +1532,7 @@ class GymService extends ChangeNotifier {
             }
           }
           migrated = b.copyWith(
-            paymentId: linked?.id ?? '',
+            paymentId: linked?.id ?? 'legacy-unlinked',
             billType: 'FULL',
           );
           _billsMap[b.id] = migrated;

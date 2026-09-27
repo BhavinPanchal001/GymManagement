@@ -340,6 +340,48 @@ void main() {
     expect(gym.isMonthCoveredByPaidPayment(member.id, '2026-09'), isFalse);
   });
 
+  test('updatePayment edits the record and primary bill in place, no duplicates',
+      () async {
+    final gym = GymService();
+
+    final member = await gym.addCustomer(
+      name: 'Edit Payer',
+      phone: '9876500008',
+      joinDate: DateTime(2026, 5, 1),
+      markAsPaidNow: false,
+    );
+
+    final bill = await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-05',
+      method: PaymentMethod.cash,
+      amount: 1500.0,
+      totalDue: 1500.0,
+      startDate: DateTime(2026, 5, 1),
+      endDate: DateTime(2026, 5, 31),
+      paidAt: DateTime(2026, 5, 1),
+    );
+
+    final updatedBill = await gym.updatePayment(
+      paymentId: bill.paymentId,
+      amount: 1200.0,
+      method: PaymentMethod.gpay,
+    );
+
+    // Still exactly one payment record and one PAID bill for it.
+    expect(gym.getPaidPaymentsForCustomer(member.id).length, equals(1));
+    expect(gym.getBillsForPayment(bill.paymentId).length, equals(1));
+    expect(updatedBill.id, equals(bill.id));
+    expect(updatedBill.billNumber, equals(bill.billNumber));
+    expect(updatedBill.amount, equals(1200.0));
+    expect(updatedBill.billType, equals('PARTIAL'));
+    expect(updatedBill.method, equals(PaymentMethod.gpay));
+
+    final record = gym.getPaymentById(bill.paymentId)!;
+    expect(record.amount, equals(1200.0));
+    expect(record.balanceDue, equals(300.0));
+  });
+
   test('Pre-join months return notEnrolled and past months distinguish 0 vs positive attendance', () async {
     final gym = GymService();
     // Member enrolled on September 27, 2026

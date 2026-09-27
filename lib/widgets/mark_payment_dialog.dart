@@ -221,19 +221,34 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
 
     setState(() => _isLoading = true);
 
-    final bill = await GymService().markPaymentAsPaid(
-      customerId: widget.customer.id,
-      monthYear: widget.monthYear,
-      method: _selectedMethod,
-      amount: amount,
-      totalDue: _totalDue,
-      durationMonths: _selectedDurationMonths,
-      startDate: _startDate,
-      endDate: _endDate,
-      notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
-      transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
-      paidAt: _selectedDate,
-    );
+    final isUpdate = widget.currentRecord.isPaid &&
+        !widget.currentRecord.id.startsWith('pending_');
+    final bill = isUpdate
+        ? await GymService().updatePayment(
+            paymentId: widget.currentRecord.id,
+            amount: amount,
+            totalDue: _totalDue,
+            method: _selectedMethod,
+            paidAt: _selectedDate,
+            startDate: _startDate,
+            endDate: _endDate,
+            durationMonths: _selectedDurationMonths,
+            notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+            transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
+          )
+        : await GymService().markPaymentAsPaid(
+            customerId: widget.customer.id,
+            monthYear: widget.monthYear,
+            method: _selectedMethod,
+            amount: amount,
+            totalDue: _totalDue,
+            durationMonths: _selectedDurationMonths,
+            startDate: _startDate,
+            endDate: _endDate,
+            notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+            transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
+            paidAt: _selectedDate,
+          );
 
     setState(() => _isLoading = false);
     if (mounted) {
@@ -241,7 +256,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Payment marked as Paid & Bill created for ${widget.customer.name}!',
+            isUpdate
+                ? 'Payment updated for ${widget.customer.name}!'
+                : 'Payment marked as Paid & Bill created for ${widget.customer.name}!',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: AppColors.paid,
