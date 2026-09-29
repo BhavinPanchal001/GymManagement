@@ -19,6 +19,10 @@ class PaymentReceiptPdfService {
   static const PdfColor accentBlue = PdfColor.fromInt(0xFF2563EB);
   static const PdfColor paidGreen = PdfColor.fromInt(0xFF16A34A);
   static const PdfColor paidBg = PdfColor.fromInt(0xFFDCFCE7);
+  static const PdfColor cancelRed = PdfColor.fromInt(0xFFDC2626);
+  static const PdfColor cancelBg = PdfColor.fromInt(0xFFFEE2E2);
+  static const PdfColor partialAmber = PdfColor.fromInt(0xFFB45309);
+  static const PdfColor partialBg = PdfColor.fromInt(0xFFFEF3C7);
   static const PdfColor slateDark = PdfColor.fromInt(0xFF1E293B);
   static const PdfColor slateMedium = PdfColor.fromInt(0xFF475569);
   static const PdfColor slateLight = PdfColor.fromInt(0xFF64748B);
@@ -127,6 +131,37 @@ class PaymentReceiptPdfService {
             ? effectiveBill.gymName.trim()
             : 'GYM & FITNESS CLUB');
     effectiveBill = effectiveBill.copyWith(gymName: currentGymName);
+
+    // Installment math: plan total vs amount received on THIS receipt.
+    final gym = GymService();
+    final payment = effectiveBill.paymentId.isNotEmpty
+        ? gym.getPaymentById(effectiveBill.paymentId)
+        : null;
+    final planTotal = (payment != null && payment.totalDue > 0)
+        ? payment.totalDue
+        : effectiveBill.amount;
+    // PAID bills on the same payment issued before this one.
+    final paidEarlier = payment == null
+        ? 0.0
+        : gym.getBillsForPayment(payment.id)
+            .where((b) =>
+                b.id != effectiveBill.id &&
+                b.issuedAt.isBefore(effectiveBill.issuedAt))
+            .fold<double>(0.0, (s, b) => s + b.amount);
+    final balanceAfter =
+        (planTotal - paidEarlier - effectiveBill.amount).clamp(0.0, double.infinity);
+    final isCancelled = effectiveBill.status == 'CANCELLED';
+    final isPartial = effectiveBill.billType == 'PARTIAL';
+    final isBalance = effectiveBill.billType == 'BALANCE';
+    final isInstallment = isPartial || isBalance;
+    final badgeLabel = isCancelled
+        ? 'CANCELLED'
+        : (isPartial
+            ? 'PARTIAL PAYMENT'
+            : (isBalance ? 'BALANCE RECEIVED' : 'PAYMENT RECEIVED'));
+    final badgeColor =
+        isCancelled ? cancelRed : (isPartial ? partialAmber : paidGreen);
+    final badgeBg = isCancelled ? cancelBg : (isPartial ? partialBg : paidBg);
 
     final pdf = pw.Document(
       title: 'Payment_Receipt_${effectiveBill.billNumber}',
@@ -317,9 +352,9 @@ class PaymentReceiptPdfService {
                         pw.Container(
                           padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: pw.BoxDecoration(
-                            color: paidBg,
+                            color: badgeBg,
                             borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                            border: pw.Border.all(color: paidGreen, width: 1.2),
+                            border: pw.Border.all(color: badgeColor, width: 1.2),
                           ),
                           child: pw.Row(
                             mainAxisSize: pw.MainAxisSize.min,
@@ -327,18 +362,18 @@ class PaymentReceiptPdfService {
                               pw.Container(
                                 width: 7,
                                 height: 7,
-                                decoration: const pw.BoxDecoration(
-                                  color: paidGreen,
+                                decoration: pw.BoxDecoration(
+                                  color: badgeColor,
                                   shape: pw.BoxShape.circle,
                                 ),
                               ),
                               pw.SizedBox(width: 5),
                               pw.Text(
-                                'PAYMENT RECEIVED',
+                                badgeLabel,
                                 style: pw.TextStyle(
                                   font: effectiveBold,
                                   fontSize: 9.5,
-                                  color: paidGreen,
+                                  color: badgeColor,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -556,6 +591,15 @@ class PaymentReceiptPdfService {
                                       : 'Monthly Membership Subscription',
                                   style: pw.TextStyle(font: effectiveRegular, fontSize: 8, color: slateLight),
                                 ),
+                                if (isInstallment) ...[
+                                  pw.SizedBox(height: 2),
+                                  pw.Text(
+                                    isPartial
+                                        ? sanitize('Partial payment — balance ${formatMoney(balanceAfter)} pending')
+                                        : 'Balance payment for earlier partial receipt',
+                                    style: pw.TextStyle(font: effectiveRegular, fontSize: 8, color: partialAmber),
+                                  ),
+                                ],
                                 if (presentDays > 0) ...[
                                   pw.SizedBox(height: 2),
                                   pw.Text(
@@ -599,7 +643,7 @@ class PaymentReceiptPdfService {
                           pw.Expanded(
                             flex: 2,
                             child: pw.Text(
-                              formatMoney(effectiveBill.amount),
+                              formatMoney(planTotal),
                               textAlign: pw.TextAlign.right,
                               style: pw.TextStyle(font: effectiveBold, fontSize: 10, color: primaryNavy),
                             ),
@@ -662,9 +706,13 @@ class PaymentReceiptPdfService {
                         pw.Container(
                           padding: const pw.EdgeInsets.symmetric(horizontal: 9, vertical: 6),
                           decoration: pw.BoxDecoration(
-                            color: paidBg,
+                            color: isCancelled ? cancelBg : paidBg,
                             borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                            border: pw.Border.all(color: paidGreen.shade(0.3), width: 0.8),
+                            border: pw.Border.all(
+                                color: isCancelled
+                                    ? cancelRed.shade(0.3)
+                                    : paidGreen.shade(0.3),
+                                width: 0.8),
                           ),
                           child: pw.Row(
                             children: [
@@ -673,17 +721,19 @@ class PaymentReceiptPdfService {
                                 style: pw.TextStyle(
                                   font: effectiveBold,
                                   fontSize: 10,
-                                  color: paidGreen,
+                                  color: isCancelled ? cancelRed : paidGreen,
                                 ),
                               ),
                               pw.SizedBox(width: 6),
                               pw.Expanded(
                                 child: pw.Text(
-                                  'Payment of ${formatMoney(effectiveBill.amount)} confirmed received via ${effectiveBill.method.label} on $paidDateTime.',
+                                  isCancelled
+                                      ? 'This receipt was cancelled and is no longer valid.'
+                                      : 'Payment of ${formatMoney(effectiveBill.amount)} confirmed received via ${effectiveBill.method.label} on $paidDateTime.${isInstallment && balanceAfter > 0 ? ' Remaining balance: ${formatMoney(balanceAfter)}.' : ''}',
                                   style: pw.TextStyle(
                                     font: effectiveMedium,
                                     fontSize: 8,
-                                    color: paidGreen,
+                                    color: isCancelled ? cancelRed : paidGreen,
                                   ),
                                 ),
                               ),
@@ -708,11 +758,19 @@ class PaymentReceiptPdfService {
                       ),
                       child: pw.Column(
                         children: [
-                          _buildSummaryRow('Subtotal:', formatMoney(effectiveBill.amount), effectiveRegular, effectiveMedium),
+                          _buildSummaryRow('Subtotal:', formatMoney(planTotal), effectiveRegular, effectiveMedium),
                           pw.SizedBox(height: 4),
                           _buildSummaryRow('Discount / Offer:', formatMoney(0.0), effectiveRegular, effectiveMedium),
                           pw.SizedBox(height: 4),
                           _buildSummaryRow('Taxes / GST:', 'Inclusive', effectiveRegular, effectiveMedium),
+                          if (isInstallment) ...[
+                            if (paidEarlier > 0) ...[
+                              pw.SizedBox(height: 4),
+                              _buildSummaryRow('Paid Earlier:', formatMoney(paidEarlier), effectiveRegular, effectiveMedium),
+                            ],
+                            pw.SizedBox(height: 4),
+                            _buildSummaryRow('Balance Due:', formatMoney(balanceAfter), effectiveRegular, effectiveMedium),
+                          ],
                           pw.SizedBox(height: 6),
                           pw.Container(height: 1, color: borderLight),
                           pw.SizedBox(height: 6),
@@ -727,7 +785,7 @@ class PaymentReceiptPdfService {
                               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                               children: [
                                 pw.Text(
-                                  'TOTAL PAID:',
+                                  isInstallment ? 'PAID NOW:' : 'TOTAL PAID:',
                                   style: pw.TextStyle(
                                     font: effectiveBold,
                                     fontSize: 10,

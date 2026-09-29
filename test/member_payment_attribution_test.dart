@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gym/models/attendance.dart';
 import 'package:gym/models/payment.dart';
 import 'package:gym/services/gym_service.dart';
+import 'package:gym/services/payment_receipt_pdf_service.dart';
 import 'package:gym/utils/date_utils.dart';
 
 void main() {
@@ -465,5 +466,36 @@ void main() {
     expect(gym.getBillsForPayment(firstBill.paymentId).length, equals(2));
     expect(
         gym.getAllBillsForPayment(firstBill.paymentId).length, equals(2));
+  });
+
+  test('PDF receipt for a partial bill generates non-empty bytes', () async {
+    final gym = GymService();
+
+    final member = await gym.addCustomer(
+      name: 'Pdf Partial Member',
+      phone: '9876500010',
+      joinDate: DateTime(2026, 4, 1),
+      markAsPaidNow: false,
+    );
+
+    final bill = await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-04',
+      method: PaymentMethod.cash,
+      amount: 500.0,
+      totalDue: 1500.0,
+      durationMonths: 3,
+      startDate: DateTime(2026, 4, 1),
+      endDate: DateTime(2026, 6, 30),
+      paidAt: DateTime(2026, 4, 1),
+    );
+    expect(bill.billType, equals('PARTIAL'));
+
+    final bytes = await PaymentReceiptPdfService().generateReceiptPdf(
+      bill: bill,
+      customer: member,
+      settings: gym.settings,
+    );
+    expect(bytes, isNotEmpty);
   });
 }
