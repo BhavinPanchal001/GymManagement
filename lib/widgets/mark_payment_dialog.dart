@@ -6,6 +6,7 @@ import '../services/gym_service.dart';
 import '../services/whatsapp_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/date_utils.dart';
+import 'bill_history_sheet.dart';
 import 'bill_receipt_dialog.dart';
 
 class MarkPaymentDialog extends StatefulWidget {
@@ -753,8 +754,11 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    final bill = GymService().getOrCreateBillForPayment(widget.customer, widget.currentRecord);
-                    BillReceiptDialog.show(context, bill: bill);
+                    BillHistorySheet.showForPayment(
+                      context,
+                      customer: widget.customer,
+                      payment: widget.currentRecord,
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     backgroundColor: AppColors.paid.withValues(alpha: 0.1),

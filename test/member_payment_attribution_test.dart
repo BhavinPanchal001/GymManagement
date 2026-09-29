@@ -406,4 +406,64 @@ void main() {
     final sepStage = gym.getMemberLifecycleStage(member, '2026-09');
     expect(sepStage.isNotEnrolled, isFalse);
   });
+
+  test('getAllBillsForCustomer includes cancelled and balance bills newest first',
+      () async {
+    final gym = GymService();
+
+    final member = await gym.addCustomer(
+      name: 'Bill History Member',
+      phone: '9876500009',
+      joinDate: DateTime(2026, 2, 1),
+      markAsPaidNow: false,
+    );
+
+    // Partial payment, then a balance collection on the same payment.
+    final firstBill = await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-02',
+      method: PaymentMethod.cash,
+      amount: 500.0,
+      totalDue: 1500.0,
+      startDate: DateTime(2026, 2, 1),
+      endDate: DateTime(2026, 2, 28),
+      paidAt: DateTime(2026, 2, 1),
+    );
+    await gym.collectBalance(
+      paymentId: firstBill.paymentId,
+      amount: 1000.0,
+      method: PaymentMethod.gpay,
+    );
+
+    // A second cycle that is then reverted: its bill stays as CANCELLED.
+    final secondBill = await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-03',
+      method: PaymentMethod.upi,
+      amount: 1500.0,
+      totalDue: 1500.0,
+      startDate: DateTime(2026, 3, 1),
+      endDate: DateTime(2026, 3, 31),
+      paidAt: DateTime(2026, 3, 1),
+    );
+    await gym.revertPayment(secondBill.paymentId);
+
+    final allBills = gym.getAllBillsForCustomer(member.id);
+    expect(allBills.length, equals(3));
+    expect(allBills.any((b) => b.status == 'CANCELLED'), isTrue);
+    expect(allBills.any((b) => b.billType == 'BALANCE'), isTrue);
+    expect(allBills.any((b) => b.billType == 'PARTIAL'), isTrue);
+    for (var i = 0; i + 1 < allBills.length; i++) {
+      expect(
+        allBills[i].issuedAt.isBefore(allBills[i + 1].issuedAt),
+        isFalse,
+        reason: 'Bills must be newest first',
+      );
+    }
+
+    // PAID-only view still sees 2 bills on the first payment.
+    expect(gym.getBillsForPayment(firstBill.paymentId).length, equals(2));
+    expect(
+        gym.getAllBillsForPayment(firstBill.paymentId).length, equals(2));
+  });
 }

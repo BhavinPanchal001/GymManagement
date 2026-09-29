@@ -8,7 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
-import '../../widgets/bill_receipt_dialog.dart';
+import '../../widgets/bill_history_sheet.dart';
 import '../customers/customer_detail_screen.dart';
 import '../reports/pending_payments_report_screen.dart';
 import '../reports/gym_statistics_screen.dart';
@@ -749,10 +749,11 @@ class _BillingTabState extends State<BillingTab> {
                 ],
                 if (isPaid) ...[
                   OutlinedButton.icon(
-                    onPressed: () {
-                      final bill = GymService().getOrCreateBillForPayment(customer, payment);
-                      BillReceiptDialog.show(context, bill: bill);
-                    },
+                    onPressed: () => BillHistorySheet.showForPayment(
+                      context,
+                      customer: customer,
+                      payment: payment,
+                    ),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: AppColors.paid.withValues(alpha: 0.1),
                       foregroundColor: AppColors.paid,

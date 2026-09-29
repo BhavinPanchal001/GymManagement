@@ -977,6 +977,22 @@ class GymService extends ChangeNotifier {
     return list;
   }
 
+  /// Every bill ever issued to a customer (PAID and CANCELLED), newest first.
+  List<BillRecord> getAllBillsForCustomer(String customerId) {
+    final list =
+        _billsMap.values.where((b) => b.customerId == customerId).toList();
+    list.sort((a, b) => b.issuedAt.compareTo(a.issuedAt));
+    return list;
+  }
+
+  /// Every bill for a payment (PAID and CANCELLED), newest first.
+  List<BillRecord> getAllBillsForPayment(String paymentId) {
+    final list =
+        _billsMap.values.where((b) => b.paymentId == paymentId).toList();
+    list.sort((a, b) => b.issuedAt.compareTo(a.issuedAt));
+    return list;
+  }
+
   /// Primary bill covering a customer+month (UI compatibility shim).
   BillRecord? getBill(String customerId, String monthYear) {
     final p = getPaymentCoveringMonth(customerId, monthYear);
