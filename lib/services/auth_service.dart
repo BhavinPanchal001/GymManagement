@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'gym_service.dart';
 
 class AuthService {
   AuthService._internal();
@@ -10,6 +11,10 @@ class AuthService {
   static const String _keyProfilePhoto = 'gym_auth_profile_photo';
   static const String _keyProfileDisplayName = 'gym_auth_profile_display_name';
   static const String _keyProfilePhone = 'gym_auth_profile_phone';
+
+  String _photoKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_profile_photo' : _keyProfilePhoto;
+  String _nameKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_profile_display_name' : _keyProfileDisplayName;
+  String _phoneKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_profile_phone' : _keyProfilePhone;
 
   final ValueNotifier<int> profileNotifier = ValueNotifier<int>(0);
 
@@ -30,20 +35,29 @@ class AuthService {
   Future<void> init() async {
     if (_isInitialized) return;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _cachedPhotoPath = prefs.getString(_keyProfilePhoto);
-      _cachedDisplayName = prefs.getString(_keyProfileDisplayName);
-      _cachedPhone = prefs.getString(_keyProfilePhone);
+      final user = _auth?.currentUser;
+      if (user != null) {
+        final prefs = await SharedPreferences.getInstance();
+        _cachedDisplayName = user.displayName ?? prefs.getString(_nameKey(user.uid));
+        _cachedPhotoPath = user.photoURL ?? prefs.getString(_photoKey(user.uid));
+        _cachedPhone = user.phoneNumber ?? prefs.getString(_phoneKey(user.uid));
+      } else {
+        _cachedDisplayName = null;
+        _cachedPhotoPath = null;
+        _cachedPhone = null;
+      }
 
       // Listen to auth user profile changes from Firebase
-      _auth?.userChanges().listen((user) {
+      _auth?.userChanges().listen((user) async {
         if (user != null) {
-          if (user.displayName != null && user.displayName!.isNotEmpty) {
-            _cachedDisplayName = user.displayName;
-          }
-          if (user.photoURL != null && user.photoURL!.isNotEmpty) {
-            _cachedPhotoPath = user.photoURL;
-          }
+          final prefs = await SharedPreferences.getInstance();
+          _cachedDisplayName = user.displayName ?? prefs.getString(_nameKey(user.uid));
+          _cachedPhotoPath = user.photoURL ?? prefs.getString(_photoKey(user.uid));
+          _cachedPhone = user.phoneNumber ?? prefs.getString(_phoneKey(user.uid));
+        } else {
+          _cachedDisplayName = null;
+          _cachedPhotoPath = null;
+          _cachedPhone = null;
         }
         _notifyProfileChanged();
       });
@@ -82,22 +96,26 @@ class AuthService {
 
   /// Current profile photo path or URL (or fitness avatar preset)
   String? get profilePhotoPath {
-    if (_cachedPhotoPath != null && _cachedPhotoPath!.trim().isNotEmpty) {
-      return _cachedPhotoPath!.trim();
-    }
     final firebasePhoto = currentUser?.photoURL;
     if (firebasePhoto != null && firebasePhoto.trim().isNotEmpty) {
       return firebasePhoto.trim();
+    }
+    if (_cachedPhotoPath != null && _cachedPhotoPath!.trim().isNotEmpty) {
+      return _cachedPhotoPath!.trim();
     }
     return null;
   }
 
   /// Current profile phone number
   String? get phoneNumber {
+    final firebasePhone = currentUser?.phoneNumber;
+    if (firebasePhone != null && firebasePhone.trim().isNotEmpty) {
+      return firebasePhone.trim();
+    }
     if (_cachedPhone != null && _cachedPhone!.trim().isNotEmpty) {
       return _cachedPhone!.trim();
     }
-    return currentUser?.phoneNumber;
+    return null;
   }
 
   /// Current email address
@@ -218,29 +236,30 @@ class AuthService {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final uid = currentUser?.uid;
 
       if (displayName != null) {
         _cachedDisplayName = displayName.trim();
-        await prefs.setString(_keyProfileDisplayName, _cachedDisplayName!);
+        await prefs.setString(_nameKey(uid), _cachedDisplayName!);
       }
 
       if (photoPath != null) {
         if (photoPath.trim().isEmpty) {
           _cachedPhotoPath = null;
-          await prefs.remove(_keyProfilePhoto);
+          await prefs.remove(_photoKey(uid));
         } else {
           _cachedPhotoPath = photoPath.trim();
-          await prefs.setString(_keyProfilePhoto, _cachedPhotoPath!);
+          await prefs.setString(_photoKey(uid), _cachedPhotoPath!);
         }
       }
 
       if (phone != null) {
         if (phone.trim().isEmpty) {
           _cachedPhone = null;
-          await prefs.remove(_keyProfilePhone);
+          await prefs.remove(_phoneKey(uid));
         } else {
           _cachedPhone = phone.trim();
-          await prefs.setString(_keyProfilePhone, _cachedPhone!);
+          await prefs.setString(_phoneKey(uid), _cachedPhone!);
         }
       }
 
@@ -263,8 +282,14 @@ class AuthService {
   /// Sign out the current user.
   Future<void> signOut() async {
     try {
+      final uid = currentUser?.uid;
       await _requireAuth.signOut();
       final prefs = await SharedPreferences.getInstance();
+      if (uid != null) {
+        await prefs.remove(_photoKey(uid));
+        await prefs.remove(_nameKey(uid));
+        await prefs.remove(_phoneKey(uid));
+      }
       await prefs.remove(_keyProfilePhoto);
       await prefs.remove(_keyProfileDisplayName);
       await prefs.remove(_keyProfilePhone);
@@ -272,6 +297,7 @@ class AuthService {
       _cachedDisplayName = null;
       _cachedPhone = null;
       _notifyProfileChanged();
+      await GymService().detachUser(clearMemory: true);
     } catch (e) {
       debugPrint('AuthService.signOut error: $e');
       rethrow;

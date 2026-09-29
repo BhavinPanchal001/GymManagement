@@ -485,7 +485,7 @@ void main() {
 
     // Enter name & phone
     await tester.enterText(find.widgetWithText(TextFormField, 'e.g. Rahul Sharma'), 'Plan Test User');
-    await tester.enterText(find.widgetWithText(TextFormField, 'e.g. +91 98765 43210'), '+91 95555 66666');
+    await tester.enterText(find.byType(TextFormField).at(1), '9555566666');
 
     // Register Member
     await tester.ensureVisible(find.text('Register Member'));

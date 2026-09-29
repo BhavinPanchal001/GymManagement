@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -15,17 +16,29 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  StreamSubscription<User?>? _authSubscription;
   String? _lastAttachedUserId;
 
-  /// Attach Firestore cloud sync when user logs in.
-  Future<void> _handleAuthStateChange(User? user) async {
-    if (user != null && _lastAttachedUserId != user.uid) {
-      _lastAttachedUserId = user.uid;
-      await GymService().attachUser(user.uid);
-    } else if (user == null && _lastAttachedUserId != null) {
-      _lastAttachedUserId = null;
-      await GymService().detachUser();
-    }
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = AuthService().authStateChanges.listen((user) async {
+      if (user != null) {
+        if (_lastAttachedUserId != user.uid) {
+          _lastAttachedUserId = user.uid;
+          await GymService().attachUser(user.uid);
+        }
+      } else {
+        _lastAttachedUserId = null;
+        await GymService().detachUser(clearMemory: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -129,9 +142,6 @@ class _AuthGateState extends State<AuthGate> {
             ),
           );
         }
-
-        // Trigger Firestore attach/detach based on auth state
-        _handleAuthStateChange(snapshot.data);
 
         // If authenticated, navigate to HomeScreen
         if (snapshot.hasData && snapshot.data != null) {

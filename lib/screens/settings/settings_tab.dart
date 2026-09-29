@@ -137,6 +137,45 @@ class _SettingsTabState extends State<SettingsTab> {
     );
   }
 
+  void _confirmClearAllData() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text('Clear All Gym Data?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        content: Text(
+          'This will permanently delete all members, attendance records, payments, bills, and expenses. Your gym will start completely fresh.\n\nThis action cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.absent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await GymService().clearAllGymData();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('All gym data cleared. Ready for your members!'),
+                  backgroundColor: AppColors.paid,
+                ),
+              );
+            },
+            child: const Text('Clear All Data', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmSignOut() {
     showDialog(
       context: context,
@@ -822,6 +861,21 @@ class _SettingsTabState extends State<SettingsTab> {
                         ],
                       ),
                       const SizedBox(height: 14),
+                      OutlinedButton.icon(
+                        onPressed: _confirmClearAllData,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.absent,
+                          side: BorderSide(color: AppColors.absent.withValues(alpha: 0.5)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        icon: const Icon(Icons.delete_sweep_rounded, size: 18, color: AppColors.absent),
+                        label: const Text(
+                          'Clear All Gym Data (Start Fresh)',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       OutlinedButton.icon(
                         onPressed: _confirmResetData,
                         style: OutlinedButton.styleFrom(

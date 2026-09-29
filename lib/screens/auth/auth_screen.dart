@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/gym_settings.dart';
 import '../../services/auth_service.dart';
 import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
@@ -74,6 +75,9 @@ class _AuthScreenState extends State<AuthScreen>
     });
 
     try {
+      // Clear memory from any previous session before signing in
+      await GymService().detachUser(clearMemory: true);
+
       await AuthService().signInWithEmailAndPassword(
         email: _signInEmailController.text,
         password: _signInPasswordController.text,
@@ -99,19 +103,32 @@ class _AuthScreenState extends State<AuthScreen>
     });
 
     try {
-      await AuthService().signUpWithEmailAndPassword(
+      // Step 1: Ensure previous session memory and legacy cache are completely wiped
+      await GymService().detachUser(clearMemory: true);
+
+      // Step 2: Create new Firebase Auth user
+      final cred = await AuthService().signUpWithEmailAndPassword(
         email: _signUpEmailController.text,
         password: _signUpPasswordController.text,
         displayName: _signUpNameController.text,
         photoPath: _signUpSelectedImagePath,
       );
+
+      final newUserId = cred.user?.uid;
       final gymName = _signUpGymNameController.text.trim();
-      await GymService().updateSettings(
-        GymService().settings.copyWith(
-          gymName: gymName.isNotEmpty ? gymName : GymService().settings.gymName,
-          gymLogoPath: _signUpSelectedImagePath,
-        ),
+      final freshSettings = GymSettings(
+        gymName: gymName.isNotEmpty ? gymName : 'My Gym',
+        gymLogoPath: _signUpSelectedImagePath,
       );
+
+      // Step 3: Attach with isNewUser: true to guarantee completely empty, clean state
+      if (newUserId != null) {
+        await GymService().attachUser(
+          newUserId,
+          isNewUser: true,
+          initialSettings: freshSettings,
+        );
+      }
       // Navigation is automatically handled by AuthGate
     } catch (e) {
       if (mounted) {

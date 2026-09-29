@@ -406,6 +406,25 @@ void main() {
     // is within 3-day grace period if within 3 days, or due
     final sepStage = gym.getMemberLifecycleStage(member, '2026-09');
     expect(sepStage.isNotEnrolled, isFalse);
+
+    // 4. Mark attendance in July 2026 (27 days present)
+    for (int day = 1; day <= 27; day++) {
+      await gym.toggleAttendance(
+        member.id,
+        '2026-07-${day.toString().padLeft(2, '0')}',
+        AttendanceStatus.present,
+      );
+    }
+
+    // Now July 2026 has attendance marked -> MUST be due!
+    final julStageAfterAttendance = gym.getMemberLifecycleStage(member, '2026-07');
+    expect(julStageAfterAttendance, equals(MemberLifecycleStage.due));
+    expect(julStageAfterAttendance.isDue, isTrue);
+    expect(julStageAfterAttendance.isNotEnrolled, isFalse);
+
+    // August 2026 still has 0 attendance -> remains notEnrolled
+    final augStageStillZero = gym.getMemberLifecycleStage(member, '2026-08');
+    expect(augStageStillZero, equals(MemberLifecycleStage.notEnrolled));
   });
 
   test('getAllBillsForCustomer includes cancelled and balance bills newest first',

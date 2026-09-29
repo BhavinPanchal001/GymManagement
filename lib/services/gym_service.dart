@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/customer.dart';
@@ -84,6 +85,7 @@ class GymService extends ChangeNotifier {
   Map<String, PaymentRecord> _paymentMap = {}; // key: payment record id
   Map<String, BillRecord> _billsMap = {}; // key: bill record id
   GymSettings _settings = const GymSettings();
+  String? _currentUserId;
   bool _isInitialized = false;
   bool _isCloudAttached = false;
   bool _isMigratedToCloud = false;
@@ -93,6 +95,7 @@ class GymService extends ChangeNotifier {
   List<ExpenseRecord> get expenses => List.unmodifiable(_expenses);
   Map<String, BillRecord> get billsMap => Map.unmodifiable(_billsMap);
   GymSettings get settings => _settings;
+  String? get currentUserId => _currentUserId;
 
   /// Effective gym logo path with fallback to cached owner profile photo
   String? get gymLogoPath {
@@ -119,62 +122,84 @@ class GymService extends ChangeNotifier {
   static const String _keySettings = 'gym_settings_v1';
   static const String _keyPaymentsSchemaV2 = 'payments_schema_v2';
 
+  String _customerKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_customers_v1' : _keyCustomers;
+  String _expensesKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_expenses_v1' : _keyExpenses;
+  String _attendanceKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_attendance_v1' : _keyAttendance;
+  String _paymentsKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_payments_v1' : _keyPayments;
+  String _billsKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_bills_v1' : _keyBills;
+  String _settingsKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_settings_v1' : _keySettings;
+
   Future<void> init() async {
     if (_isInitialized) return;
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      final settingsJson = prefs.getString(_keySettings);
-      if (settingsJson != null) {
-        _settings = GymSettings.fromJson(settingsJson);
-      }
+      final currentUser = AuthService().currentUser;
+      if (currentUser != null) {
+        _currentUserId = currentUser.uid;
+        await _loadUserLocalData(currentUser.uid);
+      } else if (Firebase.apps.isEmpty) {
+        // Fallback for offline exploration mode when Firebase is not configured
+        final settingsJson = prefs.getString(_keySettings);
+        if (settingsJson != null) {
+          _settings = GymSettings.fromJson(settingsJson);
+        }
 
-      final customersJson = prefs.getString(_keyCustomers);
-      if (customersJson != null) {
-        final list = json.decode(customersJson) as List<dynamic>;
-        _customers = list.map((item) => Customer.fromMap(item as Map<String, dynamic>)).toList();
-      }
+        final customersJson = prefs.getString(_keyCustomers);
+        if (customersJson != null) {
+          final list = json.decode(customersJson) as List<dynamic>;
+          _customers = list.map((item) => Customer.fromMap(item as Map<String, dynamic>)).toList();
+        }
 
-      final attendanceJson = prefs.getString(_keyAttendance);
-      if (attendanceJson != null) {
-        final list = json.decode(attendanceJson) as List<dynamic>;
-        _attendanceMap = {
-          for (var item in list)
-            "${item['customerId']}_${item['dateKey']}": AttendanceRecord.fromMap(item as Map<String, dynamic>)
-        };
-      }
+        final attendanceJson = prefs.getString(_keyAttendance);
+        if (attendanceJson != null) {
+          final list = json.decode(attendanceJson) as List<dynamic>;
+          _attendanceMap = {
+            for (var item in list)
+              "${item['customerId']}_${item['dateKey']}": AttendanceRecord.fromMap(item as Map<String, dynamic>)
+          };
+        }
 
-      final paymentsJson = prefs.getString(_keyPayments);
-      if (paymentsJson != null) {
-        final list = json.decode(paymentsJson) as List<dynamic>;
-        _paymentMap = {
-          for (var item in list)
-            (item['id'] as String? ?? ''): PaymentRecord.fromMap(item as Map<String, dynamic>)
-        };
-      }
+        final paymentsJson = prefs.getString(_keyPayments);
+        if (paymentsJson != null) {
+          final list = json.decode(paymentsJson) as List<dynamic>;
+          _paymentMap = {
+            for (var item in list)
+              (item['id'] as String? ?? ''): PaymentRecord.fromMap(item as Map<String, dynamic>)
+          };
+        }
 
-      final billsJson = prefs.getString(_keyBills);
-      if (billsJson != null) {
-        final list = json.decode(billsJson) as List<dynamic>;
-        _billsMap = {
-          for (var item in list)
-            (item['id'] as String? ?? ''): BillRecord.fromMap(item as Map<String, dynamic>)
-        };
+        final billsJson = prefs.getString(_keyBills);
+        if (billsJson != null) {
+          final list = json.decode(billsJson) as List<dynamic>;
+          _billsMap = {
+            for (var item in list)
+              (item['id'] as String? ?? ''): BillRecord.fromMap(item as Map<String, dynamic>)
+          };
+        }
+
+        final expensesJson = prefs.getString(_keyExpenses);
+        if (expensesJson != null) {
+          final list = json.decode(expensesJson) as List<dynamic>;
+          _expenses = list
+              .map((item) => ExpenseRecord.fromMap(item as Map<String, dynamic>))
+              .toList();
+        }
+      } else {
+        // Firebase is active but no user is currently authenticated:
+        // Keep in-memory data completely clean so old user's data is never displayed or leaked!
+        _customers = [];
+        _expenses = [];
+        _attendanceMap = {};
+        _paymentMap = {};
+        _billsMap = {};
+        _settings = const GymSettings();
       }
 
       if (prefs.getBool(_keyPaymentsSchemaV2) != true) {
         await _migrateLegacyPayments();
         await prefs.setBool(_keyPaymentsSchemaV2, true);
       }
-
-      final expensesJson = prefs.getString(_keyExpenses);
-      if (expensesJson != null) {
-        final list = json.decode(expensesJson) as List<dynamic>;
-        _expenses = list
-            .map((item) => ExpenseRecord.fromMap(item as Map<String, dynamic>))
-            .toList();
-      }
-
     } catch (e) {
       debugPrint('Error initializing GymService: $e');
     } finally {
@@ -183,27 +208,161 @@ class GymService extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadUserLocalData(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final settingsJson = prefs.getString(_settingsKey(userId));
+      if (settingsJson != null) {
+        _settings = GymSettings.fromJson(settingsJson);
+      } else {
+        _settings = const GymSettings();
+      }
+
+      final customersJson = prefs.getString(_customerKey(userId));
+      if (customersJson != null) {
+        final list = json.decode(customersJson) as List<dynamic>;
+        _customers = list.map((item) => Customer.fromMap(item as Map<String, dynamic>)).toList();
+      } else {
+        _customers = [];
+      }
+
+      final attendanceJson = prefs.getString(_attendanceKey(userId));
+      if (attendanceJson != null) {
+        final list = json.decode(attendanceJson) as List<dynamic>;
+        _attendanceMap = {
+          for (var item in list)
+            "${item['customerId']}_${item['dateKey']}": AttendanceRecord.fromMap(item as Map<String, dynamic>)
+        };
+      } else {
+        _attendanceMap = {};
+      }
+
+      final paymentsJson = prefs.getString(_paymentsKey(userId));
+      if (paymentsJson != null) {
+        final list = json.decode(paymentsJson) as List<dynamic>;
+        _paymentMap = {
+          for (var item in list)
+            (item['id'] as String? ?? ''): PaymentRecord.fromMap(item as Map<String, dynamic>)
+        };
+      } else {
+        _paymentMap = {};
+      }
+
+      final billsJson = prefs.getString(_billsKey(userId));
+      if (billsJson != null) {
+        final list = json.decode(billsJson) as List<dynamic>;
+        _billsMap = {
+          for (var item in list)
+            (item['id'] as String? ?? ''): BillRecord.fromMap(item as Map<String, dynamic>)
+        };
+      } else {
+        _billsMap = {};
+      }
+
+      final expensesJson = prefs.getString(_expensesKey(userId));
+      if (expensesJson != null) {
+        final list = json.decode(expensesJson) as List<dynamic>;
+        _expenses = list
+            .map((item) => ExpenseRecord.fromMap(item as Map<String, dynamic>))
+            .toList();
+      } else {
+        _expenses = [];
+      }
+    } catch (e) {
+      debugPrint('GymService._loadUserLocalData error: $e');
+    }
+  }
+
   // ==================== CLOUD LIFECYCLE ====================
 
   /// Attach Firestore sync for the authenticated user.
-  /// Call this after successful login.
-  Future<void> attachUser(String userId) async {
-    if (_isCloudAttached) return;
+  /// Call this after successful login or signup.
+  Future<void> attachUser(
+    String userId, {
+    bool isNewUser = false,
+    GymSettings? initialSettings,
+  }) async {
+    // If already attached to this exact user and not initializing a new user, skip
+    if (_isCloudAttached && _currentUserId == userId && !isNewUser) return;
 
+    // If switching from another user, clear old memory first
+    if (_currentUserId != null && _currentUserId != userId) {
+      await detachUser(clearMemory: true);
+    }
+
+    _currentUserId = userId;
+
+    if (isNewUser) {
+      // New user signup: guarantee completely empty, clean state
+      _customers = [];
+      _expenses = [];
+      _attendanceMap = {};
+      _paymentMap = {};
+      _billsMap = {};
+      _settings = initialSettings ?? GymSettings(gymName: AuthService().displayName);
+
+      // Save initial settings and empty collections to user-scoped local storage
+      await _saveSettingsLocallyOnly();
+      await _saveCustomers();
+      await _saveAttendance();
+      await _savePayments();
+      await _saveBills();
+      await _saveExpenses();
+
+      // Attach Firestore listener
+      await FirestoreService().attachUser(userId, callback: _onFirestoreData);
+      _isCloudAttached = true;
+
+      // Upsert fresh settings in Firestore for this new user
+      _suppressCloudUpdates = true;
+      await FirestoreService().upsertSettings(_settings);
+      _suppressCloudUpdates = false;
+
+      notifyListeners();
+      return;
+    }
+
+    // Existing user:
+    // 1. Load user's local cached data
+    await _loadUserLocalData(userId);
+
+    // 2. Attach Firestore sync (Firestore is source of truth)
     await FirestoreService().attachUser(userId, callback: _onFirestoreData);
     _isCloudAttached = true;
-
-    // Auto-migrate local data to cloud if this is the first time
-    await migrateLocalDataToCloud();
 
     notifyListeners();
   }
 
   /// Detach Firestore sync. Call this on logout.
-  Future<void> detachUser() async {
+  Future<void> detachUser({bool clearMemory = true}) async {
     await FirestoreService().detachUser();
     _isCloudAttached = false;
     _isMigratedToCloud = false;
+    _currentUserId = null;
+
+    if (clearMemory) {
+      _customers = [];
+      _expenses = [];
+      _attendanceMap = {};
+      _paymentMap = {};
+      _billsMap = {};
+      _settings = const GymSettings();
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        // Remove legacy un-scoped keys to ensure no stale data persists
+        await prefs.remove(_keyCustomers);
+        await prefs.remove(_keyExpenses);
+        await prefs.remove(_keyAttendance);
+        await prefs.remove(_keyPayments);
+        await prefs.remove(_keyBills);
+        await prefs.remove(_keySettings);
+      } catch (e) {
+        debugPrint('GymService.detachUser prefs cleanup warning: $e');
+      }
+    }
+
     notifyListeners();
   }
 
@@ -222,26 +381,32 @@ class GymService extends ChangeNotifier {
 
     if (customers != null) {
       _customers = customers;
+      _saveCustomers();
       changed = true;
     }
     if (attendanceMap != null) {
       _attendanceMap = attendanceMap;
+      _saveAttendance();
       changed = true;
     }
     if (paymentMap != null) {
       _paymentMap = paymentMap;
+      _savePayments();
       changed = true;
     }
     if (billsMap != null) {
       _billsMap = billsMap;
+      _saveBills();
       changed = true;
     }
     if (expenses != null) {
       _expenses = expenses;
+      _saveExpenses();
       changed = true;
     }
     if (settings != null) {
       _settings = settings;
+      _saveSettingsLocallyOnly();
       changed = true;
     }
 
@@ -558,15 +723,15 @@ class GymService extends ChangeNotifier {
       }
     }
 
-    // 2. If month is before the customer joined and not paid, they weren't enrolled yet
+    // 2. If this month has any attended days that are NOT covered by payment -> DUE!
+    if (unpaidAttendedDays > 0) {
+      return MemberLifecycleStage.due;
+    }
+
+    // 3. If month is before the customer joined, not paid, and has 0 attendance -> not enrolled
     final joinMonthKey = GymDateUtils.toMonthKey(customer.joinDate);
     if (monthYear.compareTo(joinMonthKey) < 0) {
       return MemberLifecycleStage.notEnrolled;
-    }
-
-    // 3. If this month has any attended days that are NOT covered by payment -> DUE!
-    if (unpaidAttendedDays > 0) {
-      return MemberLifecycleStage.due;
     }
 
     // 4. New member check (only applies to current month of joining with 0 attendance within 3 days)
@@ -603,7 +768,9 @@ class GymService extends ChangeNotifier {
     _attendanceMap.removeWhere((k, v) => v.customerId == customerId);
     _paymentMap.removeWhere((k, v) => v.customerId == customerId);
     notifyListeners();
-    await _saveAll();
+    await _saveCustomers();
+    await _saveAttendance();
+    await _savePayments();
     await _cloudDeleteCustomer(customerId);
   }
 
@@ -2132,36 +2299,40 @@ class GymService extends ChangeNotifier {
   Future<void> _saveCustomers() async {
     final prefs = await SharedPreferences.getInstance();
     final data = _customers.map((c) => c.toMap()).toList();
-    await prefs.setString(_keyCustomers, json.encode(data));
+    await prefs.setString(_customerKey(_currentUserId), json.encode(data));
   }
 
   Future<void> _saveExpenses() async {
     final prefs = await SharedPreferences.getInstance();
     final data = _expenses.map((e) => e.toMap()).toList();
-    await prefs.setString(_keyExpenses, json.encode(data));
+    await prefs.setString(_expensesKey(_currentUserId), json.encode(data));
   }
 
   Future<void> _saveAttendance() async {
     final prefs = await SharedPreferences.getInstance();
     final data = _attendanceMap.values.map((a) => a.toMap()).toList();
-    await prefs.setString(_keyAttendance, json.encode(data));
+    await prefs.setString(_attendanceKey(_currentUserId), json.encode(data));
   }
 
   Future<void> _savePayments() async {
     final prefs = await SharedPreferences.getInstance();
     final data = _paymentMap.values.map((p) => p.toMap()).toList();
-    await prefs.setString(_keyPayments, json.encode(data));
+    await prefs.setString(_paymentsKey(_currentUserId), json.encode(data));
   }
 
   Future<void> _saveBills() async {
     final prefs = await SharedPreferences.getInstance();
     final data = _billsMap.values.map((b) => b.toMap()).toList();
-    await prefs.setString(_keyBills, json.encode(data));
+    await prefs.setString(_billsKey(_currentUserId), json.encode(data));
+  }
+
+  Future<void> _saveSettingsLocallyOnly() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_settingsKey(_currentUserId), _settings.toJson());
   }
 
   Future<void> _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keySettings, _settings.toJson());
+    await _saveSettingsLocallyOnly();
     // Sync settings to cloud
     if (_isCloudAttached) {
       _suppressCloudUpdates = true;
@@ -2177,19 +2348,31 @@ class GymService extends ChangeNotifier {
     await _savePayments();
     await _saveBills();
     await _saveSettings();
-    // Full sync to cloud
+  }
+
+  /// Completely clears all gym members, attendance, payments, bills, and expenses.
+  /// Gives the gym owner a clean, fresh start.
+  Future<void> clearAllGymData() async {
+    _customers.clear();
+    _expenses.clear();
+    _attendanceMap.clear();
+    _paymentMap.clear();
+    _billsMap.clear();
+    notifyListeners();
+
     if (_isCloudAttached) {
       _suppressCloudUpdates = true;
-      await FirestoreService().migrateLocalData(
-        customers: _customers,
-        attendanceMap: _attendanceMap,
-        paymentMap: _paymentMap,
-        billsMap: _billsMap,
-        expenses: _expenses,
-        settings: _settings,
-      );
+      await FirestoreService().clearAllData();
+      // Keep gym settings in cloud so gym name and configuration remain intact
+      await FirestoreService().upsertSettings(_settings);
       _suppressCloudUpdates = false;
     }
+
+    await _saveCustomers();
+    await _saveAttendance();
+    await _savePayments();
+    await _saveBills();
+    await _saveExpenses();
   }
 
   // ---- Cloud-aware save helpers for individual record operations ----
@@ -2271,6 +2454,14 @@ class GymService extends ChangeNotifier {
     if (_isCloudAttached) {
       _suppressCloudUpdates = true;
       await FirestoreService().clearAllData();
+      await FirestoreService().migrateLocalData(
+        customers: _customers,
+        attendanceMap: _attendanceMap,
+        paymentMap: _paymentMap,
+        billsMap: _billsMap,
+        expenses: _expenses,
+        settings: _settings,
+      );
       _suppressCloudUpdates = false;
     }
     await _saveAll();

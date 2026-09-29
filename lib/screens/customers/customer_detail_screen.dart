@@ -771,8 +771,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     final stage = GymService().getMemberLifecycleStage(customer, monthKey);
     final isPaid = stage.isPaid;
     final isNew = stage.isNew;
-    final isNotEnrolled = stage.isNotEnrolled;
     final presentDays = attendanceSummary['present'] ?? 0;
+    final isNotEnrolled = stage.isNotEnrolled && presentDays == 0;
     final now = DateTime.now();
     final currentMonthKey = GymDateUtils.toMonthKey(now);
     final isPastMonth = monthKey.compareTo(currentMonthKey) < 0;
@@ -1346,11 +1346,25 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
+                    final parts = earliestMonth.split('-');
+                    final y = int.tryParse(parts[0]) ?? DateTime.now().year;
+                    final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? DateTime.now().month) : DateTime.now().month;
+                    final startOfMonth = DateTime(y, m, 1);
+                    final endOfMonth = DateTime(y, m, GymDateUtils.daysInMonth(y, m));
+                    final attendedInEarliest = gym.getUnpaidAttendedDaysInMonth(customer.id, earliestMonth);
+                    final defaultFee = earliestPay.displayAmount > 0
+                        ? earliestPay.displayAmount
+                        : gym.settings.getPriceForDuration(customer.planType, customer.planDurationMonths);
                     MarkPaymentDialog.show(
                       context,
                       customer: customer,
                       monthYear: earliestMonth,
-                      currentRecord: earliestPay,
+                      currentRecord: earliestPay.copyWith(
+                        amount: defaultFee,
+                        startDate: startOfMonth,
+                        endDate: endOfMonth,
+                        notes: 'Settlement for $attendedInEarliest attended days in ${GymDateUtils.formatMonthYearKey(earliestMonth)}',
+                      ),
                     );
                   },
                   style: OutlinedButton.styleFrom(
@@ -1402,7 +1416,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     final currentMonthKey = GymDateUtils.toMonthKey(DateTime.now());
     final isPastMonth = monthKey.compareTo(currentMonthKey) < 0;
     final joinMonthKey = GymDateUtils.toMonthKey(customer.joinDate);
-    final isBeforeJoinMonth = monthKey.compareTo(joinMonthKey) < 0;
+    final isBeforeJoinMonth = monthKey.compareTo(joinMonthKey) < 0 && present == 0 && unpaidAttendedDays == 0;
 
     final effectivePayment = (paymentRecord.isPaid ? paymentRecord : (coveringPayment ?? paymentRecord));
     final fee = effectivePayment.displayAmount > 0
