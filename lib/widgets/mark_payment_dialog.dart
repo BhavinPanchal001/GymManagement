@@ -217,6 +217,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _submitPayment() async {
+    if (_isLoading) return;
     final amount = double.tryParse(_amountController.text.trim()) ??
         GymService().settings.standardMonthlyFee;
 
@@ -270,6 +271,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _collectBalance() async {
+    if (_isLoading) return;
     final balance = widget.currentRecord.balanceDue;
     if (balance <= 0) return;
 
@@ -300,6 +302,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _revertPayment() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
     await GymService().revertPayment(widget.currentRecord.id);
     setState(() => _isLoading = false);

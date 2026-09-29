@@ -527,9 +527,11 @@ class GymService extends ChangeNotifier {
   /// - NEW: Unpaid + 0 attendance days + Joined within last 3 days
   /// - DUE: Unpaid attended days or expired / lacking plan
   MemberLifecycleStage getMemberLifecycleStage(Customer customer, String monthYear) {
-    // 1. Check if a paid payment covers this month
+    // 1. Check if a paid payment covers this month — but only count it as
+    // paid when no attended days in the month are left uncovered.
+    final unpaidAttendedDays = getUnpaidAttendedDaysInMonth(customer.id, monthYear);
     final parts = monthYear.split('-');
-    if (parts.length == 2) {
+    if (parts.length == 2 && unpaidAttendedDays == 0) {
       final y = int.tryParse(parts[0]) ?? 2026;
       final m = int.tryParse(parts[1]) ?? 1;
       final monthStart = DateTime(y, m, 1);
@@ -563,7 +565,6 @@ class GymService extends ChangeNotifier {
     }
 
     // 3. If this month has any attended days that are NOT covered by payment -> DUE!
-    final unpaidAttendedDays = getUnpaidAttendedDaysInMonth(customer.id, monthYear);
     if (unpaidAttendedDays > 0) {
       return MemberLifecycleStage.due;
     }
@@ -936,11 +937,57 @@ class GymService extends ChangeNotifier {
   /// records, the full fee for pending ones.
   double pendingAmountOf(PaymentRecord r) => r.isPaid ? r.balanceDue : r.totalDue;
 
-  /// Pure read: the paid payment covering [monthYear], or a transient pending
-  /// record when none exists. Transient records are never stored.
+  /// Pure read: the paid payment covering [monthYear] with all attended days
+  /// covered, or a transient pending record when attended days remain unpaid.
+  /// Transient records are never stored.
   PaymentRecord getPaymentRecord(String customerId, String monthYear) {
     final covering = getPaymentCoveringMonth(customerId, monthYear);
-    if (covering != null) return covering;
+    final unpaidDays = getUnpaidAttendedDaysInMonth(customerId, monthYear);
+    if (covering != null && unpaidDays == 0) return covering;
+
+    // A paid cycle overlaps this month but still-uncovered attended days
+    // remain: suggest the new cycle start at the first uncovered attendance
+    // (or right after the latest paid cycle that ends before it).
+    DateTime? suggestedStart;
+    if (covering != null) {
+      final parts = monthYear.split('-');
+      final y = int.tryParse(parts[0]) ?? DateTime.now().year;
+      final m = int.tryParse(parts[1]) ?? DateTime.now().month;
+      final monthStart = DateTime(y, m, 1);
+
+      DateTime? firstUnpaid;
+      for (final record in _attendanceMap.values) {
+        if (record.customerId == customerId &&
+            record.status == AttendanceStatus.present &&
+            record.dateKey.startsWith(monthYear) &&
+            !isDateCoveredByPayment(customerId, record.dateKey)) {
+          final d = DateTime.tryParse(record.dateKey);
+          if (d != null) {
+            final day = DateTime(d.year, d.month, d.day);
+            if (firstUnpaid == null || day.isBefore(firstUnpaid)) {
+              firstUnpaid = day;
+            }
+          }
+        }
+      }
+
+      if (firstUnpaid != null) {
+        DateTime? prevEndPlusOne;
+        for (final p in _paymentMap.values) {
+          if (p.customerId == customerId && p.isPaid) {
+            final e = p.effectiveEndDate;
+            final endPlusOne = DateTime(e.year, e.month, e.day + 1);
+            if (!endPlusOne.isAfter(firstUnpaid) &&
+                !endPlusOne.isBefore(monthStart)) {
+              if (prevEndPlusOne == null || endPlusOne.isAfter(prevEndPlusOne)) {
+                prevEndPlusOne = endPlusOne;
+              }
+            }
+          }
+        }
+        suggestedStart = prevEndPlusOne ?? firstUnpaid;
+      }
+    }
 
     final customer = getCustomerById(customerId);
     return PaymentRecord(
@@ -951,6 +998,7 @@ class GymService extends ChangeNotifier {
       totalDue: _feeForCustomer(customer),
       status: PaymentStatus.pending,
       durationMonths: customer?.planDurationMonths ?? 1,
+      startDate: suggestedStart,
     );
   }
 
@@ -1395,7 +1443,10 @@ class GymService extends ChangeNotifier {
     for (final monthKey in getUnpaidAttendedMonthKeys(customerId)) {
       final hasCycleStartingHere = list.any((p) => p.monthYear == monthKey);
       if (!hasCycleStartingHere) {
-        list.add(getPaymentRecord(customerId, monthKey));
+        final rec = getPaymentRecord(customerId, monthKey);
+        if (!rec.isPaid && !list.any((p) => p.id == rec.id)) {
+          list.add(rec);
+        }
       }
     }
     list.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));

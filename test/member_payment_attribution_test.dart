@@ -498,4 +498,81 @@ void main() {
     );
     expect(bytes, isNotEmpty);
   });
+
+  test('mid-month cycle: month with uncovered attended days yields a pending record, not the covering payment',
+      () async {
+    final gym = GymService();
+
+    final member = await gym.addCustomer(
+      name: 'Mid Month Cycle',
+      phone: '9876500011',
+      joinDate: DateTime(2026, 8, 15),
+      markAsPaidNow: false,
+    );
+
+    // Attendance 15-31 Aug and 1-29 Sep 2026.
+    for (var d = 15; d <= 31; d++) {
+      final key = '2026-08-${d.toString().padLeft(2, '0')}';
+      await gym.toggleAttendance(member.id, key, AttendanceStatus.present);
+    }
+    await gym.setMonthAttendance(
+      customerId: member.id,
+      year: 2026,
+      month: 9,
+      status: AttendanceStatus.present,
+    );
+
+    // Paid cycle: 15 Aug - 14 Sep.
+    await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-08',
+      method: PaymentMethod.cash,
+      amount: 600.0,
+      totalDue: 600.0,
+      startDate: DateTime(2026, 8, 15),
+      endDate: DateTime(2026, 9, 14),
+      paidAt: DateTime(2026, 8, 15),
+    );
+
+    // August is fully covered -> paid record.
+    final augRecord = gym.getPaymentRecord(member.id, '2026-08');
+    expect(augRecord.isPaid, isTrue);
+    expect(gym.getMemberLifecycleStage(member, '2026-08'),
+        equals(MemberLifecycleStage.paid));
+
+    // September still has uncovered attended days (15-29) -> pending record.
+    final sepRecord = gym.getPaymentRecord(member.id, '2026-09');
+    expect(sepRecord.isPaid, isFalse);
+    expect(sepRecord.id, startsWith('pending_'));
+    expect(sepRecord.startDate, equals(DateTime(2026, 9, 15)));
+    expect(gym.getMemberLifecycleStage(member, '2026-09'),
+        equals(MemberLifecycleStage.due));
+
+    // History: exactly one paid + one pending, no duplicate of the paid record.
+    final history = gym.getCustomerPaymentHistory(member.id);
+    expect(history.where((p) => p.isPaid).length, equals(1));
+    expect(history.where((p) => !p.isPaid).length, equals(1));
+
+    // Continuation: pay the suggested 15 Sep - 14 Oct cycle.
+    await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-09',
+      method: PaymentMethod.gpay,
+      amount: 600.0,
+      totalDue: 600.0,
+      startDate: DateTime(2026, 9, 15),
+      endDate: DateTime(2026, 10, 14),
+      paidAt: DateTime(2026, 9, 15),
+    );
+
+    final paid = gym.getPaidPaymentsForCustomer(member.id);
+    expect(paid.length, equals(2));
+    final starts = paid.map((p) => p.effectiveStartDate).toList();
+    expect(starts, contains(DateTime(2026, 8, 15)));
+    expect(starts, contains(DateTime(2026, 9, 15)));
+    expect(gym.getUnpaidAttendedMonthKeys(member.id), isEmpty);
+    final sepAfter = gym.getPaymentRecord(member.id, '2026-09');
+    expect(sepAfter.isPaid, isTrue);
+    expect(sepAfter.effectiveStartDate, equals(DateTime(2026, 9, 15)));
+  });
 }
