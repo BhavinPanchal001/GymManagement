@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gym/models/attendance.dart';
 import 'package:gym/models/payment.dart';
 import 'package:gym/services/gym_service.dart';
+import 'package:gym/services/payment_receipt_pdf_service.dart';
 import 'package:gym/utils/date_utils.dart';
 
 void main() {
@@ -405,5 +406,173 @@ void main() {
     // is within 3-day grace period if within 3 days, or due
     final sepStage = gym.getMemberLifecycleStage(member, '2026-09');
     expect(sepStage.isNotEnrolled, isFalse);
+  });
+
+  test('getAllBillsForCustomer includes cancelled and balance bills newest first',
+      () async {
+    final gym = GymService();
+
+    final member = await gym.addCustomer(
+      name: 'Bill History Member',
+      phone: '9876500009',
+      joinDate: DateTime(2026, 2, 1),
+      markAsPaidNow: false,
+    );
+
+    // Partial payment, then a balance collection on the same payment.
+    final firstBill = await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-02',
+      method: PaymentMethod.cash,
+      amount: 500.0,
+      totalDue: 1500.0,
+      startDate: DateTime(2026, 2, 1),
+      endDate: DateTime(2026, 2, 28),
+      paidAt: DateTime(2026, 2, 1),
+    );
+    await gym.collectBalance(
+      paymentId: firstBill.paymentId,
+      amount: 1000.0,
+      method: PaymentMethod.gpay,
+    );
+
+    // A second cycle that is then reverted: its bill stays as CANCELLED.
+    final secondBill = await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-03',
+      method: PaymentMethod.upi,
+      amount: 1500.0,
+      totalDue: 1500.0,
+      startDate: DateTime(2026, 3, 1),
+      endDate: DateTime(2026, 3, 31),
+      paidAt: DateTime(2026, 3, 1),
+    );
+    await gym.revertPayment(secondBill.paymentId);
+
+    final allBills = gym.getAllBillsForCustomer(member.id);
+    expect(allBills.length, equals(3));
+    expect(allBills.any((b) => b.status == 'CANCELLED'), isTrue);
+    expect(allBills.any((b) => b.billType == 'BALANCE'), isTrue);
+    expect(allBills.any((b) => b.billType == 'PARTIAL'), isTrue);
+    for (var i = 0; i + 1 < allBills.length; i++) {
+      expect(
+        allBills[i].issuedAt.isBefore(allBills[i + 1].issuedAt),
+        isFalse,
+        reason: 'Bills must be newest first',
+      );
+    }
+
+    // PAID-only view still sees 2 bills on the first payment.
+    expect(gym.getBillsForPayment(firstBill.paymentId).length, equals(2));
+    expect(
+        gym.getAllBillsForPayment(firstBill.paymentId).length, equals(2));
+  });
+
+  test('PDF receipt for a partial bill generates non-empty bytes', () async {
+    final gym = GymService();
+
+    final member = await gym.addCustomer(
+      name: 'Pdf Partial Member',
+      phone: '9876500010',
+      joinDate: DateTime(2026, 4, 1),
+      markAsPaidNow: false,
+    );
+
+    final bill = await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-04',
+      method: PaymentMethod.cash,
+      amount: 500.0,
+      totalDue: 1500.0,
+      durationMonths: 3,
+      startDate: DateTime(2026, 4, 1),
+      endDate: DateTime(2026, 6, 30),
+      paidAt: DateTime(2026, 4, 1),
+    );
+    expect(bill.billType, equals('PARTIAL'));
+
+    final bytes = await PaymentReceiptPdfService().generateReceiptPdf(
+      bill: bill,
+      customer: member,
+      settings: gym.settings,
+    );
+    expect(bytes, isNotEmpty);
+  });
+
+  test('mid-month cycle: month with uncovered attended days yields a pending record, not the covering payment',
+      () async {
+    final gym = GymService();
+
+    final member = await gym.addCustomer(
+      name: 'Mid Month Cycle',
+      phone: '9876500011',
+      joinDate: DateTime(2026, 8, 15),
+      markAsPaidNow: false,
+    );
+
+    // Attendance 15-31 Aug and 1-29 Sep 2026.
+    for (var d = 15; d <= 31; d++) {
+      final key = '2026-08-${d.toString().padLeft(2, '0')}';
+      await gym.toggleAttendance(member.id, key, AttendanceStatus.present);
+    }
+    await gym.setMonthAttendance(
+      customerId: member.id,
+      year: 2026,
+      month: 9,
+      status: AttendanceStatus.present,
+    );
+
+    // Paid cycle: 15 Aug - 14 Sep.
+    await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-08',
+      method: PaymentMethod.cash,
+      amount: 600.0,
+      totalDue: 600.0,
+      startDate: DateTime(2026, 8, 15),
+      endDate: DateTime(2026, 9, 14),
+      paidAt: DateTime(2026, 8, 15),
+    );
+
+    // August is fully covered -> paid record.
+    final augRecord = gym.getPaymentRecord(member.id, '2026-08');
+    expect(augRecord.isPaid, isTrue);
+    expect(gym.getMemberLifecycleStage(member, '2026-08'),
+        equals(MemberLifecycleStage.paid));
+
+    // September still has uncovered attended days (15-29) -> pending record.
+    final sepRecord = gym.getPaymentRecord(member.id, '2026-09');
+    expect(sepRecord.isPaid, isFalse);
+    expect(sepRecord.id, startsWith('pending_'));
+    expect(sepRecord.startDate, equals(DateTime(2026, 9, 15)));
+    expect(gym.getMemberLifecycleStage(member, '2026-09'),
+        equals(MemberLifecycleStage.due));
+
+    // History: exactly one paid + one pending, no duplicate of the paid record.
+    final history = gym.getCustomerPaymentHistory(member.id);
+    expect(history.where((p) => p.isPaid).length, equals(1));
+    expect(history.where((p) => !p.isPaid).length, equals(1));
+
+    // Continuation: pay the suggested 15 Sep - 14 Oct cycle.
+    await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-09',
+      method: PaymentMethod.gpay,
+      amount: 600.0,
+      totalDue: 600.0,
+      startDate: DateTime(2026, 9, 15),
+      endDate: DateTime(2026, 10, 14),
+      paidAt: DateTime(2026, 9, 15),
+    );
+
+    final paid = gym.getPaidPaymentsForCustomer(member.id);
+    expect(paid.length, equals(2));
+    final starts = paid.map((p) => p.effectiveStartDate).toList();
+    expect(starts, contains(DateTime(2026, 8, 15)));
+    expect(starts, contains(DateTime(2026, 9, 15)));
+    expect(gym.getUnpaidAttendedMonthKeys(member.id), isEmpty);
+    final sepAfter = gym.getPaymentRecord(member.id, '2026-09');
+    expect(sepAfter.isPaid, isTrue);
+    expect(sepAfter.effectiveStartDate, equals(DateTime(2026, 9, 15)));
   });
 }

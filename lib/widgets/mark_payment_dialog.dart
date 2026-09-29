@@ -6,6 +6,7 @@ import '../services/gym_service.dart';
 import '../services/whatsapp_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/date_utils.dart';
+import 'bill_history_sheet.dart';
 import 'bill_receipt_dialog.dart';
 
 class MarkPaymentDialog extends StatefulWidget {
@@ -216,6 +217,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _submitPayment() async {
+    if (_isLoading) return;
     final amount = double.tryParse(_amountController.text.trim()) ??
         GymService().settings.standardMonthlyFee;
 
@@ -269,6 +271,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _collectBalance() async {
+    if (_isLoading) return;
     final balance = widget.currentRecord.balanceDue;
     if (balance <= 0) return;
 
@@ -299,6 +302,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _revertPayment() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
     await GymService().revertPayment(widget.currentRecord.id);
     setState(() => _isLoading = false);
@@ -753,8 +757,11 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    final bill = GymService().getOrCreateBillForPayment(widget.customer, widget.currentRecord);
-                    BillReceiptDialog.show(context, bill: bill);
+                    BillHistorySheet.showForPayment(
+                      context,
+                      customer: widget.customer,
+                      payment: widget.currentRecord,
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     backgroundColor: AppColors.paid.withValues(alpha: 0.1),

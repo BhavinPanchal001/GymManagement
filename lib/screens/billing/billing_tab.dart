@@ -8,7 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
-import '../../widgets/bill_receipt_dialog.dart';
+import '../../widgets/bill_history_sheet.dart';
 import '../customers/customer_detail_screen.dart';
 import '../reports/pending_payments_report_screen.dart';
 import '../reports/gym_statistics_screen.dart';
@@ -65,11 +65,25 @@ class _BillingTabState extends State<BillingTab> {
         final pendingCount = summary['pendingCount'] as int;
         final progress = totalExpected > 0 ? (totalCollected / totalExpected).clamp(0.0, 1.0) : 0.0;
 
+        final dueIds = <String>{};
+        for (final g in gym.getPendingDuesByMonth(
+            DateTime(_selectedMonth.year, _selectedMonth.month, 1),
+            DateTime(_selectedMonth.year, _selectedMonth.month,
+                GymDateUtils.daysInMonth(_selectedMonth.year, _selectedMonth.month)))) {
+          if (g.monthKey == monthKey) {
+            for (final it in g.items) {
+              dueIds.add(it.customer.id);
+            }
+          }
+        }
+
         var customers = gym.customers.where((c) => c.isActive).toList();
         if (_filter == BillingFilter.pending) {
-          customers = customers.where((c) => !gym.getPaymentRecord(c.id, monthKey).isPaid).toList();
+          customers = customers.where((c) => dueIds.contains(c.id)).toList();
         } else if (_filter == BillingFilter.paid) {
-          customers = customers.where((c) => gym.getPaymentRecord(c.id, monthKey).isPaid).toList();
+          customers = customers
+              .where((c) => gym.isMonthCoveredByPaidPayment(c.id, monthKey))
+              .toList();
         }
 
         return Scaffold(
@@ -411,7 +425,7 @@ class _BillingTabState extends State<BillingTab> {
                             final attendanceSummary = gym.getMonthlyAttendanceSummary(customer.id, monthKey);
                             final presentDays = attendanceSummary['present'] ?? 0;
 
-                            return _buildBillingRow(customer, payment, monthKey, presentDays, currency);
+                            return _buildBillingRow(customer, payment, monthKey, presentDays, currency, dueIds.contains(customer.id));
                           },
                         ),
                 ),
@@ -551,6 +565,7 @@ class _BillingTabState extends State<BillingTab> {
     String monthKey,
     int presentDays,
     String currency,
+    bool isDue,
   ) {
     final isPaid = payment.isPaid;
 
@@ -640,12 +655,16 @@ class _BillingTabState extends State<BillingTab> {
                       decoration: BoxDecoration(
                         color: isPaid
                             ? AppColors.paid.withValues(alpha: 0.15)
-                            : AppColors.pending.withValues(alpha: 0.15),
+                            : (isDue
+                                ? AppColors.pending.withValues(alpha: 0.15)
+                                : AppColors.surfaceElevated),
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
                           color: isPaid
                               ? AppColors.paid.withValues(alpha: 0.5)
-                              : AppColors.pending.withValues(alpha: 0.5),
+                              : (isDue
+                                  ? AppColors.pending.withValues(alpha: 0.5)
+                                  : AppColors.surfaceBorder),
                           width: 0.8,
                         ),
                       ),
@@ -654,9 +673,11 @@ class _BillingTabState extends State<BillingTab> {
                             ? (payment.isPartiallyPaid
                                 ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
                                 : 'PAID')
-                            : 'PENDING',
+                            : (isDue ? 'PENDING' : 'NOT DUE'),
                         style: TextStyle(
-                          color: isPaid ? AppColors.paid : AppColors.pending,
+                          color: isPaid
+                              ? AppColors.paid
+                              : (isDue ? AppColors.pending : AppColors.textMuted),
                           fontSize: 10,
                           fontWeight: FontWeight.w900,
                         ),
@@ -695,15 +716,15 @@ class _BillingTabState extends State<BillingTab> {
                             ),
                           ],
                         )
-                      : const Row(
+                      : Row(
                           children: [
-                            Icon(Icons.pending_actions_rounded, size: 14, color: AppColors.pending),
-                            SizedBox(width: 6),
+                            Icon(Icons.pending_actions_rounded, size: 14, color: isDue ? AppColors.pending : AppColors.textMuted),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                'Due this month',
+                                isDue ? 'Due this month' : 'No unpaid attendance yet',
                                 style: TextStyle(
-                                  color: AppColors.pending,
+                                  color: isDue ? AppColors.pending : AppColors.textMuted,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -715,7 +736,7 @@ class _BillingTabState extends State<BillingTab> {
                         ),
                 ),
                 const SizedBox(width: 8),
-                if (!isPaid) ...[
+                if (!isPaid && isDue) ...[
                   OutlinedButton.icon(
                     onPressed: () {
                       WhatsAppService().showReminderSheet(
@@ -749,10 +770,11 @@ class _BillingTabState extends State<BillingTab> {
                 ],
                 if (isPaid) ...[
                   OutlinedButton.icon(
-                    onPressed: () {
-                      final bill = GymService().getOrCreateBillForPayment(customer, payment);
-                      BillReceiptDialog.show(context, bill: bill);
-                    },
+                    onPressed: () => BillHistorySheet.showForPayment(
+                      context,
+                      customer: customer,
+                      payment: payment,
+                    ),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: AppColors.paid.withValues(alpha: 0.1),
                       foregroundColor: AppColors.paid,

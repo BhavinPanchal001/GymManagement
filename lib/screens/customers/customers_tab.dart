@@ -9,7 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
-import '../../widgets/bill_receipt_dialog.dart';
+import '../../widgets/bill_history_sheet.dart';
 import '../../widgets/user_profile_menu_button.dart';
 import '../../widgets/dashboard_metrics_grid.dart';
 import 'add_customer_sheet.dart';
@@ -412,8 +412,11 @@ class _CustomersTabState extends State<CustomersTab> {
                 ),
                 tooltip: 'View Bill / Receipt',
                 onPressed: () {
-                  final bill = GymService().getOrCreateBillForPayment(customer, payment);
-                  BillReceiptDialog.show(context, bill: bill);
+                  BillHistorySheet.showForPayment(
+                    context,
+                    customer: customer,
+                    payment: payment,
+                  );
                 },
               ),
               const SizedBox(width: 4),

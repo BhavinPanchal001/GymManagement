@@ -10,7 +10,7 @@ import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
 import '../../widgets/mark_month_attendance_dialog.dart';
-import '../../widgets/bill_receipt_dialog.dart';
+import '../../widgets/bill_history_sheet.dart';
 import 'add_customer_sheet.dart';
 import 'member_card_screen.dart';
 
@@ -942,10 +942,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      final bill = GymService().getOrCreateBillForPayment(customer, record);
-                      BillReceiptDialog.show(context, bill: bill);
-                    },
+                    onPressed: () => BillHistorySheet.showForPayment(
+                      context,
+                      customer: customer,
+                      payment: record,
+                    ),
                     style: OutlinedButton.styleFrom(
                       backgroundColor: AppColors.paid.withValues(alpha: 0.1),
                       foregroundColor: AppColors.paid,
@@ -1647,10 +1648,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       padding: const EdgeInsets.all(8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    onPressed: () {
-                      final bill = gym.getOrCreateBillForPayment(customer, effectivePayment);
-                      BillReceiptDialog.show(context, bill: bill);
-                    },
+                    onPressed: () => BillHistorySheet.showForPayment(
+                      context,
+                      customer: customer,
+                      payment: effectivePayment,
+                    ),
                   ),
                 ] else if (isBeforeJoinMonth || (isPastMonth && present == 0)) ...[
                   // No payment button for pre-join or past months with 0 attendance
@@ -2284,9 +2286,30 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              "${history.length} Record${history.length != 1 ? 's' : ''}",
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            Row(
+              children: [
+                Text(
+                  "${history.length} Record${history.length != 1 ? 's' : ''}",
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
+                const SizedBox(width: 6),
+                TextButton.icon(
+                  onPressed: () => BillHistorySheet.show(
+                    context,
+                    customer: customer,
+                  ),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 28),
+                  ),
+                  icon: const Icon(Icons.receipt_long_rounded, size: 14),
+                  label: Text(
+                    'All Bills (${gym.getAllBillsForCustomer(customer.id).length})',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -2448,8 +2471,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         ),
                         tooltip: 'View Bill / Receipt',
                         onPressed: () {
-                          final bill = gym.getOrCreateBillForPayment(customer, item);
-                          BillReceiptDialog.show(context, bill: bill);
+                          BillHistorySheet.showForPayment(
+                            context,
+                            customer: customer,
+                            payment: item,
+                          );
                         },
                       ),
                     ] else ...[
