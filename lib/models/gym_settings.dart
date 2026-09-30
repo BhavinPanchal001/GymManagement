@@ -11,6 +11,7 @@ class GymSettings {
   final double ptDietPlanFee;
   final String currencySymbol;
   final bool isFirestoreConnected;
+  final bool isPaymentDueNotificationEnabled;
   final List<PlanDurationPackage> durationPackages;
 
   static const List<PlanDurationPackage> defaultPackages = [
@@ -42,6 +43,7 @@ class GymSettings {
     this.ptDietPlanFee = 3500.0,
     this.currencySymbol = '₹',
     this.isFirestoreConnected = false,
+    this.isPaymentDueNotificationEnabled = true,
     this.durationPackages = defaultPackages,
   });
 
@@ -101,6 +103,7 @@ class GymSettings {
     double? ptDietPlanFee,
     String? currencySymbol,
     bool? isFirestoreConnected,
+    bool? isPaymentDueNotificationEnabled,
     List<PlanDurationPackage>? durationPackages,
   }) {
     final effectiveNormalFee = normalPlanFee ?? this.normalPlanFee;
@@ -134,6 +137,7 @@ class GymSettings {
       ptDietPlanFee: effectivePtDietFee,
       currencySymbol: currencySymbol ?? this.currencySymbol,
       isFirestoreConnected: isFirestoreConnected ?? this.isFirestoreConnected,
+      isPaymentDueNotificationEnabled: isPaymentDueNotificationEnabled ?? this.isPaymentDueNotificationEnabled,
       durationPackages: updatedPackages,
     );
   }
@@ -149,6 +153,7 @@ class GymSettings {
       'ptDietPlanFee': ptDietPlanFee,
       'currencySymbol': currencySymbol,
       'isFirestoreConnected': isFirestoreConnected,
+      'isPaymentDueNotificationEnabled': isPaymentDueNotificationEnabled,
       'durationPackages': effectivePackages.map((p) => p.toMap()).toList(),
     };
   }
@@ -178,6 +183,7 @@ class GymSettings {
       ptDietPlanFee: ptDietFee,
       currencySymbol: map['currencySymbol'] as String? ?? '₹',
       isFirestoreConnected: map['isFirestoreConnected'] as bool? ?? false,
+      isPaymentDueNotificationEnabled: map['isPaymentDueNotificationEnabled'] as bool? ?? true,
       durationPackages: packages,
     );
   }

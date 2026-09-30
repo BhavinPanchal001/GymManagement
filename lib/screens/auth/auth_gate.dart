@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/gym_service.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../home_screen.dart';
 import 'auth_screen.dart';
@@ -27,6 +28,7 @@ class _AuthGateState extends State<AuthGate> {
         if (_lastAttachedUserId != user.uid) {
           _lastAttachedUserId = user.uid;
           await GymService().attachUser(user.uid);
+          await NotificationService().onUserAuthenticated(user.uid);
         }
       } else {
         _lastAttachedUserId = null;

@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'services/gym_service.dart';
+import 'services/notification_service.dart';
 import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/nav_keys.dart';
@@ -20,6 +21,7 @@ void main() async {
   await AuthService().init();
   await GymService().init();
   await ThemeService().init();
+  await NotificationService().init();
   runApp(const GymManagerApp());
 }
 

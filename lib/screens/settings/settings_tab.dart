@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/customer.dart';
 import '../../services/auth_service.dart';
 import '../../services/gym_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/user_avatar.dart';
@@ -63,9 +64,7 @@ class _SettingsTabState extends State<SettingsTab> {
     final normalFee = double.tryParse(_normalFeeController.text.trim()) ?? gym.settings.normalPlanFee;
     final ptFee = double.tryParse(_ptFeeController.text.trim()) ?? gym.settings.ptPlanFee;
     final ptDietFee = double.tryParse(_ptDietFeeController.text.trim()) ?? gym.settings.ptDietPlanFee;
-    final name = _gymNameController.text.trim().isNotEmpty
-        ? _gymNameController.text.trim()
-        : gym.settings.gymName;
+    final name = _gymNameController.text.trim().isNotEmpty ? _gymNameController.text.trim() : gym.settings.gymName;
 
     final existingPackages = List.of(gym.settings.durationPackages);
     final updatedPackages = existingPackages.map((p) {
@@ -104,7 +103,10 @@ class _SettingsTabState extends State<SettingsTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('Reset to Demo Data?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Reset to Demo Data?',
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           'This will restore default demo members, attendance history, and monthly payments.',
           style: TextStyle(color: AppColors.textSecondary),
@@ -124,10 +126,7 @@ class _SettingsTabState extends State<SettingsTab> {
                 _syncControllersFromSettings();
               });
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Demo data reloaded successfully!'),
-                  backgroundColor: AppColors.paid,
-                ),
+                const SnackBar(content: Text('Demo data reloaded successfully!'), backgroundColor: AppColors.paid),
               );
             },
             child: const Text('Reset', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -143,7 +142,10 @@ class _SettingsTabState extends State<SettingsTab> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Clear All Gym Data?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Clear All Gym Data?',
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           'This will permanently delete all members, attendance records, payments, bills, and expenses. Your gym will start completely fresh.\n\nThis action cannot be undone.',
           style: TextStyle(color: AppColors.textSecondary, height: 1.4),
@@ -154,10 +156,7 @@ class _SettingsTabState extends State<SettingsTab> {
             child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.absent,
-              foregroundColor: Colors.white,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.absent, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(ctx);
               await GymService().clearAllGymData();
@@ -182,7 +181,10 @@ class _SettingsTabState extends State<SettingsTab> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Sign Out?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Sign Out?',
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           'Are you sure you want to sign out of your account?',
           style: TextStyle(color: AppColors.textSecondary),
@@ -193,10 +195,7 @@ class _SettingsTabState extends State<SettingsTab> {
             child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.absent,
-              foregroundColor: Colors.white,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.absent, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(ctx);
               await AuthService().signOut();
@@ -222,9 +221,7 @@ class _SettingsTabState extends State<SettingsTab> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.14)
-                : AppColors.surfaceElevated,
+            color: isSelected ? AppColors.primary.withValues(alpha: 0.14) : AppColors.surfaceElevated,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isSelected ? AppColors.primary : AppColors.surfaceBorder,
@@ -233,11 +230,7 @@ class _SettingsTabState extends State<SettingsTab> {
           ),
           child: Column(
             children: [
-              Icon(
-                icon,
-                size: 24,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              ),
+              Icon(icon, size: 24, color: isSelected ? AppColors.primary : AppColors.textSecondary),
               const SizedBox(height: 8),
               Text(
                 label,
@@ -301,11 +294,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           const SizedBox(width: 8),
                           Text(
                             'Account & Security',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                           const Spacer(),
                           Container(
@@ -316,11 +305,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                             child: Text(
                               'AUTHENTICATED',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -344,10 +329,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                   padding: const EdgeInsets.symmetric(vertical: 4),
                                   child: Row(
                                     children: [
-                                      const UserAvatar(
-                                        radius: 28,
-                                        showEditBadge: true,
-                                      ),
+                                      const UserAvatar(radius: 28, showEditBadge: true),
                                       const SizedBox(width: 14),
                                       Expanded(
                                         child: Column(
@@ -364,10 +346,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                             const SizedBox(height: 2),
                                             Text(
                                               email,
-                                              style: TextStyle(
-                                                color: AppColors.textSecondary,
-                                                fontSize: 13,
-                                              ),
+                                              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             if (phone != null && phone.isNotEmpty) ...[
@@ -378,10 +357,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     phone,
-                                                    style: TextStyle(
-                                                      color: AppColors.textSecondary,
-                                                      fontSize: 12,
-                                                    ),
+                                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                                   ),
                                                 ],
                                               ),
@@ -408,10 +384,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                         elevation: 0,
                                       ),
                                       icon: const Icon(Icons.edit_rounded, size: 18),
-                                      label: const Text(
-                                        'Edit Profile',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
-                                      ),
+                                      label: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.bold)),
                                     ),
                                   ),
                                   const SizedBox(width: 10),
@@ -424,10 +397,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                                     ),
                                     icon: const Icon(Icons.logout_rounded, size: 18),
-                                    label: const Text(
-                                      'Sign Out',
-                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                    ),
+                                    label: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
                                   ),
                                 ],
                               ),
@@ -457,11 +427,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           const SizedBox(width: 8),
                           Text(
                             'Appearance & Theme',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                           const Spacer(),
                           Container(
@@ -472,11 +438,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                             child: Text(
                               theme.themeModeName.toUpperCase(),
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -516,6 +478,105 @@ class _SettingsTabState extends State<SettingsTab> {
                 ),
                 const SizedBox(height: 16),
 
+                // Notifications & Alerts Card
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.notifications_active_rounded, color: AppColors.pending, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Notifications & Alerts',
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: gym.settings.isPaymentDueNotificationEnabled
+                                  ? AppColors.paid.withValues(alpha: 0.15)
+                                  : AppColors.textMuted.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              gym.settings.isPaymentDueNotificationEnabled ? 'ACTIVE' : 'MUTED',
+                              style: TextStyle(
+                                color: gym.settings.isPaymentDueNotificationEnabled
+                                    ? AppColors.paid
+                                    : AppColors.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        // activeThumbColor: AppColors.primary,
+                        title: Text(
+                          'Payment Due Reminders',
+                          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          'Notify on app launch when members have overdue membership payments.',
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        ),
+                        value: gym.settings.isPaymentDueNotificationEnabled,
+                        onChanged: (bool enabled) async {
+                          final updated = gym.settings.copyWith(isPaymentDueNotificationEnabled: enabled);
+                          await gym.updateSettings(updated);
+                        },
+                      ),
+                      const Divider(height: 18),
+                      Row(
+                        children: [
+                          Icon(Icons.cloud_done_rounded, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Firebase FCM Push Ready',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              await NotificationService().checkAndNotifyPendingPayments(force: true);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Checking pending dues & test notification sent!'),
+                                    backgroundColor: AppColors.paid,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
+                            child: const Text(
+                              'Test Alert',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 // Gym Profile Card
                 Container(
                   padding: const EdgeInsets.all(18),
@@ -533,11 +594,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           const SizedBox(width: 8),
                           Text(
                             'Gym Profile & Pricing',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -578,10 +635,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                     gym.gymLogoPath != null
                                         ? 'Active on member cards & receipts'
                                         : 'No logo set yet. Tap to upload.',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 11,
-                                    ),
+                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                                   ),
                                 ],
                               ),
@@ -612,9 +666,7 @@ class _SettingsTabState extends State<SettingsTab> {
                       TextField(
                         controller: _gymNameController,
                         style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
-                        decoration: const InputDecoration(
-                          hintText: 'Enter gym title',
-                        ),
+                        decoration: const InputDecoration(hintText: 'Enter gym title'),
                       ),
                       const SizedBox(height: 16),
 
@@ -627,11 +679,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           const SizedBox(width: 8),
                           Text(
                             'Membership Plans Pricing',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
                           ),
                           const Spacer(),
                           Container(
@@ -642,11 +690,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                             child: Text(
                               'PER MONTH',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -719,7 +763,11 @@ class _SettingsTabState extends State<SettingsTab> {
                             padding: const EdgeInsets.only(left: 14, right: 8, top: 12),
                             child: Text(
                               currency,
-                              style: const TextStyle(color: Color(0xFFFF9100), fontSize: 16, fontWeight: FontWeight.w900),
+                              style: const TextStyle(
+                                color: Color(0xFFFF9100),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
                           hintText: '3500',
@@ -784,11 +832,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           const SizedBox(width: 8),
                           Text(
                             'Cloud & Database',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                           const Spacer(),
                           Container(
@@ -852,11 +896,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           const SizedBox(width: 8),
                           Text(
                             'Data Management',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -885,19 +925,14 @@ class _SettingsTabState extends State<SettingsTab> {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
                         icon: Icon(Icons.restore_rounded, size: 18, color: AppColors.primary),
-                        label: const Text(
-                          'Reload Sample / Demo Data',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
+                        label: const Text('Reload Sample / Demo Data', style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
                         onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const IntroScreen(isReview: true),
-                            ),
-                          );
+                          Navigator.of(
+                            context,
+                          ).push(MaterialPageRoute(builder: (_) => const IntroScreen(isReview: true)));
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textPrimary,
