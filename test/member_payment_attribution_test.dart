@@ -594,4 +594,55 @@ void main() {
     expect(sepAfter.isPaid, isTrue);
     expect(sepAfter.effectiveStartDate, equals(DateTime(2026, 9, 15)));
   });
+
+  test('August attendance is due in August but does not create September dues',
+      () async {
+    final gym = GymService();
+    final septemberPendingBefore = gym.getMonthlyFinancialSummary('2026-09')['pendingCount'] as int;
+    final member = await gym.addCustomer(
+      name: 'August Only',
+      phone: '9876500012',
+      joinDate: DateTime(2026, 8, 1),
+      markAsPaidNow: false,
+    );
+    await gym.setMonthAttendance(
+      customerId: member.id,
+      year: 2026,
+      month: 8,
+      status: AttendanceStatus.present,
+    );
+
+    final start = DateTime(2026, 8, 1);
+    final end = DateTime(2026, 9, 30);
+    final groups = gym.getPendingDuesByMonth(start, end);
+    expect(
+      groups.singleWhere((g) => g.monthKey == '2026-08')
+          .items.where((item) => item.customer.id == member.id).length,
+      1,
+    );
+    expect(
+      groups.where((g) => g.monthKey == '2026-09')
+          .expand((g) => g.items)
+          .where((item) => item.customer.id == member.id),
+      isEmpty,
+    );
+    expect(gym.getMonthlyFinancialSummary('2026-09')['pendingCount'], septemberPendingBefore);
+    expect(
+      gym.getPendingDuesByMember(start, end)
+          .singleWhere((s) => s.customer.id == member.id)
+          .pendingRecords.map((record) => record.monthYear),
+      ['2026-08'],
+    );
+
+    await gym.toggleAttendance(
+      member.id, '2026-09-01', AttendanceStatus.present,
+    );
+    expect(
+      gym.getPendingDuesByMonth(start, end)
+          .singleWhere((g) => g.monthKey == '2026-09')
+          .items.where((item) => item.customer.id == member.id).length,
+      1,
+    );
+    expect(gym.getMonthlyFinancialSummary('2026-09')['pendingCount'], septemberPendingBefore + 1);
+  });
 }

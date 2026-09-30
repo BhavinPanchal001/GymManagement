@@ -1841,7 +1841,8 @@ class GymService extends ChangeNotifier {
         }
 
         final stage = getMemberLifecycleStage(customer, monthKey);
-        if (stage == MemberLifecycleStage.due) {
+        if (stage == MemberLifecycleStage.due &&
+            getUnpaidAttendedDaysInMonth(customer.id, monthKey) > 0) {
           final record = getPaymentRecord(customer.id, monthKey);
           pendingRecords.add(record);
         }
@@ -1891,7 +1892,8 @@ class GymService extends ChangeNotifier {
         if (customer.joinDate.isAfter(monthEnd)) continue;
 
         final stage = getMemberLifecycleStage(customer, monthKey);
-        if (stage == MemberLifecycleStage.due) {
+        if (stage == MemberLifecycleStage.due &&
+            getUnpaidAttendedDaysInMonth(customer.id, monthKey) > 0) {
           final record = getPaymentRecord(customer.id, monthKey);
           items.add(MonthPendingItem(customer: customer, payment: record));
           monthTotal += pendingAmountOf(record);
