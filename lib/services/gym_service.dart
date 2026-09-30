@@ -1830,16 +1830,6 @@ class GymService extends ChangeNotifier {
 
       final pendingRecords = <PaymentRecord>[];
       for (final monthKey in monthKeys) {
-        final parts = monthKey.split('-');
-        if (parts.length == 2) {
-          final year = int.tryParse(parts[0]) ?? 2026;
-          final month = int.tryParse(parts[1]) ?? 1;
-          final monthEnd = DateTime(year, month + 1, 0, 23, 59, 59);
-          if (customer.joinDate.isAfter(monthEnd)) {
-            continue; // Member hadn't joined yet
-          }
-        }
-
         final stage = getMemberLifecycleStage(customer, monthKey);
         if (stage == MemberLifecycleStage.due &&
             getUnpaidAttendedDaysInMonth(customer.id, monthKey) > 0) {
@@ -1882,14 +1872,8 @@ class GymService extends ChangeNotifier {
       final items = <MonthPendingItem>[];
       double monthTotal = 0.0;
 
-      final parts = monthKey.split('-');
-      final year = int.tryParse(parts[0]) ?? 2026;
-      final month = int.tryParse(parts[1]) ?? 1;
-      final monthEnd = DateTime(year, month + 1, 0, 23, 59, 59);
-
       for (final customer in _customers) {
         if (!customer.isActive) continue;
-        if (customer.joinDate.isAfter(monthEnd)) continue;
 
         final stage = getMemberLifecycleStage(customer, monthKey);
         if (stage == MemberLifecycleStage.due &&

@@ -645,4 +645,70 @@ void main() {
     );
     expect(gym.getMonthlyFinancialSummary('2026-09')['pendingCount'], septemberPendingBefore + 1);
   });
+
+  test('Backdated attendance is pending even when the profile join date is later',
+      () async {
+    final gym = GymService();
+    final augustPendingBefore =
+        gym.getMonthlyFinancialSummary('2026-08')['pendingCount'] as int;
+    final member = await gym.addCustomer(
+      name: 'Backdated Member',
+      phone: '9876500013',
+      joinDate: DateTime(2026, 9, 1),
+      markAsPaidNow: false,
+    );
+    await gym.setMonthAttendance(
+      customerId: member.id,
+      year: 2026,
+      month: 8,
+      status: AttendanceStatus.present,
+      excludeSundays: true,
+    );
+
+    final start = DateTime(2026, 8, 1);
+    final end = DateTime(2026, 9, 30);
+    expect(gym.getMonthlyAttendanceSummary(member.id, '2026-08')['present'], 26);
+    expect(gym.getUnpaidAttendedDaysInMonth(member.id, '2026-08'), 26);
+    expect(gym.getMemberLifecycleStage(member, '2026-08'),
+        MemberLifecycleStage.due);
+    expect(
+      gym.getPendingDuesByMonth(start, end)
+          .where((group) => group.monthKey == '2026-08')
+          .expand((group) => group.items)
+          .where((item) => item.customer.id == member.id).length,
+      1,
+    );
+    expect(
+      gym.getPendingDuesByMember(start, end)
+          .singleWhere((summary) => summary.customer.id == member.id)
+          .pendingRecords.map((record) => record.monthYear),
+      ['2026-08'],
+    );
+    expect(gym.getMonthlyFinancialSummary('2026-08')['pendingCount'],
+        augustPendingBefore + 1);
+    expect(
+      gym.getPendingDuesByMonth(start, end)
+          .where((group) => group.monthKey == '2026-09')
+          .expand((group) => group.items)
+          .where((item) => item.customer.id == member.id),
+      isEmpty,
+    );
+
+    await gym.markPaymentAsPaid(
+      customerId: member.id,
+      monthYear: '2026-08',
+      method: PaymentMethod.cash,
+      amount: 600,
+      totalDue: 600,
+      startDate: DateTime(2026, 8, 1),
+      endDate: DateTime(2026, 8, 31),
+    );
+    expect(gym.getUnpaidAttendedDaysInMonth(member.id, '2026-08'), 0);
+    expect(
+      gym.getPendingDuesByMonth(start, end)
+          .expand((group) => group.items)
+          .where((item) => item.customer.id == member.id),
+      isEmpty,
+    );
+  });
 }
