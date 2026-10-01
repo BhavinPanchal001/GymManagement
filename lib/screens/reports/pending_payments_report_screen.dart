@@ -8,10 +8,13 @@ import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
+import '../../widgets/collect_balance_dialog.dart';
+import '../../widgets/bill_receipt_dialog.dart';
 import '../../widgets/whatsapp_reminder_sheet.dart';
 import 'export_report_dialog.dart';
 
 enum DateRangePreset {
+  allOutstanding('All Outstanding'),
   thisMonth('This Month'),
   last3Months('Last 3 Months'),
   last6Months('Last 6 Months'),
@@ -41,9 +44,15 @@ class PendingPaymentsReportScreen extends StatefulWidget {
 }
 
 class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScreen> {
-  DateRangePreset _selectedPreset = DateRangePreset.last3Months;
+  DateRangePreset _selectedPreset = DateRangePreset.allOutstanding;
   late DateTime _startDate;
   late DateTime _endDate;
+  DateTime get _rangeStart => _selectedPreset == DateRangePreset.allOutstanding
+      ? GymService().outstandingStartDate
+      : _startDate;
+  DateTime get _rangeEnd => _selectedPreset == DateRangePreset.allOutstanding
+      ? GymService().outstandingEndDate
+      : _endDate;
   ReportViewMode _viewMode = ReportViewMode.byMember;
   ReportSortOrder _sortOrder = ReportSortOrder.highestDue;
 
@@ -53,7 +62,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   @override
   void initState() {
     super.initState();
-    _applyPreset(DateRangePreset.last3Months);
+    _applyPreset(DateRangePreset.allOutstanding);
   }
 
   @override
@@ -68,6 +77,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     DateTime end = DateTime(now.year, now.month + 1, 0); // end of current month
 
     switch (preset) {
+      case DateRangePreset.allOutstanding:
+        start = GymService().outstandingStartDate;
+        end = GymService().outstandingEndDate;
+        break;
       case DateRangePreset.thisMonth:
         start = DateTime(now.year, now.month, 1);
         break;
@@ -95,7 +108,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   Future<void> _pickCustomDateRange() async {
     final picked = await showDateRangePicker(
       context: context,
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+      initialDateRange: DateTimeRange(start: _rangeStart, end: _rangeEnd),
       firstDate: DateTime(2022),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
@@ -185,6 +198,15 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   }
 
   Future<void> _openMarkPaid(Customer customer, PaymentRecord record) async {
+    if (record.isPaid) {
+      final current = GymService().getPaymentById(record.id);
+      if (current == null || current.balanceDue <= 0) return;
+      final bill = await CollectBalanceDialog.show(context, current);
+      if (bill != null && mounted) {
+        await BillReceiptDialog.show(context, bill: bill);
+      }
+      return;
+    }
     final success = await MarkPaymentDialog.show(
       context,
       customer: customer,
@@ -211,8 +233,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
         final gym = GymService();
         final currency = gym.settings.currencySymbol;
 
-        final rawMemberSummaries = gym.getPendingDuesByMember(_startDate, _endDate);
-        final rawMonthGroups = gym.getPendingDuesByMonth(_startDate, _endDate);
+        final start = _rangeStart;
+        final end = _rangeEnd;
+        final rawMemberSummaries = gym.getPendingDuesByMember(start, end);
+        final rawMonthGroups = gym.getPendingDuesByMonth(start, end);
 
         final totalPending = rawMemberSummaries.fold<double>(0.0, (s, m) => s + m.totalPendingAmount);
         final totalPendingRecords = rawMemberSummaries.fold<int>(0, (s, m) => s + m.pendingRecords.length);
@@ -231,8 +255,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                 onPressed: () {
                   ExportReportDialog.show(
                     context,
-                    startDate: _startDate,
-                    endDate: _endDate,
+                    startDate: start,
+                    endDate: end,
                     memberSummaries: rawMemberSummaries,
                     totalPending: totalPending,
                   );
@@ -310,8 +334,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   }
 
   Widget _buildDateRangeHeader() {
-    final startStr = GymDateUtils.formatDate(_startDate);
-    final endStr = GymDateUtils.formatDate(_endDate);
+    final startStr = GymDateUtils.formatDate(_rangeStart);
+    final endStr = GymDateUtils.formatDate(_rangeEnd);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -685,10 +709,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                             children: [
                               Icon(Icons.phone_rounded, color: AppColors.primary, size: 12),
                               const SizedBox(width: 4),
-                              Text(
+                              Flexible(child: Text(
                                 customer.phone,
                                 style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                              ),
+                              )),
                             ],
                           ),
                         ),
@@ -709,7 +733,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         ),
                       ),
                       Text(
-                        '${item.pendingRecords.length} ${item.pendingRecords.length == 1 ? 'month' : 'months'} due',
+                        '${item.pendingRecords.length} ${item.pendingRecords.length == 1 ? 'period' : 'periods'} due',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
@@ -760,7 +784,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
               const SizedBox(height: 12),
 
               // Action Buttons Row
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   // Call Member Button
                   IconButton(
@@ -784,8 +811,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   const SizedBox(width: 8),
 
                   // WhatsApp Reminder Button
-                  Expanded(
-                    child: OutlinedButton.icon(
+                  OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.whatsapp,
                         side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.5)),
@@ -799,13 +825,11 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         latestRecord.monthYear,
                         item.totalPendingAmount,
                       ),
-                    ),
                   ),
                   const SizedBox(width: 8),
 
                   // Mark as Paid Button
-                  Expanded(
-                    child: ElevatedButton.icon(
+                  ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.primaryOn,
@@ -814,9 +838,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         elevation: 0,
                       ),
                       icon: const Icon(Icons.check_circle_outline_rounded, size: 15),
-                      label: const Text('Mark Paid', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      label: Text(
+                        item.pendingRecords.first.isPaid ? 'Collect Balance' : 'Record Payment',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       onPressed: () => _openMarkPaid(customer, item.pendingRecords.first),
-                    ),
                   ),
                 ],
               ),
@@ -858,8 +883,9 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                   border: Border(bottom: BorderSide(color: AppColors.surfaceBorder)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Row(
                       children: [
@@ -906,7 +932,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   final customer = item.customer;
                   final payment = item.payment;
 
-                  return Row(
+                  return Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       CustomerAvatar(
                         imagePath: customer.imagePath,
@@ -914,8 +943,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         radius: 18,
                       ),
                       const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
+                      Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -931,7 +959,6 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                               style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                             ),
                           ],
-                        ),
                       ),
                       Text(
                         GymDateUtils.formatCurrency(GymService().pendingAmountOf(payment), symbol: currency),
@@ -970,7 +997,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       // Quick Pay Icon
                       IconButton(
                         icon: Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
-                        tooltip: 'Mark Paid',
+                        tooltip: payment.isPaid ? 'Collect Balance' : 'Record Payment',
                         visualDensity: VisualDensity.compact,
                         onPressed: () => _openMarkPaid(customer, payment),
                       ),

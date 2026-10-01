@@ -66,6 +66,7 @@ void main() {
       monthYear: testMonth,
       method: PaymentMethod.gpay,
       amount: 1200,
+      totalDue: 1200,
       startDate: DateTime(2026, 9, 1),
       endDate: DateTime(2026, 9, 30),
       transactionRef: 'UPI-TEST-123',
@@ -79,7 +80,7 @@ void main() {
 
   test('GymService mark whole month present / absent logic test', () async {
     final gym = GymService();
-    final customer = gym.customers.first;
+    final customer = gym.customers.firstWhere((c) => c.name == 'Demo Member');
     const testYear = 2026;
     const testMonth = 7; // July 2026 has 31 days and is in the past
     const monthKey = '2026-07';
@@ -128,7 +129,7 @@ void main() {
     expect(summary['rest'], 0);
 
     // 4. Test setMonthAttendanceForMultiple
-    final activeIds = gym.customers.where((c) => c.isActive).take(2).map((c) => c.id).toList();
+    final activeIds = gym.customers.where((c) => c.isActive && !c.joinDate.isAfter(DateTime(testYear, testMonth, 1))).take(2).map((c) => c.id).toList();
     await gym.setMonthAttendanceForMultiple(
       customerIds: activeIds,
       year: testYear,
@@ -197,7 +198,7 @@ void main() {
 
   testWidgets('MarkMonthAttendanceDialog widget renders and applies test', (WidgetTester tester) async {
     final gym = GymService();
-    final customer = gym.customers.first;
+    final customer = gym.customers.firstWhere((c) => c.name == 'Demo Member');
     final testMonth = DateTime(2026, 7, 1);
 
     await tester.pumpWidget(
@@ -571,7 +572,9 @@ void main() {
       amount: 1500.0,
       durationMonths: 3,
       transactionRef: 'UPI-PKG-1500',
-    );
+        startDate: DateTime(2026, 9, 17),
+        paidAt: DateTime(2026, 9, 17),
+      );
 
     // Verify Bill
     expect(bill.amount, 1500.0);
@@ -596,8 +599,8 @@ void main() {
     expect(novPayment.isPaid, true);
     expect(novPayment.id, sepPayment.id);
 
-    // The cycle paid today (mid-September) runs to mid-December, so December
-    // is still covered by the same record; the next uncovered month is January.
+      // The cycle starting mid-September runs to mid-December, so December
+      // is still covered by the same record; the next uncovered month is January.
     final decPayment = gym.getPaymentRecord(member.id, '2026-12');
     expect(decPayment.isPaid, true);
     expect(decPayment.id, sepPayment.id);
@@ -625,7 +628,7 @@ void main() {
     final customer = gym.customers.first;
 
     await tester.pumpWidget(
-      MaterialApp(
+        MaterialApp(
         home: CustomerDetailScreen(customerId: customer.id),
       ),
     );
@@ -725,5 +728,3 @@ void main() {
     expect(find.text('Get Started'), findsOneWidget);
   });
 }
-
-

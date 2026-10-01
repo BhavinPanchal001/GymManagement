@@ -105,6 +105,9 @@ class PaymentRecord {
   final DateTime? startDate;
   /// Exact end date of this membership period (e.g., 2026-10-14)
   final DateTime? endDate;
+  final bool isMembershipAgreement;
+  final bool isInferredAgreement;
+  final String? planType;
 
   const PaymentRecord({
     required this.id,
@@ -121,6 +124,9 @@ class PaymentRecord {
     this.coveredByMonthYear,
     this.startDate,
     this.endDate,
+    this.isMembershipAgreement = false,
+    this.isInferredAgreement = false,
+    this.planType,
   });
 
   bool get isPaid => status == PaymentStatus.paid;
@@ -174,6 +180,9 @@ class PaymentRecord {
     String? coveredByMonthYear,
     DateTime? startDate,
     DateTime? endDate,
+    bool? isMembershipAgreement,
+    bool? isInferredAgreement,
+    String? planType,
   }) {
     return PaymentRecord(
       id: id ?? this.id,
@@ -190,6 +199,10 @@ class PaymentRecord {
       coveredByMonthYear: coveredByMonthYear ?? this.coveredByMonthYear,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
+      isMembershipAgreement:
+          isMembershipAgreement ?? this.isMembershipAgreement,
+      isInferredAgreement: isInferredAgreement ?? this.isInferredAgreement,
+      planType: planType ?? this.planType,
     );
   }
 
@@ -209,6 +222,9 @@ class PaymentRecord {
       'coveredByMonthYear': coveredByMonthYear,
       'startDate': startDate?.toIso8601String(),
       'endDate': endDate?.toIso8601String(),
+      'isMembershipAgreement': isMembershipAgreement,
+      'isInferredAgreement': isInferredAgreement,
+      'planType': planType,
     };
   }
 
@@ -237,6 +253,9 @@ class PaymentRecord {
       endDate: map['endDate'] != null
           ? DateTime.tryParse(map['endDate'] as String)
           : null,
+      isMembershipAgreement: map['isMembershipAgreement'] as bool? ?? false,
+      isInferredAgreement: map['isInferredAgreement'] as bool? ?? false,
+      planType: map['planType'] as String?,
     );
   }
 

@@ -35,27 +35,8 @@ class BillReceiptDialog extends StatefulWidget {
 class _BillReceiptDialogState extends State<BillReceiptDialog> {
   bool _isGeneratingPdf = false;
 
-  BillRecord get bill {
-    if (widget.bill.amount > 0) return widget.bill;
-    final gym = GymService();
-    if (widget.bill.paymentId.isNotEmpty) {
-      final primary = gym.getBillForPayment(widget.bill.paymentId);
-      if (primary != null && primary.amount > 0) return primary;
-      final pay = gym.getPaymentById(widget.bill.paymentId);
-      final cust = gym.getCustomerById(widget.bill.customerId);
-      if (pay != null && pay.amount > 0 && cust != null) {
-        return gym.getOrCreateBillForPayment(cust, pay);
-      }
-    }
-    // Legacy bill without paymentId: resolve via the covering payment.
-    final covering = gym.getPaymentCoveringMonth(widget.bill.customerId, widget.bill.monthYear);
-    final cust = gym.getCustomerById(widget.bill.customerId);
-    if (covering != null && cust != null) {
-      final resolved = gym.getOrCreateBillForPayment(cust, covering);
-      if (resolved.amount > 0) return resolved;
-    }
-    return widget.bill;
-  }
+  // Never substitute another receipt when a saved amount is zero.
+  BillRecord get bill => widget.bill;
 
   Future<void> _handlePrintPdf() async {
     setState(() => _isGeneratingPdf = true);

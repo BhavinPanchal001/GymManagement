@@ -69,9 +69,15 @@ class _SettingsTabState extends State<SettingsTab> {
     final existingPackages = List.of(gym.settings.durationPackages);
     final updatedPackages = existingPackages.map((p) {
       if (p.months == 1) {
-        if (p.planType == CustomerPlan.normal) return p.copyWith(price: normalFee);
-        if (p.planType == CustomerPlan.personalTraining) return p.copyWith(price: ptFee);
-        if (p.planType == CustomerPlan.personalTrainingDiet) return p.copyWith(price: ptDietFee);
+        if (p.planType == CustomerPlan.normal) {
+          return p.copyWith(price: normalFee);
+        }
+        if (p.planType == CustomerPlan.personalTraining) {
+          return p.copyWith(price: ptFee);
+        }
+        if (p.planType == CustomerPlan.personalTrainingDiet) {
+          return p.copyWith(price: ptDietFee);
+        }
       }
       return p;
     }).toList();
@@ -438,7 +444,8 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                             child: Text(
                               theme.themeModeName.toUpperCase(),
-                              style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
@@ -520,7 +527,9 @@ class _SettingsTabState extends State<SettingsTab> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      SwitchListTile(
+                      Material(
+                        color: Colors.transparent,
+                        child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         // activeThumbColor: AppColors.primary,
                         title: Text(
@@ -536,6 +545,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           final updated = gym.settings.copyWith(isPaymentDueNotificationEnabled: enabled);
                           await gym.updateSettings(updated);
                         },
+                      ),
                       ),
                       const Divider(height: 18),
                       Row(
@@ -830,11 +840,10 @@ class _SettingsTabState extends State<SettingsTab> {
                         children: [
                           Icon(Icons.cloud_sync_rounded, color: AppColors.secondary, size: 22),
                           const SizedBox(width: 8),
-                          Text(
+                          Expanded(child: Text(
                             'Cloud & Database',
                             style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
-                          ),
-                          const Spacer(),
+                          )),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
@@ -844,7 +853,13 @@ class _SettingsTabState extends State<SettingsTab> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              gym.isCloudAttached ? 'CLOUD SYNCED' : 'OFFLINE ONLY',
+                              gym.syncError != null
+                                  ? 'UPLOAD ISSUE'
+                                  : gym.pendingUploadCount > 0
+                                  ? 'WAITING TO UPLOAD'
+                                  : gym.isCloudAttached
+                                  ? 'CLOUD CONNECTED'
+                                  : 'ON THIS PHONE',
                               style: TextStyle(
                                 color: gym.isCloudAttached ? AppColors.paid : AppColors.pending,
                                 fontSize: 11,
@@ -856,8 +871,8 @@ class _SettingsTabState extends State<SettingsTab> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        gym.isCloudAttached
-                            ? 'Your data is syncing live to Firebase Cloud Firestore. All members, attendance, payments, and expenses are backed up in real time.'
+                        gym.currentUserId != null
+                            ? 'Changes are saved on this phone and uploaded when the cloud is available. Check any waiting uploads before changing devices.'
                             : 'Data is stored locally on this device. Sign in to enable cloud sync across devices.',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
                       ),
@@ -868,7 +883,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             Icon(Icons.check_circle_rounded, color: AppColors.paid, size: 16),
                             const SizedBox(width: 6),
                             Text(
-                              'Connected to gym-manager-e2002',
+                              'Cloud account connected',
                               style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                             ),
                           ],
@@ -902,7 +917,9 @@ class _SettingsTabState extends State<SettingsTab> {
                       ),
                       const SizedBox(height: 14),
                       OutlinedButton.icon(
-                        onPressed: _confirmClearAllData,
+                        onPressed: gym.currentUserId == null
+                            ? _confirmClearAllData
+                            : null,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.absent,
                           side: BorderSide(color: AppColors.absent.withValues(alpha: 0.5)),
@@ -917,7 +934,9 @@ class _SettingsTabState extends State<SettingsTab> {
                       ),
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
-                        onPressed: _confirmResetData,
+                        onPressed: gym.currentUserId == null
+                            ? _confirmResetData
+                            : null,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textPrimary,
                           side: BorderSide(color: AppColors.surfaceBorder),
@@ -927,6 +946,11 @@ class _SettingsTabState extends State<SettingsTab> {
                         icon: Icon(Icons.restore_rounded, size: 18, color: AppColors.primary),
                         label: const Text('Reload Sample / Demo Data', style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
+                      if (gym.currentUserId != null)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text('Live gym accounts preserve member history. Archive a member instead of clearing data.'),
+                        ),
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
                         onPressed: () {

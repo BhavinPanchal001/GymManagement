@@ -53,7 +53,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _packages = allPackages.map((p) => p.copyWith()).toList();
     for (var p in _packages) {
       _packageControllers[p.id] = TextEditingController(
-        text: p.price.toInt().toString(),
+        text: p.price.toStringAsFixed(2),
       );
     }
   }
@@ -927,7 +927,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     setState(() {
                       _packages.removeWhere((p) => p.planType == planType && p.months == months);
                       _packages.add(newPkg);
-                      _packageControllers[newPkg.id] = TextEditingController(text: price.toInt().toString());
+                      _packageControllers[newPkg.id] = TextEditingController(text: price.toStringAsFixed(2));
                     });
 
                     Navigator.pop(dialogCtx);

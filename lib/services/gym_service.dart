@@ -11,6 +11,8 @@ import '../models/gym_settings.dart';
 import '../utils/date_utils.dart';
 import 'firestore_service.dart';
 import 'auth_service.dart';
+import 'cloud_sync_queue.dart';
+import 'dart:async';
 
 enum MemberLifecycleStage {
   paid,
@@ -74,6 +76,172 @@ class MonthCardData {
   }
 }
 
+class _PendingIndex {
+  final Map<String, List<PaymentRecord>> payments = {};
+  final Map<String, List<PaymentRecord>> agreements = {};
+  final Map<String, List<PaymentRecord>> inferredAgreements = {};
+  final Map<String, Map<String, List<String>>> unpaid = {};
+  final Map<String, List<(String, String)>> _coverage = {};
+  DateTime earliest = DateTime.now();
+  DateTime latest = DateTime.now();
+
+  _PendingIndex(
+    List<Customer> customers,
+    Iterable<PaymentRecord> records,
+    Iterable<AttendanceRecord> attendance,
+    GymSettings settings,
+  ) {
+    for (final customer in customers) {
+      if (customer.joinDate.isBefore(earliest)) earliest = customer.joinDate;
+    }
+    for (final payment in records) {
+      final start = payment.effectiveStartDate;
+      final end = payment.effectiveEndDate;
+      if (start.isBefore(earliest)) earliest = start;
+      if (payment.balanceDue > 0 && start.isAfter(latest)) latest = start;
+      if (payment.isMembershipAgreement) {
+        (agreements[payment.customerId] ??= []).add(payment);
+      }
+      if (!payment.isPaid) continue;
+      (payments[payment.customerId] ??= []).add(payment);
+      if (!end.isBefore(start)) {
+        (_coverage[payment.customerId] ??= []).add((
+          GymDateUtils.toDateKey(start),
+          GymDateUtils.toDateKey(end),
+        ));
+      }
+    }
+    for (final list in payments.values) {
+      list.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
+    }
+    for (final list in agreements.values) {
+      list.sort((a, b) => a.effectiveStartDate.compareTo(b.effectiveStartDate));
+    }
+    for (final entry in _coverage.entries) {
+      entry.value.sort((a, b) => a.$1.compareTo(b.$1));
+      final merged = <(String, String)>[];
+      for (final range in entry.value) {
+        if (merged.isNotEmpty && range.$1.compareTo(merged.last.$2) <= 0) {
+          final previous = merged.removeLast();
+          merged.add((
+            previous.$1,
+            range.$2.compareTo(previous.$2) > 0 ? range.$2 : previous.$2,
+          ));
+        } else {
+          merged.add(range);
+        }
+      }
+      _coverage[entry.key] = merged;
+    }
+    var earliestKey = GymDateUtils.toDateKey(earliest);
+    for (final record in attendance) {
+      if (record.dateKey.compareTo(earliestKey) < 0) {
+        final date = DateTime.tryParse(record.dateKey);
+        if (date != null && date.isBefore(earliest)) {
+          earliest = date;
+          earliestKey = GymDateUtils.toDateKey(date);
+        }
+      }
+      if (record.status != AttendanceStatus.present ||
+          record.dateKey.length < 7 ||
+          covers(record.customerId, record.dateKey)) {
+        continue;
+      }
+      final months = unpaid[record.customerId] ??= {};
+      (months[record.dateKey.substring(0, 7)] ??= []).add(record.dateKey);
+    }
+    for (final customer in customers) {
+      final unpaidDates = (unpaid[customer.id]?.values
+              .expand((dates) => dates).toSet().toList() ?? <String>[])..sort();
+      if (unpaidDates.isEmpty) continue;
+      final chargeRanges = <(String, String)>[
+        for (final p in agreements[customer.id] ?? <PaymentRecord>[])
+          (GymDateUtils.toDateKey(p.effectiveStartDate),
+           GymDateUtils.toDateKey(p.effectiveEndDate)),
+      ];
+      final inferred = <PaymentRecord>[];
+      for (final dateKey in unpaidDates) {
+        if (chargeRanges.any((range) =>
+            dateKey.compareTo(range.$1) >= 0 &&
+            dateKey.compareTo(range.$2) <= 0)) {
+          continue;
+        }
+        final attended = DateTime.parse(dateKey);
+        var start = attended;
+        final earlierPeriods = [
+          ...agreements[customer.id] ?? <PaymentRecord>[],
+          ...payments[customer.id] ?? <PaymentRecord>[],
+          ...inferred,
+        ];
+        for (final period in earlierPeriods) {
+          final after = period.effectiveEndDate.add(const Duration(days: 1));
+          if (!after.isAfter(attended) &&
+              after.year == attended.year && after.month == attended.month &&
+              (start == attended || after.isAfter(start))) {
+            start = after;
+          }
+        }
+        final end = GymDateUtils.computeAnniversaryEndDate(
+          start, customer.planDurationMonths,
+        );
+        final agreement = PaymentRecord(
+          id: 'pending_${customer.id}_${GymDateUtils.toDateKey(start)}',
+          customerId: customer.id,
+          monthYear: GymDateUtils.toMonthKey(start),
+          amount: 0,
+          totalDue: settings.getPriceForDuration(
+            customer.planType, customer.planDurationMonths,
+          ),
+          durationMonths: customer.planDurationMonths,
+          startDate: start,
+          endDate: end,
+          isMembershipAgreement: true,
+          isInferredAgreement: true,
+          planType: customer.planType,
+        );
+        inferred.add(agreement);
+        chargeRanges.add((
+          GymDateUtils.toDateKey(start), GymDateUtils.toDateKey(end),
+        ));
+      }
+      if (inferred.isNotEmpty) inferredAgreements[customer.id] = inferred;
+    }
+  }
+
+  bool covers(String customerId, String dateKey) {
+    final ranges = _coverage[customerId];
+    if (ranges == null) return false;
+    var low = 0;
+    var high = ranges.length - 1;
+    while (low <= high) {
+      final middle = (low + high) ~/ 2;
+      final range = ranges[middle];
+      if (dateKey.compareTo(range.$1) < 0) {
+        high = middle - 1;
+      } else if (dateKey.compareTo(range.$2) > 0) {
+        low = middle + 1;
+      } else {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<PaymentRecord> membershipRecords(String customerId) => [
+    ...agreements[customerId] ?? <PaymentRecord>[],
+    ...inferredAgreements[customerId] ?? <PaymentRecord>[],
+  ].where((record) => !record.isInferredAgreement || record.isPaid ||
+      hasUnpaidAttendance(customerId, record.effectiveStartDate, record.effectiveEndDate))
+      .toList();
+
+  bool hasUnpaidAttendance(String customerId, DateTime start, DateTime end) {
+    final startKey = GymDateUtils.toDateKey(start);
+    final endKey = GymDateUtils.toDateKey(end);
+    return unpaid[customerId]?.values.expand((dates) => dates).any((key) =>
+        key.compareTo(startKey) >= 0 && key.compareTo(endKey) <= 0) ?? false;
+  }
+}
+
 class GymService extends ChangeNotifier {
   static final GymService _instance = GymService._internal();
   factory GymService() => _instance;
@@ -90,6 +258,271 @@ class GymService extends ChangeNotifier {
   bool _isCloudAttached = false;
   bool _isMigratedToCloud = false;
   bool _suppressCloudUpdates = false; // Prevents re-entrant updates during local writes
+  CloudSyncQueue? _syncQueue;
+  String? _cloudReadError;
+  String? _financialCacheError;
+  Future<void>? _financialTail;
+  Future<void>? _financialCacheTail;
+  int _operationSequence = 0;
+  _PendingIndex? _pendingIndex;
+  final Map<String, List<MemberPendingSummary>> _pendingByRange = {};
+  String? _pendingCacheDay;
+
+  _PendingIndex get _duesIndex {
+    final day = GymDateUtils.toDateKey(DateTime.now());
+    if (_pendingCacheDay != day) {
+      _pendingIndex = null;
+      _pendingByRange.clear();
+      _pendingCacheDay = day;
+    }
+    return _pendingIndex ??= _PendingIndex(
+      _customers,
+      _paymentMap.values,
+      _attendanceMap.values,
+      _settings,
+    );
+  }
+
+  @override
+  void notifyListeners() {
+    _pendingIndex = null;
+    _pendingByRange.clear();
+    super.notifyListeners();
+  }
+
+  void _notifySyncStatus() => super.notifyListeners();
+
+  int get pendingUploadCount => _syncQueue?.pendingCount ?? 0;
+  String? get syncError =>
+      _financialCacheError ?? _cloudReadError ?? _syncQueue?.lastError;
+
+  Future<void> _prepareSyncQueue(String userId) async {
+    _syncQueue?.dispose();
+    final queue = CloudSyncQueue(
+      preferences: await SharedPreferences.getInstance(),
+      userId: userId,
+      upload: (changes) async {
+        if (_currentUserId != userId) {
+          throw StateError('This account is no longer connected.');
+        }
+        final payments = _overlay('payments', {
+          for (final p in _paymentMap.values) p.id: p.toMap(),
+        }).map((key, value) => MapEntry(key, PaymentRecord.fromMap(value)));
+        final bills = _overlay('bills', {
+          for (final b in _billsMap.values) b.id: b.toMap(),
+        }).map((key, value) => MapEntry(key, BillRecord.fromMap(value)));
+        await _saveFinancialSnapshot(payments, bills);
+        await FirestoreService().commitChanges(userId, changes);
+      },
+    );
+    queue.load();
+    _syncQueue = queue;
+    queue.addListener(_notifySyncStatus);
+    // Recover changes saved to the outbox just before an interrupted local save.
+    _onFirestoreData(
+      customers: _customers,
+      attendanceMap: _attendanceMap,
+      paymentMap: _paymentMap,
+      billsMap: _billsMap,
+      expenses: _expenses,
+      settings: _settings,
+    );
+  }
+
+  Future<void> _connectCloud(String userId) async {
+    try {
+      await FirestoreService().attachUser(
+        userId,
+        callback: _onFirestoreData,
+        onError: (_) {
+          _cloudReadError =
+              'Could not refresh cloud data. Changes stay on this phone.';
+          _notifySyncStatus();
+        },
+      );
+      _isCloudAttached = FirestoreService().isAttached;
+      _cloudReadError = null;
+    } catch (_) {
+      _isCloudAttached = false;
+      _cloudReadError =
+          'Cloud connection unavailable. Changes stay on this phone.';
+    }
+    unawaited(_syncQueue?.flush() ?? Future.value());
+  }
+
+  Future<void> retryCloudSync() async {
+    final owner = _currentUserId;
+    if (owner == null) return;
+    await _refreshFinancialCache();
+    if (!_isCloudAttached || _cloudReadError != null) {
+      await FirestoreService().detachUser();
+      await _connectCloud(owner);
+    }
+    await _syncQueue?.flush();
+    _notifySyncStatus();
+  }
+
+  Future<void> _queueChanges(List<CloudChange> changes, {
+    bool autoFlush = true,
+  }) async {
+    if (_currentUserId == null) return; // Local exploration mode.
+    final queue = _syncQueue;
+    if (queue == null) {
+      throw StateError('Please wait for your account to finish loading.');
+    }
+    final writes = <Future<void>>[];
+    for (var i = 0; i < changes.length; i += 450) {
+      writes.add(queue.enqueue(
+        changes.sublist(i, (i + 450).clamp(0, changes.length)),
+        autoFlush: autoFlush,
+      ));
+    }
+    await Future.wait(writes);
+  }
+
+  String newPaymentOperationId() =>
+      '${DateTime.now().microsecondsSinceEpoch}_${_operationSequence++}';
+
+  Future<T> _serializeFinancialSave<T>(
+    Future<T> Function() save,
+  ) {
+    final result = (_financialTail ?? Future.value()).then((_) => save());
+    late final Future<void> tail;
+    void clear() {
+      if (identical(_financialTail, tail)) _financialTail = null;
+    }
+
+    tail = result.then<void>(
+      (_) => clear(),
+      onError: (Object error, StackTrace stack) => clear(),
+    );
+    _financialTail = tail;
+    return result;
+  }
+
+  String _financialKey(String? owner) =>
+      owner == null ? 'gym_financial_v1' : 'gym_${owner}_financial_v1';
+
+  void _loadFinancialSnapshot(SharedPreferences preferences) {
+    final saved = preferences.getString(_financialKey(_currentUserId));
+    if (saved == null) return;
+    final data = json.decode(saved) as Map<String, dynamic>;
+    _paymentMap = {
+      for (final item in data['payments'] as List)
+        (item['id'] as String): PaymentRecord.fromMap(
+          Map<String, dynamic>.from(item as Map),
+        ),
+    };
+    _billsMap = {
+      for (final item in data['bills'] as List)
+        (item['id'] as String): BillRecord.fromMap(
+          Map<String, dynamic>.from(item as Map),
+        ),
+    };
+    if (data['customers'] != null) {
+      _customers = (data['customers'] as List)
+          .map((item) => Customer.fromMap(Map<String, dynamic>.from(item as Map)))
+          .toList();
+    }
+  }
+
+  Future<void> _saveFinancialSnapshot(
+    Map<String, PaymentRecord> payments,
+    Map<String, BillRecord> bills, {
+    List<Customer>? customers,
+  }
+  ) {
+    final key = _financialKey(_currentUserId);
+    final saved = json.encode({
+      'payments': payments.values.map((p) => p.toMap()).toList(),
+      'bills': bills.values.map((b) => b.toMap()).toList(),
+      'customers': (customers ?? _customers).map((c) => c.toMap()).toList(),
+    });
+    final write = (_financialCacheTail ?? Future.value())
+        .catchError((Object _) {})
+        .then((_) async {
+          final preferences = await SharedPreferences.getInstance();
+          bool stored;
+          try {
+            stored = await preferences.setString(key, saved);
+          } catch (_) {
+            await preferences.reload();
+            rethrow;
+          }
+          if (!stored) {
+            await preferences.reload();
+            throw StateError('Could not save payment history on this phone.');
+          }
+        });
+    late final Future<void> result;
+    result = write.whenComplete(() {
+      if (identical(_financialCacheTail, result)) _financialCacheTail = null;
+    });
+    _financialCacheTail = result;
+    return result;
+  }
+
+  Future<void> _refreshFinancialCache() async {
+    try {
+      await _savePayments();
+      await _saveBills();
+      _financialCacheError = null;
+    } catch (_) {
+      _financialCacheError =
+          'Payment saved. Local history refresh needs a retry.';
+    }
+  }
+
+  Future<void> _commitFinancialChange(
+    PaymentRecord payment,
+    BillRecord bill, {
+    Customer? customer,
+  }) => _commitFinancialRecords(
+    payments: [payment], bills: [bill],
+    customers: customer == null ? [] : [customer],
+  );
+
+  Future<void> _commitFinancialRecords({
+    List<PaymentRecord> payments = const [],
+    List<BillRecord> bills = const [],
+    List<Customer> customers = const [],
+  }) async {
+    final nextPayments = {..._paymentMap, for (final p in payments) p.id: p};
+    final nextBills = {..._billsMap, for (final b in bills) b.id: b};
+    final changedIds = customers.map((c) => c.id).toSet();
+    final nextCustomers = [
+      ...customers, ..._customers.where((c) => !changedIds.contains(c.id)),
+    ];
+    if (_currentUserId == null) {
+      await _saveFinancialSnapshot(
+        nextPayments, nextBills, customers: nextCustomers,
+      );
+    } else {
+      await _queueChanges([
+        ...customers.map((c) => CloudChange('customers', c.id, c.toMap())),
+        ...payments.map((p) => CloudChange('payments', p.id, p.toMap())),
+        ...bills.map((b) => CloudChange('bills', b.id, b.toMap())),
+      ], autoFlush: false);
+    }
+    _paymentMap = nextPayments;
+    _billsMap = nextBills;
+    _customers = nextCustomers;
+    await _refreshFinancialCache();
+    if (customers.isNotEmpty) {
+      try {
+        await _saveCustomers();
+      } catch (_) {
+        _financialCacheError = 'Member saved. Local history refresh needs a retry.';
+      }
+    }
+    notifyListeners();
+    unawaited(_syncQueue?.flush() ?? Future.value());
+  }
+
+  Map<String, Map<String, dynamic>> _overlay(
+    String collection,
+    Map<String, Map<String, dynamic>> records,
+  ) => _syncQueue?.overlay(collection, records) ?? records;
 
   List<Customer> get customers => List.unmodifiable(_customers);
   List<ExpenseRecord> get expenses => List.unmodifiable(_expenses);
@@ -177,6 +610,7 @@ class GymService extends ChangeNotifier {
               (item['id'] as String? ?? ''): BillRecord.fromMap(item as Map<String, dynamic>)
           };
         }
+        _loadFinancialSnapshot(prefs);
 
         final expensesJson = prefs.getString(_keyExpenses);
         if (expensesJson != null) {
@@ -259,6 +693,7 @@ class GymService extends ChangeNotifier {
       } else {
         _billsMap = {};
       }
+      _loadFinancialSnapshot(prefs);
 
       final expensesJson = prefs.getString(_expensesKey(userId));
       if (expensesJson != null) {
@@ -311,13 +746,13 @@ class GymService extends ChangeNotifier {
       await _saveExpenses();
 
       // Attach Firestore listener
-      await FirestoreService().attachUser(userId, callback: _onFirestoreData);
-      _isCloudAttached = true;
+      await _prepareSyncQueue(userId);
 
       // Upsert fresh settings in Firestore for this new user
-      _suppressCloudUpdates = true;
-      await FirestoreService().upsertSettings(_settings);
-      _suppressCloudUpdates = false;
+      await _queueChanges([
+        CloudChange('settings', 'config', _settings.toMap()),
+      ]);
+      await _connectCloud(userId);
 
       notifyListeners();
       return;
@@ -328,14 +763,19 @@ class GymService extends ChangeNotifier {
     await _loadUserLocalData(userId);
 
     // 2. Attach Firestore sync (Firestore is source of truth)
-    await FirestoreService().attachUser(userId, callback: _onFirestoreData);
-    _isCloudAttached = true;
+    await _prepareSyncQueue(userId);
+    await _connectCloud(userId);
 
     notifyListeners();
   }
 
   /// Detach Firestore sync. Call this on logout.
   Future<void> detachUser({bool clearMemory = true}) async {
+    await _financialTail;
+    _syncQueue?.dispose();
+    _syncQueue = null;
+    _cloudReadError = null;
+    _financialCacheError = null;
     await FirestoreService().detachUser();
     _isCloudAttached = false;
     _isMigratedToCloud = false;
@@ -357,6 +797,7 @@ class GymService extends ChangeNotifier {
         await prefs.remove(_keyAttendance);
         await prefs.remove(_keyPayments);
         await prefs.remove(_keyBills);
+        await prefs.remove(_financialKey(null));
         await prefs.remove(_keySettings);
       } catch (e) {
         debugPrint('GymService.detachUser prefs cleanup warning: $e');
@@ -380,34 +821,47 @@ class GymService extends ChangeNotifier {
     bool changed = false;
 
     if (customers != null) {
-      _customers = customers;
+      _customers = _overlay('customers', {
+        for (final c in customers) c.id: c.toMap(),
+      }).values.map(Customer.fromMap).toList();
       _saveCustomers();
       changed = true;
     }
     if (attendanceMap != null) {
-      _attendanceMap = attendanceMap;
+      _attendanceMap = _overlay('attendance', {
+        for (final e in attendanceMap.entries) e.key: e.value.toMap(),
+      }).map((k, v) => MapEntry(k, AttendanceRecord.fromMap(v)));
       _saveAttendance();
       changed = true;
     }
     if (paymentMap != null) {
-      _paymentMap = paymentMap;
-      _savePayments();
+      _paymentMap = _overlay('payments', {
+        for (final e in paymentMap.entries) e.key: e.value.toMap(),
+      }).map((k, v) => MapEntry(k, PaymentRecord.fromMap(v)));
       changed = true;
     }
     if (billsMap != null) {
-      _billsMap = billsMap;
-      _saveBills();
+      _billsMap = _overlay('bills', {
+        for (final e in billsMap.entries) e.key: e.value.toMap(),
+      }).map((k, v) => MapEntry(k, BillRecord.fromMap(v)));
       changed = true;
     }
     if (expenses != null) {
-      _expenses = expenses;
+      _expenses = _overlay('expenses', {
+        for (final e in expenses) e.id: e.toMap(),
+      }).values.map(ExpenseRecord.fromMap).toList();
       _saveExpenses();
       changed = true;
     }
     if (settings != null) {
-      _settings = settings;
+      _settings = GymSettings.fromMap(
+        _overlay('settings', {'config': settings.toMap()})['config']!,
+      );
       _saveSettingsLocallyOnly();
       changed = true;
+    }
+    if (paymentMap != null || billsMap != null) {
+      unawaited(_refreshFinancialCache());
     }
 
     if ((paymentMap != null || billsMap != null) && _hasLegacyPaymentShapes()) {
@@ -529,12 +983,21 @@ class GymService extends ChangeNotifier {
     PaymentMethod? initialPaymentMethod,
     DateTime? membershipStartDate,
     DateTime? membershipEndDate,
-  }) async {
+    double? membershipFee,
+    String? operationId,
+  }) => _serializeFinancialSave(() async {
+    final operationCustomerId = operationId == null ? null : 'cust_operation_$operationId';
+    if (operationCustomerId != null) {
+      final saved = getCustomerById(operationCustomerId);
+      if (saved != null) return saved;
+    }
     final assignedCardNumber = cardNumber.trim().isNotEmpty
         ? cardNumber.trim()
         : getNextCardNumber();
-    final newId = 'cust_${DateTime.now().millisecondsSinceEpoch}';
-    // Pending dues are derived from attendance — no stored pending record needed.
+    var newId = operationCustomerId ?? 'cust_${DateTime.now().millisecondsSinceEpoch}';
+    while (_customers.any((c) => c.id == newId)) {
+      newId += 'x';
+    }
     final customer = Customer(
       id: newId,
       name: name.trim(),
@@ -553,66 +1016,47 @@ class GymService extends ChangeNotifier {
       waist: waist.trim(),
       leg: leg.trim(),
     );
-    _customers.insert(0, customer);
-
-    if (markAsPaidNow) {
-      final fee = _settings.getPriceForDuration(planType, planDurationMonths);
+    final payments = <PaymentRecord>[];
+    final bills = <BillRecord>[];
+    if (markAsPaidNow || membershipStartDate != null ||
+        membershipEndDate != null || membershipFee != null) {
+      final fee = membershipFee ?? _settings.getPriceForDuration(planType, planDurationMonths);
       final actualStart = membershipStartDate ?? customer.joinDate;
       final actualEnd = membershipEndDate ??
           GymDateUtils.computeAnniversaryEndDate(actualStart, planDurationMonths);
-      final paymentMonthKey = GymDateUtils.toMonthKey(actualStart);
-      await markPaymentAsPaid(
+      _validateMembership(fee, planDurationMonths, actualStart, actualEnd);
+      final record = PaymentRecord(
+        id: 'membership_${customer.id}',
         customerId: customer.id,
-        monthYear: paymentMonthKey,
-        method: initialPaymentMethod ?? PaymentMethod.cash,
-        amount: fee,
+        monthYear: GymDateUtils.toMonthKey(actualStart),
+        method: markAsPaidNow ? initialPaymentMethod ?? PaymentMethod.cash : null,
+        amount: markAsPaidNow ? fee : 0,
         totalDue: fee,
+        status: markAsPaidNow ? PaymentStatus.paid : PaymentStatus.pending,
+        paidAt: markAsPaidNow ? DateTime.now() : null,
         durationMonths: planDurationMonths,
         startDate: actualStart,
         endDate: actualEnd,
-        notes: 'Initial registration payment',
+        isMembershipAgreement: true,
+        planType: planType,
       );
+      payments.add(record);
+      if (markAsPaidNow) bills.add(_buildPaidBill(customer, record));
     }
-
-    notifyListeners();
-    await _saveCustomers();
-    await _savePayments();
-    await _cloudSaveCustomer(customer);
-
+    await _commitFinancialRecords(customers: [customer], payments: payments, bills: bills);
     return customer;
-  }
+  });
 
   /// Checks whether a specific attendance dateKey (yyyy-MM-dd) is covered by any valid paid payment.
   bool isDateCoveredByPayment(String customerId, String dateKey) {
     final date = DateTime.tryParse(dateKey);
     if (date == null) return false;
-    final targetDay = DateTime(date.year, date.month, date.day);
-
-    for (final p in _paymentMap.values) {
-      if (p.customerId == customerId && p.isPaid) {
-        final start = DateTime(p.effectiveStartDate.year, p.effectiveStartDate.month, p.effectiveStartDate.day);
-        final end = DateTime(p.effectiveEndDate.year, p.effectiveEndDate.month, p.effectiveEndDate.day);
-        if (!targetDay.isBefore(start) && !targetDay.isAfter(end)) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return _duesIndex.covers(customerId, GymDateUtils.toDateKey(date));
   }
 
   /// Returns the count of attended (present) days in a month that have NOT been covered by any paid payment.
   int getUnpaidAttendedDaysInMonth(String customerId, String monthKey) {
-    int count = 0;
-    for (final record in _attendanceMap.values) {
-      if (record.customerId == customerId &&
-          record.status == AttendanceStatus.present &&
-          record.dateKey.startsWith(monthKey)) {
-        if (!isDateCoveredByPayment(customerId, record.dateKey)) {
-          count++;
-        }
-      }
-    }
-    return count;
+    return _duesIndex.unpaid[customerId]?[monthKey]?.length ?? 0;
   }
 
   /// Returns the count of attended (present) days in a month that ARE covered by a paid payment.
@@ -669,13 +1113,11 @@ class GymService extends ChangeNotifier {
     final monthEnd = DateTime(y, m, GymDateUtils.daysInMonth(y, m));
 
     final covering = <PaymentRecord>[];
-    for (final p in _paymentMap.values) {
-      if (p.customerId == customerId && p.isPaid) {
+    for (final p in _duesIndex.payments[customerId] ?? <PaymentRecord>[]) {
         final start = DateTime(p.effectiveStartDate.year, p.effectiveStartDate.month, p.effectiveStartDate.day);
         final end = DateTime(p.effectiveEndDate.year, p.effectiveEndDate.month, p.effectiveEndDate.day);
         if (!start.isAfter(monthEnd) && !end.isBefore(monthStart)) {
           covering.add(p);
-        }
       }
     }
     if (covering.isEmpty) return null;
@@ -712,7 +1154,7 @@ class GymService extends ChangeNotifier {
             final currentMonthKey = GymDateUtils.toMonthKey(now);
             if (monthYear == currentMonthKey) {
               final today = DateTime(now.year, now.month, now.day);
-              if (!end.isBefore(today)) {
+              if (!start.isAfter(today) && !end.isBefore(today)) {
                 return MemberLifecycleStage.paid;
               }
             } else {
@@ -726,6 +1168,26 @@ class GymService extends ChangeNotifier {
     // 2. If this month has any attended days that are NOT covered by payment -> DUE!
     if (unpaidAttendedDays > 0) {
       return MemberLifecycleStage.due;
+    }
+    if (parts.length == 2) {
+      final y = int.tryParse(parts[0]) ?? 2026;
+      final m = int.tryParse(parts[1]) ?? 1;
+      final monthStart = DateTime(y, m, 1);
+      final monthEnd = DateTime(y, m + 1, 0);
+      for (final agreement in _duesIndex.membershipRecords(customer.id)) {
+        if (agreement.balanceDue <= 0 ||
+            agreement.effectiveStartDate.isAfter(monthEnd) ||
+            agreement.effectiveEndDate.isBefore(monthStart)) {
+          continue;
+        }
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        if (monthYear == GymDateUtils.toMonthKey(today) &&
+            agreement.effectiveStartDate.isAfter(today)) {
+          return MemberLifecycleStage.notEnrolled;
+        }
+        return MemberLifecycleStage.due;
+      }
     }
 
     // 3. If month is before the customer joined, not paid, and has 0 attendance -> not enrolled
@@ -755,23 +1217,28 @@ class GymService extends ChangeNotifier {
   Future<void> updateCustomer(Customer updated) async {
     final index = _customers.indexWhere((c) => c.id == updated.id);
     if (index != -1) {
-      _customers[index] = updated;
-
-      notifyListeners();
-      await _saveCustomers();
-      await _cloudSaveCustomer(updated);
+      await _freezeUnagreedAttendance();
+      await _serializeFinancialSave(() => _commitFinancialRecords(customers: [updated]));
     }
   }
 
   Future<void> deleteCustomer(String customerId) async {
-    _customers.removeWhere((c) => c.id == customerId);
-    _attendanceMap.removeWhere((k, v) => v.customerId == customerId);
-    _paymentMap.removeWhere((k, v) => v.customerId == customerId);
-    notifyListeners();
-    await _saveCustomers();
-    await _saveAttendance();
-    await _savePayments();
-    await _cloudDeleteCustomer(customerId);
+    await archiveCustomer(customerId);
+  }
+
+  /// Keep receipts and attendance when a member leaves the gym.
+  Future<void> archiveCustomer(String customerId) async {
+    final customer = getCustomerById(customerId);
+    if (customer != null) {
+      await updateCustomer(customer.copyWith(isActive: false));
+    }
+  }
+
+  Future<void> restoreCustomer(String customerId) async {
+    final customer = getCustomerById(customerId);
+    if (customer != null) {
+      await updateCustomer(customer.copyWith(isActive: true));
+    }
   }
 
   Customer? getCustomerById(String id) {
@@ -806,9 +1273,30 @@ class GymService extends ChangeNotifier {
     return _attendanceMap[_attKey(customerId, dateKey)]?.status == AttendanceStatus.present;
   }
 
-  Future<void> toggleAttendance(String customerId, String dateKey, AttendanceStatus status) async {
+  bool _canRecordAttendance(
+    String customerId,
+    DateTime date, {
+    bool allowBeforeJoin = false,
+  }) {
+    final customer = getCustomerById(customerId);
+    if (customer == null || !customer.isActive) return false;
+    final join = customer.joinDate;
+    final now = DateTime.now();
+    final day = DateTime(date.year, date.month, date.day);
+    return (allowBeforeJoin ||
+            !day.isBefore(DateTime(join.year, join.month, join.day))) &&
+        !day.isAfter(DateTime(now.year, now.month, now.day));
+  }
+
+  Future<void> toggleAttendance(String customerId, String dateKey, AttendanceStatus status, {
+    bool toggle = true,
+  }) async {
     final date = DateTime.tryParse(dateKey);
-    if (date != null) {
+    if (date == null ||
+        !_canRecordAttendance(customerId, date, allowBeforeJoin: true)) {
+      return;
+    }
+    {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final targetDay = DateTime(date.year, date.month, date.day);
@@ -821,7 +1309,7 @@ class GymService extends ChangeNotifier {
     final key = _attKey(customerId, dateKey);
     final existing = _attendanceMap[key];
 
-    if (existing != null && existing.status == status) {
+    if (toggle && existing != null && existing.status == status) {
       // Toggle off to absent if tapped again
       _attendanceMap[key] = existing.copyWith(
         status: AttendanceStatus.absent,
@@ -837,9 +1325,33 @@ class GymService extends ChangeNotifier {
       );
     }
 
-    notifyListeners();
-    await _saveAttendance();
     await _cloudSaveAttendance(_attendanceMap[key]!);
+    await _saveAttendance();
+    notifyListeners();
+    await _freezeUnagreedAttendance();
+  }
+
+  Future<void> markAllPresentForDate(String dateKey) async {
+    final date = DateTime.tryParse(dateKey);
+    if (date == null) throw ArgumentError('Choose a valid attendance date.');
+    final records = <AttendanceRecord>[];
+    for (final customer in _customers) {
+      if (!_canRecordAttendance(customer.id, date)) continue;
+      final key = _attKey(customer.id, dateKey);
+      final record = AttendanceRecord(
+        id: _attendanceMap[key]?.id ?? 'att_$key',
+        customerId: customer.id,
+        dateKey: dateKey,
+        status: AttendanceStatus.present,
+        recordedAt: DateTime.now(),
+      );
+      _attendanceMap[key] = record;
+      records.add(record);
+    }
+    await _cloudBatchSaveAttendance(records);
+    await _saveAttendance();
+    notifyListeners();
+    await _freezeUnagreedAttendance();
   }
 
   Future<void> markTodayQuickAttendance(String customerId, bool present) async {
@@ -848,6 +1360,7 @@ class GymService extends ChangeNotifier {
       customerId,
       todayKey,
       present ? AttendanceStatus.present : AttendanceStatus.absent,
+      toggle: false,
     );
   }
 
@@ -875,6 +1388,7 @@ class GymService extends ChangeNotifier {
 
     for (int day = 1; day <= maxDay; day++) {
       final date = DateTime(year, month, day);
+      if (!_canRecordAttendance(customerId, date)) continue;
       final dateKey = GymDateUtils.toDateKey(date);
       final key = _attKey(customerId, dateKey);
 
@@ -904,15 +1418,17 @@ class GymService extends ChangeNotifier {
     final modifiedRecords = <AttendanceRecord>[];
     for (int day = 1; day <= maxDay; day++) {
       final date = DateTime(year, month, day);
+      if (!_canRecordAttendance(customerId, date)) continue;
       final dateKey = GymDateUtils.toDateKey(date);
       final key = _attKey(customerId, dateKey);
       final record = _attendanceMap[key];
       if (record != null) modifiedRecords.add(record);
     }
 
-    notifyListeners();
-    await _saveAttendance();
     await _cloudBatchSaveAttendance(modifiedRecords);
+    await _saveAttendance();
+    notifyListeners();
+    await _freezeUnagreedAttendance();
   }
 
   Future<void> setMonthAttendanceForMultiple({
@@ -939,6 +1455,7 @@ class GymService extends ChangeNotifier {
     for (final customerId in customerIds) {
       for (int day = 1; day <= maxDay; day++) {
         final date = DateTime(year, month, day);
+        if (!_canRecordAttendance(customerId, date)) continue;
         final dateKey = GymDateUtils.toDateKey(date);
         final key = _attKey(customerId, dateKey);
 
@@ -970,6 +1487,7 @@ class GymService extends ChangeNotifier {
     for (final cId in customerIds) {
       for (int day = 1; day <= maxDay; day++) {
         final date = DateTime(year, month, day);
+        if (!_canRecordAttendance(cId, date)) continue;
         final dateKey = GymDateUtils.toDateKey(date);
         final key = _attKey(cId, dateKey);
         final record = _attendanceMap[key];
@@ -977,9 +1495,10 @@ class GymService extends ChangeNotifier {
       }
     }
 
-    notifyListeners();
-    await _saveAttendance();
     await _cloudBatchSaveAttendance(modifiedRecords);
+    await _saveAttendance();
+    notifyListeners();
+    await _freezeUnagreedAttendance();
   }
 
   Map<String, int> getMonthlyAttendanceSummary(String customerId, String monthYear) {
@@ -1048,35 +1567,42 @@ class GymService extends ChangeNotifier {
   }
 
   List<String> getUnpaidAttendedMonthKeys(String customerId) {
-    final monthsWithUnpaidAttendance = <String>{};
-    for (final record in _attendanceMap.values) {
-      if (record.customerId == customerId && record.status == AttendanceStatus.present) {
-        if (!isDateCoveredByPayment(customerId, record.dateKey)) {
-          if (record.dateKey.length >= 7) {
-            monthsWithUnpaidAttendance.add(record.dateKey.substring(0, 7));
-          }
-        }
-      }
-    }
-    final list = monthsWithUnpaidAttendance.toList()..sort();
-    return list;
+    return <String>{
+      for (final record in _duesIndex.membershipRecords(customerId))
+        if (record.balanceDue > 0) record.monthYear,
+    }.toList()..sort();
   }
 
 
   Map<String, int> getDailyOverview(String dateKey) {
     int present = 0;
-    int totalActive = _customers.where((c) => c.isActive).length;
+    int rest = 0;
+    final date = DateTime.tryParse(dateKey);
+    final eligible = _customers
+        .where(
+          (c) =>
+              c.isActive &&
+              date != null &&
+              !DateTime(date.year, date.month, date.day).isBefore(
+                DateTime(c.joinDate.year, c.joinDate.month, c.joinDate.day),
+              ),
+        )
+        .toList();
+    int totalActive = eligible.length;
 
-    for (var c in _customers) {
-      if (c.isActive && isCustomerPresentOnDate(c.id, dateKey)) {
+    for (var c in eligible) {
+      if (isCustomerPresentOnDate(c.id, dateKey)) {
         present++;
+      } else if (getAttendanceStatus(c.id, dateKey) == AttendanceStatus.rest) {
+        rest++;
       }
     }
 
     return {
       'total': totalActive,
       'present': present,
-      'absent': totalActive - present,
+      'absent': totalActive - present - rest,
+      'rest': rest,
     };
   }
 
@@ -1091,14 +1617,73 @@ class GymService extends ChangeNotifier {
 
   /// All paid payment records for a customer, latest cycle start first.
   List<PaymentRecord> getPaidPaymentsForCustomer(String customerId) {
-    final list = _paymentMap.values
-        .where((p) => p.customerId == customerId && p.isPaid)
-        .toList();
-    list.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
-    return list;
+    return List.of(_duesIndex.payments[customerId] ?? <PaymentRecord>[]);
   }
 
   PaymentRecord? getPaymentById(String id) => _paymentMap[id];
+
+  PaymentRecord getRenewalPaymentRecord(Customer customer) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final expiry = getCustomerExpiryDate(customer);
+    final start = hasPaidMembership(customer) && !expiry.isBefore(today)
+        ? expiry.add(const Duration(days: 1))
+        : today;
+    return PaymentRecord(
+      id: 'pending_renewal_${customer.id}',
+      customerId: customer.id,
+      monthYear: GymDateUtils.toMonthKey(start),
+      amount: 0,
+      totalDue: _feeForCustomer(customer),
+      status: PaymentStatus.pending,
+      durationMonths: customer.planDurationMonths,
+      startDate: start,
+    );
+  }
+
+  Future<void> _freezeUnagreedAttendance() async {
+    final agreements = _duesIndex.inferredAgreements.values
+        .expand((records) => records)
+        .where((record) => !_paymentMap.containsKey(record.id)).toList();
+    if (agreements.isEmpty) return;
+    await _serializeFinancialSave(() => _commitFinancialRecords(payments: agreements));
+  }
+
+  void _validateMembership(double fee, int duration, DateTime start, DateTime end) {
+    if (!fee.isFinite || fee <= 0) {
+      throw ArgumentError('Enter a membership fee greater than zero.');
+    }
+    if (duration <= 0 || end.isBefore(start)) {
+      throw ArgumentError('Choose a valid membership period.');
+    }
+  }
+
+  void _validatePayment(
+    double amount,
+    double due,
+    int duration,
+    DateTime start,
+    DateTime end,
+    DateTime received,
+  ) {
+    if (!amount.isFinite || amount <= 0) {
+      throw ArgumentError('Enter an amount greater than zero.');
+    }
+    if (!due.isFinite || due <= 0 || amount > due + 0.005) {
+      throw ArgumentError(
+        'The amount received cannot exceed the membership fee.',
+      );
+    }
+    _validateMembership(due, duration, start, end);
+    final now = DateTime.now();
+    if (DateTime(
+      received.year,
+      received.month,
+      received.day,
+    ).isAfter(DateTime(now.year, now.month, now.day))) {
+      throw ArgumentError('The payment received date cannot be in the future.');
+    }
+  }
 
   /// Amount still owed for a record: the remaining balance for partially paid
   /// records, the full fee for pending ones.
@@ -1108,6 +1693,18 @@ class GymService extends ChangeNotifier {
   /// covered, or a transient pending record when attended days remain unpaid.
   /// Transient records are never stored.
   PaymentRecord getPaymentRecord(String customerId, String monthYear) {
+    final parts = monthYear.split('-');
+    if (parts.length == 2) {
+      final start = DateTime(int.parse(parts[0]), int.parse(parts[1]), 1);
+      final end = DateTime(start.year, start.month + 1, 0);
+      for (final agreement in _duesIndex.membershipRecords(customerId)) {
+        if (agreement.balanceDue > 0 &&
+            !agreement.effectiveStartDate.isAfter(end) &&
+            !agreement.effectiveEndDate.isBefore(start)) {
+          return agreement;
+        }
+      }
+    }
     final covering = getPaymentCoveringMonth(customerId, monthYear);
     final unpaidDays = getUnpaidAttendedDaysInMonth(customerId, monthYear);
     if (covering != null && unpaidDays == 0) return covering;
@@ -1123,32 +1720,26 @@ class GymService extends ChangeNotifier {
       final monthStart = DateTime(y, m, 1);
 
       DateTime? firstUnpaid;
-      for (final record in _attendanceMap.values) {
-        if (record.customerId == customerId &&
-            record.status == AttendanceStatus.present &&
-            record.dateKey.startsWith(monthYear) &&
-            !isDateCoveredByPayment(customerId, record.dateKey)) {
-          final d = DateTime.tryParse(record.dateKey);
-          if (d != null) {
-            final day = DateTime(d.year, d.month, d.day);
-            if (firstUnpaid == null || day.isBefore(firstUnpaid)) {
-              firstUnpaid = day;
-            }
+      for (final dateKey
+          in _duesIndex.unpaid[customerId]?[monthYear] ?? <String>[]) {
+        final d = DateTime.tryParse(dateKey);
+        if (d != null) {
+          final day = DateTime(d.year, d.month, d.day);
+          if (firstUnpaid == null || day.isBefore(firstUnpaid)) {
+            firstUnpaid = day;
           }
         }
       }
 
       if (firstUnpaid != null) {
         DateTime? prevEndPlusOne;
-        for (final p in _paymentMap.values) {
-          if (p.customerId == customerId && p.isPaid) {
-            final e = p.effectiveEndDate;
-            final endPlusOne = DateTime(e.year, e.month, e.day + 1);
-            if (!endPlusOne.isAfter(firstUnpaid) &&
-                !endPlusOne.isBefore(monthStart)) {
-              if (prevEndPlusOne == null || endPlusOne.isAfter(prevEndPlusOne)) {
-                prevEndPlusOne = endPlusOne;
-              }
+        for (final p in _duesIndex.payments[customerId] ?? <PaymentRecord>[]) {
+          final e = p.effectiveEndDate;
+          final endPlusOne = DateTime(e.year, e.month, e.day + 1);
+          if (!endPlusOne.isAfter(firstUnpaid) &&
+              !endPlusOne.isBefore(monthStart)) {
+            if (prevEndPlusOne == null || endPlusOne.isAfter(prevEndPlusOne)) {
+              prevEndPlusOne = endPlusOne;
             }
           }
         }
@@ -1216,18 +1807,38 @@ class GymService extends ChangeNotifier {
   }
 
   BillRecord getOrCreateBillForPayment(Customer customer, PaymentRecord payment) {
-    if (payment.isPaid && !payment.id.startsWith('pending_')) {
+    if (payment.isPaid) {
       final existing = getBillForPayment(payment.id);
       if (existing != null) return existing;
 
       // Legacy gap: a paid payment with no persisted bill — create + persist once.
-      final bill = BillRecord(
+      final bill = _buildPaidBill(customer, payment);
+      _billsMap[bill.id] = bill;
+      unawaited(_refreshFinancialCache());
+      _cloudSaveBill(bill);
+      return bill;
+    }
+
+    // Transient/pending payment: return a non-persisted preview bill.
+    final effectiveAmount = payment.amount > 0.0
+        ? payment.amount
+        : _feeForCustomer(customer, durationMonths: payment.durationMonths);
+    return _buildPaidBill(customer, payment).copyWith(
+      id: 'bill_${customer.id}_${payment.monthYear}',
+      amount: effectiveAmount,
+      billType: 'FULL',
+      status: payment.isPaid ? 'PAID' : 'PENDING',
+    );
+  }
+
+  BillRecord _buildPaidBill(Customer customer, PaymentRecord payment) =>
+      BillRecord(
         id: 'bill_${customer.id}_${DateTime.now().millisecondsSinceEpoch}',
         billNumber: generateBillNumber(payment.monthYear),
         customerId: customer.id,
         customerName: customer.name,
         customerPhone: customer.phone,
-        planType: customer.planType,
+        planType: payment.planType ?? customer.planType,
         monthYear: payment.monthYear,
         amount: payment.amount,
         paymentId: payment.id,
@@ -1244,39 +1855,6 @@ class GymService extends ChangeNotifier {
         endDate: payment.endDate ?? payment.effectiveEndDate,
         coveragePeriod: payment.formattedDateRange,
       );
-      _billsMap[bill.id] = bill;
-      _saveBills();
-      _cloudSaveBill(bill);
-      return bill;
-    }
-
-    // Transient/pending payment: return a non-persisted preview bill.
-    final effectiveAmount = payment.amount > 0.0
-        ? payment.amount
-        : _feeForCustomer(customer, durationMonths: payment.durationMonths);
-    return BillRecord(
-      id: 'bill_${customer.id}_${payment.monthYear}',
-      billNumber: generateBillNumber(payment.monthYear),
-      customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      planType: customer.planType,
-      monthYear: payment.monthYear,
-      amount: effectiveAmount,
-      paymentId: payment.id,
-      method: payment.method ?? PaymentMethod.cash,
-      paidAt: payment.paidAt ?? DateTime.now(),
-      notes: payment.notes,
-      transactionRef: payment.transactionRef,
-      gymName: _settings.gymName,
-      issuedAt: payment.paidAt ?? DateTime.now(),
-      status: payment.isPaid ? 'PAID' : 'PENDING',
-      durationMonths: payment.durationMonths,
-      startDate: payment.startDate ?? payment.effectiveStartDate,
-      endDate: payment.endDate ?? payment.effectiveEndDate,
-      coveragePeriod: payment.formattedDateRange,
-    );
-  }
 
   /// Sequential bill number BILL-YYYYMM-NNNN where NNNN = max sequence parsed
   /// from existing bill numbers with the same prefix (any status) + 1.
@@ -1312,55 +1890,98 @@ class GymService extends ChangeNotifier {
     return id;
   }
 
-  /// Records a payment. Always creates a NEW PaymentRecord with a fresh id —
-  /// never overwrites an existing one. [monthYear] is only a hint kept for
-  /// callers; the record's monthYear is the month the cycle starts in.
+  /// Creates a paid cycle or settles an unpaid agreement.
   Future<BillRecord> markPaymentAsPaid({
     required String customerId,
     required String monthYear,
     required PaymentMethod method,
     required double amount,
     double? totalDue,
-    int durationMonths = 1,
+    int? durationMonths,
     DateTime? startDate,
     DateTime? endDate,
     String? notes,
     String? transactionRef,
     DateTime? paidAt,
-  }) async {
+    String? operationId,
+    String? agreementId,
+    bool updateFutureRenewalDefault = false,
+  }) => _serializeFinancialSave(() async {
+    final receiptId = operationId == null
+        ? _newBillId(customerId)
+        : 'bill_operation_$operationId';
+    final saved = _billsMap[receiptId];
+    if (saved != null) return saved;
     final effectivePaidAt = paidAt ?? DateTime.now();
     final customer = getCustomerById(customerId);
+    if (customer == null || !customer.isActive) {
+      throw ArgumentError('Restore the member before recording a new payment.');
+    }
+    PaymentRecord? matchingAgreement;
+    if (agreementId != null) {
+      for (final agreement in _duesIndex.membershipRecords(customerId)) {
+        if (agreement.id == agreementId) {
+          matchingAgreement = agreement;
+          break;
+        }
+      }
+      if (matchingAgreement == null || matchingAgreement.isPaid) {
+        throw ArgumentError('Use balance collection for an existing payment.');
+      }
+    }
+    final effectiveDuration = durationMonths ?? matchingAgreement?.durationMonths ?? 1;
 
     // Smart default for startDate if not provided:
     DateTime computedStartDate;
-    if (startDate != null) {
-      computedStartDate = startDate;
-    } else if (customer != null) {
+    if (startDate != null || matchingAgreement != null) {
+      computedStartDate = startDate ?? matchingAgreement!.effectiveStartDate;
+    } else {
       final currentExpiry = getCustomerExpiryDate(customer);
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      if (hasPaidMembership(customer) && currentExpiry.isAfter(today)) {
+      if (hasPaidMembership(customer) && !currentExpiry.isBefore(today)) {
         // Member is currently active -> advance payment starts day after expiry
         computedStartDate = currentExpiry.add(const Duration(days: 1));
       } else {
         computedStartDate = DateTime(
             effectivePaidAt.year, effectivePaidAt.month, effectivePaidAt.day);
       }
-    } else {
-      computedStartDate = DateTime(
-          effectivePaidAt.year, effectivePaidAt.month, effectivePaidAt.day);
     }
 
-    final computedEndDate = endDate ??
-        GymDateUtils.computeAnniversaryEndDate(computedStartDate, durationMonths);
+    final computedEndDate = endDate ?? matchingAgreement?.effectiveEndDate ??
+        GymDateUtils.computeAnniversaryEndDate(computedStartDate, effectiveDuration);
     final coveragePeriod =
         GymDateUtils.formatDateRange(computedStartDate, computedEndDate);
     final startMonthKey = GymDateUtils.toMonthKey(computedStartDate);
-    final effectiveTotalDue =
-        totalDue ?? _feeForCustomer(customer, durationMonths: durationMonths);
+    if (agreementId == null) {
+      for (final agreement in _duesIndex.membershipRecords(customerId)) {
+        if (!agreement.isInferredAgreement || agreement.isPaid) continue;
+        final firstUnpaid = (_duesIndex.unpaid[customerId]?.values
+            .expand((dates) => dates).where((key) =>
+                key.compareTo(GymDateUtils.toDateKey(agreement.effectiveStartDate)) >= 0 &&
+                key.compareTo(GymDateUtils.toDateKey(agreement.effectiveEndDate)) <= 0)
+            .toList() ?? <String>[])..sort();
+        if (firstUnpaid.isNotEmpty &&
+            firstUnpaid.first.compareTo(GymDateUtils.toDateKey(computedStartDate)) >= 0 &&
+            firstUnpaid.first.compareTo(GymDateUtils.toDateKey(computedEndDate)) <= 0) {
+          matchingAgreement = agreement;
+          break;
+        }
+      }
+    }
+    final effectiveTotalDue = totalDue ?? matchingAgreement?.totalDue ??
+        _feeForCustomer(customer, durationMonths: effectiveDuration);
+    _validatePayment(
+      amount,
+      effectiveTotalDue,
+      effectiveDuration,
+      computedStartDate,
+      computedEndDate,
+      effectivePaidAt,
+    );
 
     final record = PaymentRecord(
-      id: _newPaymentId(customerId),
+      id: matchingAgreement?.id ?? _newPaymentId(customerId),
       customerId: customerId,
       monthYear: startMonthKey,
       amount: amount,
@@ -1372,17 +1993,18 @@ class GymService extends ChangeNotifier {
       endDate: computedEndDate,
       notes: notes,
       transactionRef: transactionRef,
-      durationMonths: durationMonths,
+      durationMonths: effectiveDuration,
+      isMembershipAgreement: matchingAgreement?.isMembershipAgreement ?? false,
+      isInferredAgreement: matchingAgreement?.isInferredAgreement ?? false,
+      planType: matchingAgreement?.planType ?? customer.planType,
     );
-    _paymentMap[record.id] = record;
-
     final bill = BillRecord(
-      id: _newBillId(customerId),
+      id: receiptId,
       billNumber: generateBillNumber(startMonthKey),
       customerId: customerId,
-      customerName: customer?.name ?? 'Member',
-      customerPhone: customer?.phone ?? '',
-      planType: customer?.planType ?? CustomerPlan.normal,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      planType: record.planType ?? customer.planType,
       monthYear: startMonthKey,
       amount: amount,
       paymentId: record.id,
@@ -1396,19 +2018,16 @@ class GymService extends ChangeNotifier {
       gymName: _settings.gymName,
       issuedAt: DateTime.now(),
       status: 'PAID',
-      durationMonths: durationMonths,
+      durationMonths: effectiveDuration,
       coveragePeriod: coveragePeriod,
     );
-    _billsMap[bill.id] = bill;
-
-    notifyListeners();
-    await _savePayments();
-    await _saveBills();
-    await _cloudSavePayment(record);
-    await _cloudSaveBill(bill);
+    await _commitFinancialChange(record, bill,
+      customer: updateFutureRenewalDefault
+          ? customer.copyWith(planDurationMonths: effectiveDuration) : null,
+    );
 
     return bill;
-  }
+  });
 
   /// Collects (part of) the remaining balance on a paid payment. Issues its own
   /// BALANCE bill with its own bill number.
@@ -1419,24 +2038,42 @@ class GymService extends ChangeNotifier {
     DateTime? paidAt,
     String? notes,
     String? transactionRef,
-  }) async {
+    String? operationId,
+  }) => _serializeFinancialSave(() async {
+    final saved = operationId == null
+        ? null
+        : _billsMap['bill_operation_$operationId'];
+    if (saved != null) return saved;
     final record = _paymentMap[paymentId];
     if (record == null || !record.isPaid) {
       throw ArgumentError('No paid payment found for id $paymentId');
     }
-    if (amount <= 0) {
-      throw ArgumentError('Amount must be positive');
+    if (!amount.isFinite ||
+        amount <= 0 ||
+        record.balanceDue <= 0 ||
+        amount > record.balanceDue + 0.005) {
+      throw ArgumentError(
+        'Enter a positive amount within the remaining balance.',
+      );
     }
     final collected =
         amount > record.balanceDue ? record.balanceDue : amount;
     final effectivePaidAt = paidAt ?? DateTime.now();
+    _validatePayment(
+      collected,
+      record.balanceDue,
+      record.durationMonths,
+      record.effectiveStartDate,
+      record.effectiveEndDate,
+      effectivePaidAt,
+    );
     final customer = getCustomerById(record.customerId);
 
     final updated = record.copyWith(amount: record.amount + collected);
-    _paymentMap[paymentId] = updated;
-
     final bill = BillRecord(
-      id: _newBillId(record.customerId),
+      id: operationId == null
+          ? _newBillId(record.customerId)
+          : 'bill_operation_$operationId',
       billNumber: generateBillNumber(record.monthYear),
       customerId: record.customerId,
       customerName: customer?.name ?? 'Member',
@@ -1458,16 +2095,10 @@ class GymService extends ChangeNotifier {
       durationMonths: record.durationMonths,
       coveragePeriod: record.formattedDateRange,
     );
-    _billsMap[bill.id] = bill;
-
-    notifyListeners();
-    await _savePayments();
-    await _saveBills();
-    await _cloudSavePayment(updated);
-    await _cloudSaveBill(bill);
+    await _commitFinancialChange(updated, bill);
 
     return bill;
-  }
+  });
 
   /// Updates an existing paid payment in place (same record id) and syncs its
   /// primary (non-BALANCE) bill in place, keeping the bill's id and billNumber.
@@ -1484,7 +2115,7 @@ class GymService extends ChangeNotifier {
     int? durationMonths,
     String? notes,
     String? transactionRef,
-  }) async {
+  }) => _serializeFinancialSave(() async {
     final record = _paymentMap[paymentId];
     if (record == null || !record.isPaid) {
       throw ArgumentError('No paid payment found for id $paymentId');
@@ -1502,11 +2133,11 @@ class GymService extends ChangeNotifier {
     } else {
       newEnd = record.endDate;
     }
-    final newMonthYear = newStart != null
+    final newMonthYear = newStart != null && newStart != record.effectiveStartDate
         ? GymDateUtils.toMonthKey(newStart)
         : record.monthYear;
 
-    final updated = record.copyWith(
+    var updated = record.copyWith(
       amount: amount,
       totalDue: totalDue,
       method: method,
@@ -1518,12 +2149,47 @@ class GymService extends ChangeNotifier {
       transactionRef: transactionRef,
       monthYear: newMonthYear,
     );
-    _paymentMap[paymentId] = updated;
-
+    final financialEdit =
+        updated.amount != record.amount ||
+        updated.totalDue != record.totalDue ||
+        updated.durationMonths != record.durationMonths ||
+        updated.effectiveStartDate != record.effectiveStartDate ||
+        updated.effectiveEndDate != record.effectiveEndDate ||
+        updated.paidAt != record.paidAt;
+    if (financialEdit) {
+      _validatePayment(
+        updated.amount,
+        updated.totalDue,
+        updated.durationMonths,
+        updated.effectiveStartDate,
+        updated.effectiveEndDate,
+        updated.paidAt ?? DateTime.now(),
+      );
+    } else {
+      updated = record.copyWith(
+        method: method,
+        notes: notes,
+        transactionRef: transactionRef,
+      );
+    }
+    final balanceReceipts = getBillsForPayment(paymentId)
+        .where((b) => b.billType == 'BALANCE')
+        .fold<double>(0, (sum, b) => sum + b.amount);
+    if (financialEdit && updated.amount <= balanceReceipts) {
+      throw ArgumentError(
+        'The total received must include the original payment and all balance receipts.',
+      );
+    }
     final customer = getCustomerById(record.customerId);
     BillRecord bill;
     final existing = getBillForPayment(paymentId);
-    if (existing != null) {
+    if (existing != null && !financialEdit) {
+      bill = existing.copyWith(
+        method: updated.method,
+        notes: updated.notes,
+        transactionRef: updated.transactionRef,
+      );
+    } else if (existing != null) {
       var balanceCollected = 0.0;
       for (final b in _billsMap.values) {
         if (b.paymentId == paymentId &&
@@ -1546,9 +2212,8 @@ class GymService extends ChangeNotifier {
         notes: updated.notes,
         transactionRef: updated.transactionRef,
       );
-      _billsMap[bill.id] = bill;
     } else {
-      bill = getOrCreateBillForPayment(
+      bill = _buildPaidBill(
           customer ??
               Customer(
                 id: record.customerId,
@@ -1559,14 +2224,10 @@ class GymService extends ChangeNotifier {
           updated);
     }
 
-    notifyListeners();
-    await _savePayments();
-    await _saveBills();
-    await _cloudSavePayment(updated);
-    await _cloudSaveBill(bill);
+    await _commitFinancialChange(updated, bill);
 
     return bill;
-  }
+  });
 
   /// Removes a payment record entirely (pending state is derived, so nothing
   /// needs to be kept) and marks all of its bills CANCELLED. Bills are never
@@ -1574,24 +2235,37 @@ class GymService extends ChangeNotifier {
   Future<void> revertPayment(String paymentId) async {
     final record = _paymentMap[paymentId];
     if (record == null) return;
-    _paymentMap.remove(paymentId);
+    final revertedAgreement = record.isMembershipAgreement
+        ? PaymentRecord(
+            id: record.id, customerId: record.customerId, monthYear: record.monthYear,
+            amount: 0, totalDue: record.totalDue, durationMonths: record.durationMonths,
+            startDate: record.startDate, endDate: record.endDate,
+            isMembershipAgreement: true, isInferredAgreement: record.isInferredAgreement,
+            planType: record.planType,
+          ) : null;
 
     final cancelled = <BillRecord>[];
-    for (final entry in _billsMap.entries.toList()) {
+    for (final entry in _billsMap.entries) {
       if (entry.value.paymentId == paymentId && entry.value.status != 'CANCELLED') {
-        final c = entry.value.copyWith(status: 'CANCELLED');
-        _billsMap[entry.key] = c;
-        cancelled.add(c);
+        cancelled.add(entry.value.copyWith(status: 'CANCELLED'));
       }
     }
 
+    await _queueChanges([
+      CloudChange('payments', record.id, revertedAgreement?.toMap()),
+      ...cancelled.map((b) => CloudChange('bills', b.id, b.toMap())),
+    ]);
+    if (revertedAgreement == null) {
+      _paymentMap.remove(paymentId);
+    } else {
+      _paymentMap[paymentId] = revertedAgreement;
+    }
+    for (final bill in cancelled) {
+      _billsMap[bill.id] = bill;
+    }
     notifyListeners();
     await _savePayments();
     await _saveBills();
-    await _cloudDeletePayment(record.id);
-    for (final b in cancelled) {
-      await _cloudSaveBill(b);
-    }
   }
 
   /// Thin compatibility wrapper: resolves the payment covering [monthYear]
@@ -1607,13 +2281,9 @@ class GymService extends ChangeNotifier {
   /// each month with unpaid attended days where no paid cycle starts.
   List<PaymentRecord> getCustomerPaymentHistory(String customerId) {
     final list = getPaidPaymentsForCustomer(customerId);
-    for (final monthKey in getUnpaidAttendedMonthKeys(customerId)) {
-      final hasCycleStartingHere = list.any((p) => p.monthYear == monthKey);
-      if (!hasCycleStartingHere) {
-        final rec = getPaymentRecord(customerId, monthKey);
-        if (!rec.isPaid && !list.any((p) => p.id == rec.id)) {
-          list.add(rec);
-        }
+    for (final record in _duesIndex.membershipRecords(customerId)) {
+      if (record.balanceDue > 0 && !list.any((p) => p.id == record.id)) {
+        list.add(record);
       }
     }
     list.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
@@ -1675,7 +2345,7 @@ class GymService extends ChangeNotifier {
   bool _hasLegacyPaymentShapes() {
     for (final p in _paymentMap.values) {
       if (p.isCoveredInPackage) return true;
-      if (p.status != PaymentStatus.paid) return true;
+      if (p.status != PaymentStatus.paid && !p.isMembershipAgreement) return true;
       if (p.startDate == null ||
           p.monthYear != GymDateUtils.toMonthKey(p.effectiveStartDate)) {
         return true;
@@ -1706,7 +2376,8 @@ class GymService extends ChangeNotifier {
 
       // Steps 1 & 2: remove placeholders and stored pending/overdue records.
       for (final p in _paymentMap.values.toList()) {
-        if (p.isCoveredInPackage || p.status != PaymentStatus.paid) {
+        if (p.isCoveredInPackage ||
+            (p.status != PaymentStatus.paid && !p.isMembershipAgreement)) {
           _paymentMap.remove(p.id);
           paymentDocsToDelete.add('${p.customerId}_${p.monthYear}');
           if (p.id != '${p.customerId}_${p.monthYear}') {
@@ -1782,21 +2453,16 @@ class GymService extends ChangeNotifier {
         await _saveBills();
       }
 
-      // Step 5: re-key cloud docs. Legacy doc ids were `${customerId}_${monthYear}`.
-      if (_isCloudAttached) {
-        _suppressCloudUpdates = true;
-        try {
-          await FirestoreService().batchUpsertPayments(paymentsToUpsert);
-          await FirestoreService().batchUpsertBills(billsToUpsert);
-          for (final docId in paymentDocsToDelete) {
-            await FirestoreService().deletePayment(docId);
-          }
-          for (final docId in billDocsToDelete) {
-            await FirestoreService().deleteBill(docId);
-          }
-        } finally {
-          _suppressCloudUpdates = false;
-        }
+      // Legacy re-keying uses the same durable upload queue.
+      if (_syncQueue != null) {
+        await _queueChanges([
+          ...paymentsToUpsert.map(
+            (p) => CloudChange('payments', p.id, p.toMap()),
+          ),
+          ...billsToUpsert.map((b) => CloudChange('bills', b.id, b.toMap())),
+          ...paymentDocsToDelete.map((id) => CloudChange('payments', id, null)),
+          ...billDocsToDelete.map((id) => CloudChange('bills', id, null)),
+        ]);
       }
     } finally {
       _migrating = false;
@@ -1804,6 +2470,19 @@ class GymService extends ChangeNotifier {
   }
 
   // ==================== PENDING RANGE OPERATIONS ====================
+
+  DateTime get outstandingStartDate {
+    final earliest = _duesIndex.earliest;
+    return DateTime(earliest.year, earliest.month, 1);
+  }
+
+  List<MemberPendingSummary> getAllPendingDues() =>
+      getPendingDuesByMember(outstandingStartDate, outstandingEndDate);
+
+  DateTime get outstandingEndDate {
+    final latest = _duesIndex.latest;
+    return DateTime(latest.year, latest.month + 1, 0);
+  }
 
   List<String> getMonthKeysInRange(DateTime start, DateTime end) {
     final effectiveStart = start.isBefore(end) ? start : end;
@@ -1820,31 +2499,31 @@ class GymService extends ChangeNotifier {
     return list;
   }
 
-  /// Returns all active customers with pending dues across months in the date range.
+  /// Returns outstanding debt, including archived members, in the date range.
   List<MemberPendingSummary> getPendingDuesByMember(DateTime start, DateTime end) {
+    final index = _duesIndex;
     final monthKeys = getMonthKeysInRange(start, end);
+    final rangeKey = '${monthKeys.first}:${monthKeys.last}';
+    final cached = _pendingByRange[rangeKey];
+    if (cached != null) return List.of(cached);
     final results = <MemberPendingSummary>[];
 
     for (final customer in _customers) {
-      if (!customer.isActive) continue;
-
       final pendingRecords = <PaymentRecord>[];
-      for (final monthKey in monthKeys) {
-        final stage = getMemberLifecycleStage(customer, monthKey);
-        if (stage == MemberLifecycleStage.due &&
-            getUnpaidAttendedDaysInMonth(customer.id, monthKey) > 0) {
-          final record = getPaymentRecord(customer.id, monthKey);
-          pendingRecords.add(record);
+      final addedIds = <String>{};
+      for (final agreement in index.membershipRecords(customer.id)) {
+        if (agreement.balanceDue > 0 &&
+            monthKeys.contains(agreement.monthYear) &&
+            addedIds.add(agreement.id)) {
+          pendingRecords.add(agreement);
         }
       }
 
       // Partial balances: paid cycles with an outstanding balance whose
       // start month falls inside the range still owe money.
-      for (final p in _paymentMap.values) {
-        if (p.customerId == customer.id &&
-            p.isPaid &&
-            p.balanceDue > 0 &&
-            monthKeys.contains(p.monthYear)) {
+      for (final p in index.payments[customer.id] ?? <PaymentRecord>[]) {
+        if (p.balanceDue > 0 &&
+            monthKeys.contains(p.monthYear) && addedIds.add(p.id)) {
           pendingRecords.add(p);
         }
       }
@@ -1853,63 +2532,44 @@ class GymService extends ChangeNotifier {
         final total = pendingRecords.fold<double>(0.0, (sum, r) => sum + pendingAmountOf(r));
         results.add(MemberPendingSummary(
           customer: customer,
-          pendingRecords: pendingRecords,
+          pendingRecords: List.unmodifiable(pendingRecords),
           totalPendingAmount: total,
         ));
       }
     }
 
-    return results;
+    _pendingByRange[rangeKey] = List.unmodifiable(results);
+    return List.of(results);
   }
 
   /// Returns pending dues grouped by each month in the date range.
   List<MonthPendingGroup> getPendingDuesByMonth(DateTime start, DateTime end) {
-    final monthKeys = getMonthKeysInRange(start, end);
-    final sortedMonths = List<String>.from(monthKeys)..sort((a, b) => b.compareTo(a));
-    final groups = <MonthPendingGroup>[];
-
-    for (final monthKey in sortedMonths) {
-      final items = <MonthPendingItem>[];
-      double monthTotal = 0.0;
-
-      for (final customer in _customers) {
-        if (!customer.isActive) continue;
-
-        final stage = getMemberLifecycleStage(customer, monthKey);
-        if (stage == MemberLifecycleStage.due &&
-            getUnpaidAttendedDaysInMonth(customer.id, monthKey) > 0) {
-          final record = getPaymentRecord(customer.id, monthKey);
-          items.add(MonthPendingItem(customer: customer, payment: record));
-          monthTotal += pendingAmountOf(record);
-        }
-
-        // Partial balances owed on paid cycles starting in this month.
-        for (final p in _paymentMap.values) {
-          if (p.customerId == customer.id &&
-              p.isPaid &&
-              p.balanceDue > 0 &&
-              p.monthYear == monthKey) {
-            items.add(MonthPendingItem(customer: customer, payment: p));
-            monthTotal += p.balanceDue;
-          }
-        }
-      }
-
-      if (items.isNotEmpty) {
-        groups.add(MonthPendingGroup(
-          monthKey: monthKey,
-          items: items,
-          totalAmount: monthTotal,
-        ));
+    final byMonth = <String, List<MonthPendingItem>>{};
+    for (final member in getPendingDuesByMember(start, end)) {
+      for (final payment in member.pendingRecords) {
+        (byMonth[payment.monthYear] ??= []).add(
+          MonthPendingItem(customer: member.customer, payment: payment),
+        );
       }
     }
-
-    return groups;
+    final months = byMonth.keys.toList()..sort((a, b) => b.compareTo(a));
+    return [
+      for (final month in months)
+        MonthPendingGroup(
+          monthKey: month,
+          items: List.unmodifiable(byMonth[month]!),
+          totalAmount: byMonth[month]!.fold<double>(
+            0,
+            (sum, item) => sum + pendingAmountOf(item.payment),
+          ),
+        ),
+    ];
   }
 
   // ==================== SETTINGS OPERATIONS ====================
 
   Future<void> updateSettings(GymSettings newSettings) async {
+    await _freezeUnagreedAttendance();
     _settings = newSettings;
     notifyListeners();
     await _saveSettings();
@@ -1925,6 +2585,7 @@ class GymService extends ChangeNotifier {
   }
 
   Future<void> updateStandardMonthlyFee(double fee) async {
+    await _freezeUnagreedAttendance();
     _settings = _settings.copyWith(standardMonthlyFee: fee);
     notifyListeners();
     await _saveSettings();
@@ -1954,26 +2615,26 @@ class GymService extends ChangeNotifier {
       notes: notes?.trim(),
     );
     _expenses.insert(0, expense);
+    await _cloudSaveExpense(expense);
     notifyListeners();
     await _saveExpenses();
-    await _cloudSaveExpense(expense);
   }
 
   Future<void> updateExpense(ExpenseRecord updated) async {
     final index = _expenses.indexWhere((e) => e.id == updated.id);
     if (index != -1) {
       _expenses[index] = updated;
+      await _cloudSaveExpense(updated);
       notifyListeners();
       await _saveExpenses();
-      await _cloudSaveExpense(updated);
     }
   }
 
   Future<void> deleteExpense(String expenseId) async {
     _expenses.removeWhere((e) => e.id == expenseId);
+    await _cloudDeleteExpense(expenseId);
     notifyListeners();
     await _saveExpenses();
-    await _cloudDeleteExpense(expenseId);
   }
 
   List<ExpenseRecord> getMonthlyExpenses(String monthYear) {
@@ -2249,11 +2910,8 @@ class GymService extends ChangeNotifier {
       }
     }
 
-    // Total pending dues across all members up to current month (last 3 months)
-    final pendingSummaries = getPendingDuesByMember(
-      DateTime(now.year, now.month - 2, 1),
-      now,
-    );
+    // Include older debts and archived members' unpaid receipt balances.
+    final pendingSummaries = getAllPendingDues();
     double totalDues = 0;
     for (final s in pendingSummaries) {
       totalDues += s.totalPendingAmount;
@@ -2283,48 +2941,65 @@ class GymService extends ChangeNotifier {
   // AND dispatches the write to Firestore (cloud sync).
 
   Future<void> _saveCustomers() async {
+    final key = _customerKey(_currentUserId);
+    final data = json.encode(_customers.map((c) => c.toMap()).toList());
     final prefs = await SharedPreferences.getInstance();
-    final data = _customers.map((c) => c.toMap()).toList();
-    await prefs.setString(_customerKey(_currentUserId), json.encode(data));
+    if (!await prefs.setString(key, data)) {
+      throw StateError('Could not save on this phone.');
+    }
   }
 
   Future<void> _saveExpenses() async {
+    final key = _expensesKey(_currentUserId);
+    final data = json.encode(_expenses.map((e) => e.toMap()).toList());
     final prefs = await SharedPreferences.getInstance();
-    final data = _expenses.map((e) => e.toMap()).toList();
-    await prefs.setString(_expensesKey(_currentUserId), json.encode(data));
+    if (!await prefs.setString(key, data)) {
+      throw StateError('Could not save on this phone.');
+    }
   }
 
   Future<void> _saveAttendance() async {
+    final key = _attendanceKey(_currentUserId);
+    final data = json.encode(
+      _attendanceMap.values.map((a) => a.toMap()).toList(),
+    );
     final prefs = await SharedPreferences.getInstance();
-    final data = _attendanceMap.values.map((a) => a.toMap()).toList();
-    await prefs.setString(_attendanceKey(_currentUserId), json.encode(data));
+    if (!await prefs.setString(key, data)) {
+      throw StateError('Could not save on this phone.');
+    }
   }
 
   Future<void> _savePayments() async {
+    await _saveFinancialSnapshot(_paymentMap, _billsMap);
+    final key = _paymentsKey(_currentUserId);
+    final data = json.encode(_paymentMap.values.map((p) => p.toMap()).toList());
     final prefs = await SharedPreferences.getInstance();
-    final data = _paymentMap.values.map((p) => p.toMap()).toList();
-    await prefs.setString(_paymentsKey(_currentUserId), json.encode(data));
+    if (!await prefs.setString(key, data)) {
+      throw StateError('Could not save on this phone.');
+    }
   }
 
   Future<void> _saveBills() async {
+    final key = _billsKey(_currentUserId);
+    final data = json.encode(_billsMap.values.map((b) => b.toMap()).toList());
     final prefs = await SharedPreferences.getInstance();
-    final data = _billsMap.values.map((b) => b.toMap()).toList();
-    await prefs.setString(_billsKey(_currentUserId), json.encode(data));
+    if (!await prefs.setString(key, data)) {
+      throw StateError('Could not save on this phone.');
+    }
   }
 
   Future<void> _saveSettingsLocallyOnly() async {
+    final key = _settingsKey(_currentUserId);
+    final data = _settings.toJson();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_settingsKey(_currentUserId), _settings.toJson());
+    if (!await prefs.setString(key, data)) {
+      throw StateError('Could not save on this phone.');
+    }
   }
 
   Future<void> _saveSettings() async {
+    await _queueChanges([CloudChange('settings', 'config', _settings.toMap())]);
     await _saveSettingsLocallyOnly();
-    // Sync settings to cloud
-    if (_isCloudAttached) {
-      _suppressCloudUpdates = true;
-      await FirestoreService().upsertSettings(_settings);
-      _suppressCloudUpdates = false;
-    }
   }
 
   Future<void> _saveAll() async {
@@ -2339,6 +3014,13 @@ class GymService extends ChangeNotifier {
   /// Completely clears all gym members, attendance, payments, bills, and expenses.
   /// Gives the gym owner a clean, fresh start.
   Future<void> clearAllGymData() async {
+    if (_currentUserId != null) {
+      // Collection deletion spans several server batches and cannot be safely
+      // undone. Keep the local reset action out of live owner accounts.
+      throw StateError(
+        'Clearing a live gym account is unavailable. Archive members to preserve their history.',
+      );
+    }
     _customers.clear();
     _expenses.clear();
     _attendanceMap.clear();
@@ -2361,72 +3043,33 @@ class GymService extends ChangeNotifier {
     await _saveExpenses();
   }
 
-  // ---- Cloud-aware save helpers for individual record operations ----
-
-  Future<void> _cloudSaveCustomer(Customer customer) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().upsertCustomer(customer);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudDeleteCustomer(String customerId) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().deleteCustomer(customerId);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudSaveAttendance(AttendanceRecord record) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().upsertAttendance(record);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudBatchSaveAttendance(List<AttendanceRecord> records) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().batchUpsertAttendance(records);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudSavePayment(PaymentRecord record) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().upsertPayment(record);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudDeletePayment(String docId) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().deletePayment(docId);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudSaveBill(BillRecord record) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().upsertBill(record);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudSaveExpense(ExpenseRecord record) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().upsertExpense(record);
-    _suppressCloudUpdates = false;
-  }
-
-  Future<void> _cloudDeleteExpense(String expenseId) async {
-    if (!_isCloudAttached) return;
-    _suppressCloudUpdates = true;
-    await FirestoreService().deleteExpense(expenseId);
-    _suppressCloudUpdates = false;
-  }
-
+  Future<void> _cloudSaveAttendance(AttendanceRecord r) => _queueChanges([
+    CloudChange('attendance', _attKey(r.customerId, r.dateKey), r.toMap()),
+  ]);
+  Future<void> _cloudBatchSaveAttendance(List<AttendanceRecord> records) =>
+      _queueChanges(
+        records
+            .map(
+              (r) => CloudChange(
+                'attendance',
+                _attKey(r.customerId, r.dateKey),
+                r.toMap(),
+              ),
+            )
+            .toList(),
+      );
+  Future<void> _cloudSaveBill(BillRecord b) =>
+      _queueChanges([CloudChange('bills', b.id, b.toMap())]);
+  Future<void> _cloudSaveExpense(ExpenseRecord e) =>
+      _queueChanges([CloudChange('expenses', e.id, e.toMap())]);
+  Future<void> _cloudDeleteExpense(String id) =>
+      _queueChanges([CloudChange('expenses', id, null)]);
   Future<void> resetToDemoData() async {
+    if (_currentUserId != null) {
+      throw StateError(
+        'Demo data is only available in local exploration mode.',
+      );
+    }
     _customers.clear();
     _expenses.clear();
     _attendanceMap.clear();

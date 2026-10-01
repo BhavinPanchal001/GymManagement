@@ -60,15 +60,24 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
 
     final gym = GymService();
     final dateKey = GymDateUtils.toDateKey(_selectedDate);
-    for (var c in gym.customers) {
-      if (c.isActive) {
-        await gym.toggleAttendance(c.id, dateKey, AttendanceStatus.present);
+    try {
+      await gym.markAllPresentForDate(dateKey);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save attendance. Please try again.'),
+          ),
+        );
       }
+      return;
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All active members marked Present for today!'),
+        SnackBar(
+          content: Text(
+            'All eligible members marked Present for ${GymDateUtils.formatDate(_selectedDate)}!',
+          ),
           backgroundColor: AppColors.paid,
           behavior: SnackBarBehavior.floating,
         ),
@@ -89,7 +98,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
         final isToday = targetDay == today;
         final isFutureDate = targetDay.isAfter(today);
         final overview = gym.getDailyOverview(dateKey);
-        final activeCustomers = gym.customers.where((c) => c.isActive).toList();
+        final activeCustomers = gym.customers.where((c) => c.isActive &&
+                  !targetDay.isBefore(
+                    DateTime(c.joinDate.year, c.joinDate.month, c.joinDate.day),
+                  ),
+            ).toList();
         final total = overview['total'] ?? 0;
         final present = overview['present'] ?? 0;
         final absent = overview['absent'] ?? 0;

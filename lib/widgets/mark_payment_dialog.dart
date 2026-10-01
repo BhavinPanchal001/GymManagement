@@ -8,17 +8,20 @@ import '../theme/app_theme.dart';
 import '../utils/date_utils.dart';
 import 'bill_history_sheet.dart';
 import 'bill_receipt_dialog.dart';
+import 'collect_balance_dialog.dart';
 
 class MarkPaymentDialog extends StatefulWidget {
   final Customer customer;
   final String monthYear;
   final PaymentRecord currentRecord;
+  final bool isRenewal;
 
   const MarkPaymentDialog({
     super.key,
     required this.customer,
     required this.monthYear,
     required this.currentRecord,
+    this.isRenewal = false,
   });
 
   static Future<bool?> show(
@@ -26,6 +29,7 @@ class MarkPaymentDialog extends StatefulWidget {
     required Customer customer,
     required String monthYear,
     required PaymentRecord currentRecord,
+    bool isRenewal = false,
   }) async {
     final result = await showModalBottomSheet<dynamic>(
       context: context,
@@ -35,6 +39,7 @@ class MarkPaymentDialog extends StatefulWidget {
         customer: customer,
         monthYear: monthYear,
         currentRecord: currentRecord,
+        isRenewal: isRenewal,
       ),
     );
 
@@ -45,12 +50,28 @@ class MarkPaymentDialog extends StatefulWidget {
     return result == true;
   }
 
+  static Future<bool?> showRenewal(
+    BuildContext context, {
+    required Customer customer,
+  }) {
+    final record = GymService().getRenewalPaymentRecord(customer);
+    return show(
+      context,
+      customer: customer,
+      monthYear: record.monthYear,
+      currentRecord: record,
+      isRenewal: true,
+    );
+  }
+
   @override
   State<MarkPaymentDialog> createState() => _MarkPaymentDialogState();
 }
 
 class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   late TextEditingController _amountController;
+  TextEditingController? _legacyFeeController;
+  late DateTime _initialReceivedDate;
   late TextEditingController _refController;
   late TextEditingController _notesController;
   late PaymentMethod _selectedMethod;
@@ -63,6 +84,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   late DateTime _lastExpiryDate;
   int _cycleModeIndex = 0; // 0: Fresh Start, 1: Continuous, 2: Custom
   bool _isLoading = false;
+  final _operationId = GymService().newPaymentOperationId();
+  bool _updateFutureRenewalDefault = false;
 
   final List<PaymentMethod> _methods = [
     PaymentMethod.gpay,
@@ -82,21 +105,28 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         : widget.customer.planDurationMonths;
     _selectedDurationMonths = initialDuration;
 
-    _totalDue = widget.currentRecord.totalDue > 0
+    _totalDue = widget.currentRecord.isPaid || widget.currentRecord.totalDue > 0
         ? widget.currentRecord.totalDue
         : GymService().settings.getPriceForDuration(widget.customer.planType, _selectedDurationMonths);
+    if (widget.currentRecord.isPaid &&
+        widget.currentRecord.amount > _totalDue + 0.005) {
+      _legacyFeeController = TextEditingController(
+        text: _totalDue.toStringAsFixed(2),
+      );
+    }
     final initialAmount = widget.currentRecord.isPaid
         ? widget.currentRecord.amount
         : _totalDue;
 
     _amountController = TextEditingController(
-      text: initialAmount.toInt().toString(),
+      text: initialAmount.toStringAsFixed(2),
     );
     _amountController.addListener(() => setState(() {}));
     _refController = TextEditingController(text: widget.currentRecord.transactionRef ?? '');
     _notesController = TextEditingController(text: widget.currentRecord.notes ?? '');
     _selectedMethod = widget.currentRecord.method ?? PaymentMethod.gpay;
     _selectedDate = widget.currentRecord.paidAt ?? DateTime.now();
+    _initialReceivedDate = _selectedDate;
 
     final gymService = GymService();
     final hasPaid = gymService.hasPaidMembership(widget.customer);
@@ -106,10 +136,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     _lastExpiryDate = latestExpiry;
     _isCurrentlyActive = hasPaid && !latestExpiry.isBefore(today);
 
-    if (widget.currentRecord.startDate != null) {
-      _startDate = widget.currentRecord.startDate!;
-      _endDate = widget.currentRecord.endDate ??
-          GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+    if (widget.currentRecord.isPaid || widget.currentRecord.startDate != null) {
+      _startDate = widget.currentRecord.effectiveStartDate;
+      _endDate = widget.currentRecord.effectiveEndDate;
       _cycleModeIndex = 2; // custom
     } else if (_isCurrentlyActive) {
       _startDate = latestExpiry.add(const Duration(days: 1));
@@ -158,6 +187,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   @override
   void dispose() {
     _amountController.dispose();
+    _legacyFeeController?.dispose();
     _refController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -166,9 +196,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: _selectedDate.isAfter(DateTime.now()) ? DateTime.now() : _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
+      lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context),
@@ -218,25 +248,35 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
 
   Future<void> _submitPayment() async {
     if (_isLoading) return;
-    final amount = double.tryParse(_amountController.text.trim()) ??
-        GymService().settings.standardMonthlyFee;
+    final amount = double.tryParse(_amountController.text.trim());
+    final isUpdate = widget.currentRecord.isPaid;
+    final unchangedMoney =
+        isUpdate &&
+        amount == widget.currentRecord.amount &&
+        _totalDue == widget.currentRecord.totalDue;
+    if (amount == null ||
+        !amount.isFinite ||
+        (!unchangedMoney && (amount <= 0 || amount > _totalDue + 0.005))) {
+      _showError('Enter a positive amount no greater than the membership fee.');
+      return;
+    }
 
     setState(() => _isLoading = true);
-
-    final isUpdate = widget.currentRecord.isPaid &&
-        !widget.currentRecord.id.startsWith('pending_');
-    final bill = isUpdate
+    try {
+      final bill = isUpdate
         ? await GymService().updatePayment(
             paymentId: widget.currentRecord.id,
             amount: amount,
             totalDue: _totalDue,
             method: _selectedMethod,
-            paidAt: _selectedDate,
+            paidAt: _selectedDate == _initialReceivedDate
+                ? widget.currentRecord.paidAt : _selectedDate,
             startDate: _startDate,
             endDate: _endDate,
             durationMonths: _selectedDurationMonths,
             notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
-            transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
+            transactionRef: _refController.text.trim().isNotEmpty
+                  ? _refController.text.trim() : null,
           )
         : await GymService().markPaymentAsPaid(
             customerId: widget.customer.id,
@@ -250,12 +290,14 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
             transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
             paidAt: _selectedDate,
+            operationId: _operationId,
+            agreementId: widget.currentRecord.isMembershipAgreement
+                ? widget.currentRecord.id : null,
+            updateFutureRenewalDefault: _updateFutureRenewalDefault,
           );
 
-    setState(() => _isLoading = false);
-    if (mounted) {
-      Navigator.pop(context, bill);
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             isUpdate
@@ -267,54 +309,67 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+        Navigator.pop(context, bill);
+      }
+    } catch (error) {
+      if (mounted) {
+        _showError(
+          error is ArgumentError
+              ? error.message.toString()
+              : 'Could not save the payment. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _collectBalance() async {
     if (_isLoading) return;
-    final balance = widget.currentRecord.balanceDue;
-    if (balance <= 0) return;
-
-    setState(() => _isLoading = true);
-    final bill = await GymService().collectBalance(
-      paymentId: widget.currentRecord.id,
-      amount: balance,
-      method: _selectedMethod,
-      paidAt: _selectedDate,
-      notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
-      transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
-    );
-
-    setState(() => _isLoading = false);
-    if (mounted) {
-      Navigator.pop(context, bill);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Balance collected & Bill created for ${widget.customer.name}!',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: AppColors.paid,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    final current = GymService().getPaymentById(widget.currentRecord.id);
+    if (current == null || current.balanceDue <= 0) return;
+    final receipt = await CollectBalanceDialog.show(context, current);
+    if (receipt != null && mounted) Navigator.pop(context, receipt);
   }
 
   Future<void> _revertPayment() async {
     if (_isLoading) return;
-    setState(() => _isLoading = true);
-    await GymService().revertPayment(widget.currentRecord.id);
-    setState(() => _isLoading = false);
-    if (mounted) {
-      Navigator.pop(context, true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment status reset to Pending'),
-          backgroundColor: AppColors.pending,
-          behavior: SnackBarBehavior.floating,
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel this payment?'),
+        content: const Text(
+          'All receipts for this payment will be marked cancelled and removed from collected totals. Membership coverage will be removed. This does not record a cash refund.',
         ),
-      );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep payment'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cancel payment'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      await GymService().revertPayment(widget.currentRecord.id);
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (mounted) {
+        _showError('Could not cancel the payment. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -399,7 +454,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAlreadyPaid ? 'Update Payment' : 'Record Payment',
+                        isAlreadyPaid ? 'Update Payment' : widget.isRenewal
+                            ? 'Renew Membership'
+                            : 'Record Payment',
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 20,
@@ -423,7 +480,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 10,
+                    vertical: 5),
                   decoration: BoxDecoration(
                     color: isAlreadyPaid
                         ? AppColors.paid.withValues(alpha: 0.15)
@@ -452,6 +510,23 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             // Package & Duration Combo Selector
             _buildDurationPackageSelector(currency),
             const SizedBox(height: 18),
+            if (!isAlreadyPaid &&
+                _selectedDurationMonths != widget.customer.planDurationMonths) ...[
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                value: _updateFutureRenewalDefault,
+                onChanged: (value) => setState(
+                  () => _updateFutureRenewalDefault = value ?? false,
+                ),
+                title: const Text('Use this package for future renewals'),
+                subtitle: Text(
+                  'The current default remains ${widget.customer.durationLabel} unless selected.',
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Total due (plan fee / package price, read-only)
             Row(
@@ -469,15 +544,33 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             ),
             const SizedBox(height: 10),
 
+            if (_legacyFeeController != null) ...[
+              TextField(
+                controller: _legacyFeeController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Correct membership fee (optional)',
+                  helperText:
+                      'Reference edits keep the existing fee and received amount.',
+                ),
+                onChanged: (value) => setState(() {
+                  _totalDue = double.tryParse(value.trim()) ?? double.nan;
+                }),
+              ),
+              const SizedBox(height: 10),
+            ],
+
             // Amount field
             Text(
-              'Amount Paid Now',
+              isAlreadyPaid ? 'Total received for this membership' : 'Amount received now',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
                 prefixIcon: Padding(
@@ -584,8 +677,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Payment Date',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                        isAlreadyPaid ? 'Original payment date' : 'Payment received date',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       InkWell(
@@ -602,10 +696,10 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             children: [
                               Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 20),
                               const SizedBox(width: 10),
-                              Text(
+                              Flexible(child: Text(
                                 GymDateUtils.formatDate(_selectedDate),
                                 style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-                              ),
+                              )),
                             ],
                           ),
                         ),
@@ -675,7 +769,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         children: [
                           const Icon(Icons.check_circle_rounded, size: 20),
                           const SizedBox(width: 8),
-                          Text(
+                          Flexible(child: Text(
                             isAlreadyPaid
                                 ? 'Update Payment Record'
                                 : ((double.tryParse(_amountController.text.trim()) ?? 0) + 0.005 < _totalDue
@@ -686,7 +780,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.2,
                             ),
-                          ),
+                          )),
                         ],
                       ),
               ),
@@ -781,7 +875,6 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 ),
               ),
               const SizedBox(height: 8),
-              if (!widget.currentRecord.id.startsWith('pending_'))
               Center(
                 child: TextButton.icon(
                   onPressed: _isLoading ? null : _revertPayment,
@@ -866,7 +959,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: _cycleModeIndex == 0
                             ? AppColors.paid.withValues(alpha: 0.18)
@@ -924,7 +1018,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: _cycleModeIndex == 1
                             ? AppColors.primary.withValues(alpha: 0.18)
@@ -993,7 +1088,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       children: [
                         Row(
                           children: [
-                            Text(
+                            Expanded(child: Text(
                               'START DATE',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
@@ -1001,8 +1096,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
                               ),
-                            ),
-                            const Spacer(),
+                            )),
                             Icon(Icons.edit_calendar_rounded, size: 13, color: AppColors.primary),
                           ],
                         ),
@@ -1040,7 +1134,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       children: [
                         Row(
                           children: [
-                            Text(
+                            Expanded(child: Text(
                               'EXPIRY DATE',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
@@ -1048,8 +1142,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
                               ),
-                            ),
-                            const Spacer(),
+                            )),
                             Icon(Icons.edit_calendar_rounded, size: 13, color: AppColors.primary),
                           ],
                         ),
@@ -1123,7 +1216,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           children: [
             Text(
               'Package Duration',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13,
+                fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 8),
             Container(
@@ -1158,7 +1252,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     setState(() {
                       _selectedDurationMonths = pkg.months;
                       _totalDue = pkg.price;
-                      _amountController.text = pkg.price.toInt().toString();
+                      _amountController.text = pkg.price.toStringAsFixed(2);
                       _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
                     });
                   },

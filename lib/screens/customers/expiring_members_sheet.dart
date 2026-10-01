@@ -255,7 +255,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(
                                                     horizontal: 7,
-                                                    vertical: 2,
+                                                        vertical: 2,
                                                   ),
                                                   decoration: BoxDecoration(
                                                     color: AppColors.surfaceBorder,
@@ -273,10 +273,11 @@ class ExpiringMembersSheet extends StatelessWidget {
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(
                                                     horizontal: 7,
-                                                    vertical: 2,
+                                                        vertical: 2,
                                                   ),
                                                   decoration: BoxDecoration(
-                                                    color: accentColor.withValues(alpha: 0.15),
+                                                    color: accentColor.withValues(
+                                                          alpha: 0.15),
                                                     borderRadius: BorderRadius.circular(6),
                                                   ),
                                                   child: Text(
@@ -376,13 +377,9 @@ class ExpiringMembersSheet extends StatelessWidget {
                                       Expanded(
                                         child: OutlinedButton.icon(
                                           onPressed: () {
-                                            final currentMonth = GymDateUtils.toMonthKey(DateTime.now());
-                                            final record = gym.getPaymentRecord(customer.id, currentMonth);
-                                            MarkPaymentDialog.show(
+                                            MarkPaymentDialog.showRenewal(
                                               context,
                                               customer: customer,
-                                              monthYear: currentMonth,
-                                              currentRecord: record,
                                             );
                                           },
                                           style: OutlinedButton.styleFrom(
@@ -411,7 +408,8 @@ class ExpiringMembersSheet extends StatelessWidget {
                                        // Call Member Button
                                        IconButton(
                                          padding: EdgeInsets.zero,
-                                         constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                         constraints: const BoxConstraints(minWidth: 36,
+                                          minHeight: 36),
                                          icon: Icon(Icons.call_rounded, size: 18, color: AppColors.primary),
                                          tooltip: 'Call Member',
                                          onPressed: () {
@@ -426,7 +424,8 @@ class ExpiringMembersSheet extends StatelessWidget {
                                        // Member Detail Profile Button
                                        IconButton(
                                          padding: EdgeInsets.zero,
-                                         constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                         constraints: const BoxConstraints(minWidth: 36,
+                                          minHeight: 36),
                                          icon: Icon(Icons.person_outline, size: 18, color: AppColors.textSecondary),
                                          tooltip: 'View Member Profile',
                                          onPressed: () {
