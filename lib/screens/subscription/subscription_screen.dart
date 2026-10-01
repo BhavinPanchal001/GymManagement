@@ -33,6 +33,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   bool _paying = false;
   String? _error;
 
+  /// A payment that already succeeded at checkout but hasn't activated yet —
+  /// retried without opening checkout again. In-memory fallback for when the
+  /// settings record itself couldn't be saved.
+  int _pendingMonths = 0;
+  String _pendingPaymentId = '';
+
   bool get _billingConfigured => kAppRazorpayKeyId.trim().isNotEmpty;
 
   Future<void> _subscribe() async {
@@ -51,10 +57,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       _paying = true;
       _error = null;
     });
+    final auth = AuthService();
+    RazorpayPaymentResult result;
     try {
-      final auth = AuthService();
-      final gym = GymService();
-      final result = await RazorpayService().collectPayment(
+      result = await RazorpayService().collectPayment(
         amountInr: _selectedPlan.price,
         description:
             'Gym Manager ${_selectedPlan.title} subscription (${_selectedPlan.months} month${_selectedPlan.months > 1 ? 's' : ''})',
@@ -63,22 +69,67 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         email: auth.email,
         keyIdOverride: kAppRazorpayKeyId,
       );
-      if (!mounted) return;
-      if (result.cancelled) {
-        setState(() => _error = 'Payment was cancelled.');
-        return;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _paying = false;
+          _error = 'The payment failed. Please try again.';
+        });
       }
-      if (!result.success) {
-        setState(() =>
-            _error = result.errorMessage ?? 'The payment failed. Please try again.');
-        return;
-      }
+      return;
+    }
+    if (!mounted) return;
+    if (result.cancelled) {
+      setState(() {
+        _paying = false;
+        _error = 'Payment was cancelled.';
+      });
+      return;
+    }
+    if (!result.success) {
+      setState(() {
+        _paying = false;
+        _error =
+            result.errorMessage ?? 'The payment failed. Please try again.';
+      });
+      return;
+    }
 
-      await gym.activateSubscription(
-        months: _selectedPlan.months,
-        paymentId: result.paymentId ?? '',
+    // Payment succeeded — remember it before activating so a failure below
+    // retries activation instead of charging the owner a second time.
+    _pendingMonths = _selectedPlan.months;
+    _pendingPaymentId = result.paymentId ?? '';
+    setState(() => _paying = false);
+    await _activatePendingSubscription();
+  }
+
+  /// Activates a purchase that already cleared checkout — never re-opens
+  /// Razorpay, so a retry can't double-charge the owner.
+  Future<void> _activatePendingSubscription() async {
+    if (_paying) return;
+    final gym = GymService();
+    final months = _pendingMonths > 0
+        ? _pendingMonths
+        : (gym.settings.pendingSubscriptionMonths ?? 0);
+    final paymentId = _pendingPaymentId.isNotEmpty
+        ? _pendingPaymentId
+        : (gym.settings.pendingSubscriptionPaymentId ?? '');
+    if (months <= 0) return;
+    setState(() {
+      _paying = true;
+      _error = null;
+    });
+    try {
+      // Persist the purchase first: the synced record lets this device — or
+      // another one — finish activation later without a second charge.
+      await gym.recordPendingSubscription(
+        months: months,
+        paymentId: paymentId,
       );
+      await gym.activateSubscription(months: months, paymentId: paymentId);
       if (!mounted) return;
+      _pendingMonths = 0;
+      _pendingPaymentId = '';
       final paidUntil = gym.settings.subscriptionPaidUntil;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -97,7 +148,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Could not activate the subscription. Please try again.');
+        setState(() => _error =
+            'Payment received, but activation did not finish. Tap "Complete activation" — you will not be charged again.');
       }
     } finally {
       if (mounted) setState(() => _paying = false);
@@ -113,6 +165,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         final currency = settings.currencySymbol;
         final isExpired = settings.subscriptionRequired;
         final isActive = settings.hasActiveSubscription;
+        final hasPending =
+            _pendingMonths > 0 || settings.hasPendingSubscription;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -280,9 +334,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   SizedBox(
                     height: 52,
                     child: ElevatedButton.icon(
-                      onPressed: (_paying || !_billingConfigured)
+                      onPressed: _paying || (!hasPending && !_billingConfigured)
                           ? null
-                          : _subscribe,
+                          : (hasPending
+                              ? _activatePendingSubscription
+                              : _subscribe),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF528FF0),
                         foregroundColor: Colors.white,
@@ -305,8 +361,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           : const Icon(Icons.bolt_rounded, size: 20),
                       label: Text(
                         _paying
-                            ? 'Opening Razorpay...'
-                            : 'Pay ${GymDateUtils.formatCurrency(_selectedPlan.price, symbol: currency)} via Razorpay',
+                            ? 'Please wait...'
+                            : hasPending
+                                ? 'Complete Activation'
+                                : 'Pay ${GymDateUtils.formatCurrency(_selectedPlan.price, symbol: currency)} via Razorpay',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -316,7 +374,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'UPI, cards, net banking & more — secure checkout by Razorpay.',
+                    hasPending
+                        ? 'Your payment was received — finish activating it. No new charge.'
+                        : 'UPI, cards, net banking & more — secure checkout by Razorpay.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                   ),

@@ -2583,13 +2583,60 @@ class GymService extends ChangeNotifier {
   /// devices share the same trial start instead of restarting it.
   Future<void> _ensureSubscriptionTrialStarted() async {
     if (_settings.trialStartedAt != null) return;
+    // A returning owner on a new device may already have a stamped trial or a
+    // paid plan in the cloud doc. That doc is the source of truth — adopt it
+    // before stamping so the queued settings write can't wipe the original
+    // trial start or paid expiry recorded on another device.
+    if (FirestoreService().isAttached) {
+      try {
+        final remote = await FirestoreService().fetchSettings();
+        if (remote != null) {
+          _settings = remote;
+          if (remote.trialStartedAt != null) {
+            notifyListeners();
+            await _saveSettingsLocallyOnly();
+            return;
+          }
+        }
+      } catch (_) {
+        // Remote state can't be verified — retry on the next attach rather
+        // than upload a fresh trial that could clobber a paid plan.
+        return;
+      }
+    }
     _settings = _settings.copyWith(trialStartedAt: DateTime.now());
     notifyListeners();
     await _saveSettings();
   }
 
+  /// Records a completed Razorpay payment before activation so it can be
+  /// retried later — or on another device — without charging again.
+  Future<void> recordPendingSubscription({
+    required int months,
+    required String paymentId,
+  }) async {
+    if (months <= 0) {
+      throw ArgumentError('Subscription length must be at least 1 month.');
+    }
+    _settings = _settings.copyWith(
+      pendingSubscriptionMonths: months,
+      pendingSubscriptionPaymentId: paymentId.trim(),
+    );
+    notifyListeners();
+    await _saveSettings();
+  }
+
+  /// Finishes a previously recorded pending purchase, if one exists.
+  Future<void> resumePendingSubscription() async {
+    if (!_settings.hasPendingSubscription) return;
+    await activateSubscription(
+      months: _settings.pendingSubscriptionMonths!,
+      paymentId: _settings.pendingSubscriptionPaymentId ?? '',
+    );
+  }
+
   /// Extends the paid subscription by [months] after a successful payment.
-  /// Stacks on top of any remaining paid time.
+  /// Stacks on top of any remaining paid time and clears any pending purchase.
   Future<void> activateSubscription({
     required int months,
     required String paymentId,
@@ -2601,8 +2648,9 @@ class GymService extends ChangeNotifier {
     final current = _settings.subscriptionPaidUntil;
     final base = current != null && current.isAfter(now) ? current : now;
     _settings = _settings.copyWith(
-      subscriptionPaidUntil: DateTime(base.year, base.month + months, base.day),
+      subscriptionPaidUntil: GymDateUtils.addMonthsClamped(base, months),
       subscriptionPaymentId: paymentId.trim().isNotEmpty ? paymentId.trim() : null,
+      clearPendingSubscription: true,
     );
     notifyListeners();
     await _saveSettings();

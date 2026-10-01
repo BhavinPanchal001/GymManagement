@@ -26,6 +26,11 @@ class GymSettings {
   /// Razorpay payment id of the most recent subscription purchase.
   final String? subscriptionPaymentId;
 
+  /// A paid plan that reached checkout success but hasn't finished activating
+  /// yet. Retried without charging again; cleared on activation.
+  final int? pendingSubscriptionMonths;
+  final String? pendingSubscriptionPaymentId;
+
   static const List<PlanDurationPackage> defaultPackages = [
     // Normal Plan Packages
     PlanDurationPackage(id: 'pkg_normal_1', planType: CustomerPlan.normal, months: 1, price: 600.0),
@@ -61,6 +66,8 @@ class GymSettings {
     this.trialStartedAt,
     this.subscriptionPaidUntil,
     this.subscriptionPaymentId,
+    this.pendingSubscriptionMonths,
+    this.pendingSubscriptionPaymentId,
   });
 
   /// Whether a Razorpay Key ID has been configured for online collections.
@@ -88,6 +95,17 @@ class GymSettings {
   /// Trial ended and no paid subscription — the app should show the paywall.
   bool get subscriptionRequired =>
       !isInTrialPeriod && !hasActiveSubscription;
+
+  /// A completed payment is still waiting to be activated.
+  bool get hasPendingSubscription =>
+      pendingSubscriptionMonths != null && pendingSubscriptionMonths! > 0;
+
+  /// The next moment the trial or paid plan ends — null when already expired.
+  DateTime? get subscriptionExpiryBoundary {
+    if (hasActiveSubscription) return subscriptionPaidUntil;
+    if (isInTrialPeriod) return trialEndsAt;
+    return null;
+  }
 
   /// Returns all packages available for a given plan tier sorted by month count
   List<PlanDurationPackage> getPackagesForPlan(String? planType) {
@@ -151,6 +169,9 @@ class GymSettings {
     DateTime? trialStartedAt,
     DateTime? subscriptionPaidUntil,
     String? subscriptionPaymentId,
+    int? pendingSubscriptionMonths,
+    String? pendingSubscriptionPaymentId,
+    bool clearPendingSubscription = false,
   }) {
     final effectiveNormalFee = normalPlanFee ?? this.normalPlanFee;
     final effectivePtFee = ptPlanFee ?? this.ptPlanFee;
@@ -189,6 +210,12 @@ class GymSettings {
       trialStartedAt: trialStartedAt ?? this.trialStartedAt,
       subscriptionPaidUntil: subscriptionPaidUntil ?? this.subscriptionPaidUntil,
       subscriptionPaymentId: subscriptionPaymentId ?? this.subscriptionPaymentId,
+      pendingSubscriptionMonths: clearPendingSubscription
+          ? null
+          : (pendingSubscriptionMonths ?? this.pendingSubscriptionMonths),
+      pendingSubscriptionPaymentId: clearPendingSubscription
+          ? null
+          : (pendingSubscriptionPaymentId ?? this.pendingSubscriptionPaymentId),
     );
   }
 
@@ -209,6 +236,8 @@ class GymSettings {
       'trialStartedAt': trialStartedAt?.toIso8601String(),
       'subscriptionPaidUntil': subscriptionPaidUntil?.toIso8601String(),
       'subscriptionPaymentId': subscriptionPaymentId,
+      'pendingSubscriptionMonths': pendingSubscriptionMonths,
+      'pendingSubscriptionPaymentId': pendingSubscriptionPaymentId,
     };
   }
 
@@ -247,6 +276,8 @@ class GymSettings {
           ? DateTime.tryParse(map['subscriptionPaidUntil'] as String)
           : null,
       subscriptionPaymentId: map['subscriptionPaymentId'] as String?,
+      pendingSubscriptionMonths: (map['pendingSubscriptionMonths'] as num?)?.toInt(),
+      pendingSubscriptionPaymentId: map['pendingSubscriptionPaymentId'] as String?,
     );
   }
 

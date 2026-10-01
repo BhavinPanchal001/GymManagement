@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../models/app_subscription.dart';
 import '../services/gym_service.dart';
 import '../services/notification_service.dart';
 import '../services/theme_service.dart';
@@ -18,11 +21,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
+  Timer? _entitlementTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    GymService().addListener(_scheduleEntitlementCheck);
+    _scheduleEntitlementCheck();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService().checkAndNotifyPendingPayments();
     });
@@ -32,13 +38,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       NotificationService().checkAndNotifyPendingPayments();
+      // Re-evaluate the paywall — the trial/plan may have expired in background.
+      setState(() {});
+      _scheduleEntitlementCheck();
     }
   }
 
   @override
   void dispose() {
+    _entitlementTimer?.cancel();
+    GymService().removeListener(_scheduleEntitlementCheck);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Rebuilds when the current trial or paid plan actually expires so the
+  /// paywall engages even while the app stays open. Called on every
+  /// GymService notification to keep the timer aligned with new settings.
+  void _scheduleEntitlementCheck() {
+    _entitlementTimer?.cancel();
+    _entitlementTimer = null;
+    if (!mounted || kAppRazorpayKeyId.trim().isEmpty) return;
+    final boundary = GymService().settings.subscriptionExpiryBoundary;
+    if (boundary == null) return;
+    final delay = boundary.difference(DateTime.now());
+    _entitlementTimer = Timer(
+      delay.isNegative ? Duration.zero : delay,
+      () {
+        if (!mounted) return;
+        setState(() {});
+        _scheduleEntitlementCheck();
+      },
+    );
   }
 
   final List<Widget> _tabs = const [
@@ -56,8 +87,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final gym = GymService();
         final pendingDuesCount = gym.getAllPendingDues().length;
 
-        // Paywall: trial ended without a paid subscription.
-        if (gym.subscriptionRequired) {
+        // Paywall: trial ended without a paid subscription. Only enforced
+        // once publisher billing is configured — an empty key would lock
+        // owners out with no way to pay.
+        if (kAppRazorpayKeyId.trim().isNotEmpty && gym.subscriptionRequired) {
           return const SubscriptionScreen();
         }
 
