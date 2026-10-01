@@ -301,8 +301,9 @@ class _BillingTabState extends State<BillingTab> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
                         children: [
                           Text(
                             'Collection Rate: ${(progress * 100).toStringAsFixed(1)}%',
@@ -638,7 +639,8 @@ class _BillingTabState extends State<BillingTab> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Column(
+                Flexible(
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
@@ -685,6 +687,7 @@ class _BillingTabState extends State<BillingTab> {
                     ),
                   ],
                 ),
+                ),
               ],
             ),
 
@@ -722,7 +725,10 @@ class _BillingTabState extends State<BillingTab> {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                isDue ? 'Due this month' : 'No unpaid attendance yet',
+                                isDue ? 'Due this month' :
+                                    payment.isMembershipAgreement && payment.balanceDue > 0
+                                        ? 'Fee due in ${GymDateUtils.formatMonthYearKey(payment.monthYear)}'
+                                        : 'No unpaid attendance yet',
                                 style: TextStyle(
                                   color: isDue ? AppColors.pending : AppColors.textMuted,
                                   fontSize: 11,

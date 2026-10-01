@@ -709,10 +709,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                             children: [
                               Icon(Icons.phone_rounded, color: AppColors.primary, size: 12),
                               const SizedBox(width: 4),
-                              Text(
+                              Flexible(child: Text(
                                 customer.phone,
                                 style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                              ),
+                              )),
                             ],
                           ),
                         ),
@@ -733,7 +733,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         ),
                       ),
                       Text(
-                        '${item.pendingRecords.length} ${item.pendingRecords.length == 1 ? 'month' : 'months'} due',
+                        '${item.pendingRecords.length} ${item.pendingRecords.length == 1 ? 'period' : 'periods'} due',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
@@ -784,7 +784,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
               const SizedBox(height: 12),
 
               // Action Buttons Row
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   // Call Member Button
                   IconButton(
@@ -808,8 +811,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   const SizedBox(width: 8),
 
                   // WhatsApp Reminder Button
-                  Expanded(
-                    child: OutlinedButton.icon(
+                  OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.whatsapp,
                         side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.5)),
@@ -823,13 +825,11 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         latestRecord.monthYear,
                         item.totalPendingAmount,
                       ),
-                    ),
                   ),
                   const SizedBox(width: 8),
 
                   // Mark as Paid Button
-                  Expanded(
-                    child: ElevatedButton.icon(
+                  ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.primaryOn,
@@ -842,7 +842,6 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         item.pendingRecords.first.isPaid ? 'Collect Balance' : 'Record Payment',
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       onPressed: () => _openMarkPaid(customer, item.pendingRecords.first),
-                    ),
                   ),
                 ],
               ),
@@ -884,8 +883,9 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                   border: Border(bottom: BorderSide(color: AppColors.surfaceBorder)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Row(
                       children: [
@@ -932,7 +932,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   final customer = item.customer;
                   final payment = item.payment;
 
-                  return Row(
+                  return Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       CustomerAvatar(
                         imagePath: customer.imagePath,
@@ -940,8 +943,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         radius: 18,
                       ),
                       const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
+                      Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -957,7 +959,6 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                               style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                             ),
                           ],
-                        ),
                       ),
                       Text(
                         GymDateUtils.formatCurrency(GymService().pendingAmountOf(payment), symbol: currency),

@@ -21,6 +21,16 @@ needs the billing and live-account checks listed below before owner handover.
 - **Keep history:** Archive members who leave. Their attendance, payments and
   receipts remain available. Find them through the Archived filter and restore
   them from their member page. Outstanding receipt balances remain visible.
+- **Register with payment later:** Select the agreed package and membership dates
+  and leave immediate collection off. The full agreed fee appears in outstanding
+  dues without requiring attendance. A three-month agreement creates one charge
+  in its start month. Package price changes leave this stored fee unchanged.
+- **Settle an agreement:** Record the first full or partial payment against the
+  pending period. Later collections use “Collect Balance.” Cancelling restores
+  an explicit agreement to unpaid and keeps its cancelled receipts.
+- **Choose future renewal defaults:** When buying a different duration, select
+  “Use this package for future renewals” if it should become the member's default.
+  Otherwise the purchase changes only the current period.
 - **Mark attendance:** “Mark all present” is safe to repeat. Automatic day and
   month marking skip dates before joining and future dates. Deliberate individual
   backdating remains supported for corrections. Rest days are separate from
@@ -35,8 +45,14 @@ needs the billing and live-account checks listed below before owner handover.
 - **Protect live accounts:** Demo reload and “Clear all data” are limited to local
   exploration mode. Live accounts use archiving to preserve history.
 - **Receipt accuracy:** WhatsApp shows the actual receipt status, including
-  cancelled receipts. PDFs use the recorded amount instead of substituting
-  today's package price.
+  cancelled receipts, the full fee, paid earlier, paid now and the balance after
+  that receipt. Cancelled receipts state that they are not proof of payment.
+  Decimal fees stay intact in money displays and package/payment editors.
+  PDFs use the recorded amount instead of substituting today's package price.
+- **Phone layouts:** Plan, validity and fee labels wrap, payment fields fit narrow
+  screens, and report actions can continue on another line. Automated checks use
+  real Roboto fonts at 320 × 568 and 360 × 800 with text at 130%, including
+  registration and payment sheets with the keyboard open.
 
 ## Check with a test gym account
 
@@ -50,15 +66,18 @@ needs the billing and live-account checks listed below before owner handover.
    Check the payment and receipt from a second device.
 6. Try a test account whose cloud access is denied. Check the upload error and
    retained changes.
+7. Register a pay-later member on a three-month package. Before entering any
+   attendance, check that outstanding dues contain one full package fee. Change
+   package settings and confirm the agreed fee is unchanged.
+8. Record a partial payment, collect its balance, then renew. Check that the first
+   agreement remains in history and the renewal has its own dates and receipt.
 
 ## Work still needed before handover
 
-- **Unpaid membership billing:** Unpaid charges still depend on attendance and
-  current package prices. The app can miss a fee when someone never attends,
-  change historical unpaid totals after a price edit, and count a multi-month
-  package more than once. These changes protect recorded payments and balances;
-  they do not replace that billing model. Membership agreements need their own
-  agreed fee and dates, including pay-later registrations.
+- **Old unpaid records:** New registrations retain explicit agreements. Older
+  members without an agreement use attendance to infer pending periods. An old
+  price that was never recorded cannot be reconstructed; review those inferred
+  periods and fees before relying on historical totals.
 - **Cloud checks:** Retry, persistence, account isolation and interrupted local
   saves are tested with simulated failures. Real Firebase permissions,
   reconnection and two-device behaviour still need the test-account checks.
@@ -81,12 +100,17 @@ Branch: codex/critical-gym-workflows. Nothing is merged into the original repo.
 Tested with Flutter 3.47.2 and Dart 3.13.2. The lockfile and Android settings
 include changes required by that SDK.
 The Android build requires Android 7.0 or newer (API 24).
-Static analysis reports no issues. All 73 tests pass, including 19 new regression
-tests covering the changed workflows.
+The earlier branch build produced an Android APK; that build has not been repeated
+for these follow-up changes. Current static analysis reports no issues.
+The combined branch passes 117 automated tests, including membership agreements,
+save retries, history performance and phone layouts. Live cloud, physical-device
+and release-signing acceptance remain outstanding.
 
     flutter pub get
     flutter analyze --no-pub
     flutter test --no-pub
     flutter build apk --release
 
-New regression tests: test/critical_workflows_test.dart.
+Regression tests include test/critical_workflows_test.dart,
+test/review_fixes_test.dart, test/membership_agreement_test.dart,
+test/pending_history_scale_test.dart and test/phone_layout_test.dart.

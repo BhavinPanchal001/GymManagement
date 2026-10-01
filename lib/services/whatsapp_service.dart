@@ -376,6 +376,16 @@ class WhatsAppService {
     final formattedPaidDate = GymDateUtils.formatDateTime(bill.paidAt);
     final planLabel = CustomerPlan.getLabel(bill.planType);
     final gym = bill.gymName.isNotEmpty ? bill.gymName : GymService().settings.gymName;
+    final payment = GymService().getPaymentById(bill.paymentId);
+    final paidEarlier = GymService().getBillsForPayment(bill.paymentId)
+        .where((receipt) => receipt.id != bill.id &&
+            receipt.issuedAt.isBefore(bill.issuedAt))
+        .fold<double>(0, (sum, receipt) => sum + receipt.amount);
+    final balance = payment == null ? null :
+        (payment.totalDue - paidEarlier - bill.amount).clamp(0.0, double.infinity);
+    final cancelled = bill.status == 'CANCELLED';
+    final partial = bill.billType == 'PARTIAL' || (balance != null && balance > 0.005);
+    final status = cancelled ? 'CANCELLED' : partial ? 'PARTIAL' : bill.status;
 
     final buf = StringBuffer();
     buf.writeln('🧾 *FEE RECEIPT / PAYMENT BILL* 🧾');
@@ -390,7 +400,22 @@ class WhatsAppService {
     buf.writeln('📋 *Membership Plan:* $planLabel');
     buf.writeln('🗓️ *Validity:* ${bill.formattedValidityPeriod}');
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('💵 *Amount Paid:* *$formattedAmount*');
+    if (cancelled) {
+      buf.writeln('*Cancelled receipt amount:* $formattedAmount');
+      buf.writeln('This receipt is cancelled and is not proof of payment.');
+    } else {
+      buf.writeln('*Receipt type:* ${bill.billType == 'BALANCE' ? 'BALANCE RECEIVED' : partial ? 'PARTIAL PAYMENT' : 'FULL PAYMENT'}');
+      if (payment != null) {
+        buf.writeln('*Total membership fee:* ${GymDateUtils.formatCurrency(payment.totalDue, symbol: cur)}');
+        buf.writeln('*Paid earlier:* ${GymDateUtils.formatCurrency(paidEarlier, symbol: cur)}');
+      }
+      buf.writeln('💵 *Paid now:* *$formattedAmount*');
+      if (balance != null) {
+        buf.writeln('*Balance after this receipt:* ${GymDateUtils.formatCurrency(balance, symbol: cur)}');
+      } else if (partial || bill.billType == 'BALANCE') {
+        buf.writeln('Membership fee and remaining balance are unavailable for this legacy receipt.');
+      }
+    }
     buf.writeln('💳 *Payment Method:* ${bill.method.label}');
     if (bill.transactionRef != null && bill.transactionRef!.trim().isNotEmpty) {
       buf.writeln('🔖 *Txn Ref / ID:* ${bill.transactionRef!.trim()}');
@@ -398,7 +423,7 @@ class WhatsAppService {
     if (bill.notes != null && bill.notes!.trim().isNotEmpty) {
       buf.writeln('📝 *Remarks:* ${bill.notes!.trim()}');
     }
-    buf.writeln('*Status:* ${bill.status}');
+    buf.writeln('*Status:* $status');
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━');
     buf.writeln('Thank you for training with *$gym*!');
     buf.writeln('Stay consistent, stay fit, and keep crushing your goals! 💪🔥');

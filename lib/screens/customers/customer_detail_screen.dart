@@ -279,6 +279,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   unselectedLabelColor: AppColors.textSecondary,
                   labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                   dividerColor: Colors.transparent,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
                   tabs: [
                     Tab(
                       child: Row(
@@ -590,8 +592,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: planColor.withValues(alpha: 0.45)),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        runSpacing: 4,
                         children: [
                           Icon(planIcon, size: 14, color: planColor),
                           const SizedBox(width: 6),
@@ -611,7 +614,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '$currency${price.toInt()} ($durationText)',
+                            '${GymDateUtils.formatCurrency(price, symbol: currency)} ($durationText)',
                             style: TextStyle(
                               color: planColor,
                               fontSize: 12,
@@ -644,8 +647,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: statusColor.withValues(alpha: 0.35)),
                         ),
-                        child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Icon(
                               isNew ? Icons.fiber_new_rounded : Icons.warning_amber_rounded,
@@ -682,8 +685,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: statusColor.withValues(alpha: 0.35)),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Icon(Icons.event_available_rounded, size: 12, color: statusColor),
                           const SizedBox(width: 5),
@@ -949,8 +952,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           ),
           const SizedBox(height: 14),
           if (isPaid) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
               children: [
                 Text(
                   GymDateUtils.formatCurrency(record.displayAmount, symbol: currency),
@@ -1048,8 +1052,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.whatsapp.withValues(alpha: 0.5), width: 1.2),
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: const Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Icon(Icons.receipt_long_rounded, color: AppColors.whatsapp, size: 16),
                     SizedBox(width: 8),
@@ -1082,7 +1087,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ],
               ),
             ),
-          ] else if (isPastMonth && presentDays == 0) ...[
+          ] else if (isPastMonth && presentDays == 0 &&
+              !record.isMembershipAgreement) ...[
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -1154,7 +1160,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   onPressed: () {
-                    if (isPastMonth && presentDays > 0) {
+                    if (isPastMonth && presentDays > 0 &&
+                        !record.isMembershipAgreement) {
                       final parts = monthKey.split('-');
                       final y = int.tryParse(parts[0]) ?? DateTime.now().year;
                       final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? DateTime.now().month) : DateTime.now().month;
@@ -2331,8 +2338,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
           children: [
             Text(
               'Payment History',

@@ -85,6 +85,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   int _cycleModeIndex = 0; // 0: Fresh Start, 1: Continuous, 2: Custom
   bool _isLoading = false;
   final _operationId = GymService().newPaymentOperationId();
+  bool _updateFutureRenewalDefault = false;
 
   final List<PaymentMethod> _methods = [
     PaymentMethod.gpay,
@@ -248,8 +249,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   Future<void> _submitPayment() async {
     if (_isLoading) return;
     final amount = double.tryParse(_amountController.text.trim());
-    final isUpdate = widget.currentRecord.isPaid &&
-        !widget.currentRecord.id.startsWith('pending_');
+    final isUpdate = widget.currentRecord.isPaid;
     final unchangedMoney =
         isUpdate &&
         amount == widget.currentRecord.amount &&
@@ -291,6 +291,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
             paidAt: _selectedDate,
             operationId: _operationId,
+            agreementId: widget.currentRecord.isMembershipAgreement
+                ? widget.currentRecord.id : null,
+            updateFutureRenewalDefault: _updateFutureRenewalDefault,
           );
 
       if (mounted) {
@@ -507,6 +510,23 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             // Package & Duration Combo Selector
             _buildDurationPackageSelector(currency),
             const SizedBox(height: 18),
+            if (!isAlreadyPaid &&
+                _selectedDurationMonths != widget.customer.planDurationMonths) ...[
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                value: _updateFutureRenewalDefault,
+                onChanged: (value) => setState(
+                  () => _updateFutureRenewalDefault = value ?? false,
+                ),
+                title: const Text('Use this package for future renewals'),
+                subtitle: Text(
+                  'The current default remains ${widget.customer.durationLabel} unless selected.',
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Total due (plan fee / package price, read-only)
             Row(
@@ -676,10 +696,10 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             children: [
                               Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 20),
                               const SizedBox(width: 10),
-                              Text(
+                              Flexible(child: Text(
                                 GymDateUtils.formatDate(_selectedDate),
                                 style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-                              ),
+                              )),
                             ],
                           ),
                         ),
@@ -749,7 +769,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         children: [
                           const Icon(Icons.check_circle_rounded, size: 20),
                           const SizedBox(width: 8),
-                          Text(
+                          Flexible(child: Text(
                             isAlreadyPaid
                                 ? 'Update Payment Record'
                                 : ((double.tryParse(_amountController.text.trim()) ?? 0) + 0.005 < _totalDue
@@ -760,7 +780,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.2,
                             ),
-                          ),
+                          )),
                         ],
                       ),
               ),
@@ -855,7 +875,6 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 ),
               ),
               const SizedBox(height: 8),
-              if (!widget.currentRecord.id.startsWith('pending_'))
               Center(
                 child: TextButton.icon(
                   onPressed: _isLoading ? null : _revertPayment,
@@ -1069,7 +1088,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       children: [
                         Row(
                           children: [
-                            Text(
+                            Expanded(child: Text(
                               'START DATE',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
@@ -1077,8 +1096,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
                               ),
-                            ),
-                            const Spacer(),
+                            )),
                             Icon(Icons.edit_calendar_rounded, size: 13, color: AppColors.primary),
                           ],
                         ),
@@ -1116,7 +1134,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       children: [
                         Row(
                           children: [
-                            Text(
+                            Expanded(child: Text(
                               'EXPIRY DATE',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
@@ -1124,8 +1142,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
                               ),
-                            ),
-                            const Spacer(),
+                            )),
                             Icon(Icons.edit_calendar_rounded, size: 13, color: AppColors.primary),
                           ],
                         ),
@@ -1235,7 +1252,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     setState(() {
                       _selectedDurationMonths = pkg.months;
                       _totalDue = pkg.price;
-                      _amountController.text = pkg.price.toInt().toString();
+                      _amountController.text = pkg.price.toStringAsFixed(2);
                       _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
                     });
                   },

@@ -60,8 +60,9 @@ class GymDateUtils {
   }
 
   static String formatCurrency(double amount, {String symbol = '₹'}) {
-    final formatter = NumberFormat('#,##,###');
-    return '$symbol${formatter.format(amount.round())}';
+    final cents = (amount * 100).round();
+    final formatter = NumberFormat(cents % 100 == 0 ? '#,##,###' : '#,##,###.00');
+    return '$symbol${formatter.format(cents / 100)}';
   }
 
   static int daysInMonth(int year, int month) {
@@ -116,4 +117,3 @@ class GymDateUtils {
     return list;
   }
 }
-

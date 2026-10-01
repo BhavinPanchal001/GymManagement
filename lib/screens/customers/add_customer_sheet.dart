@@ -55,12 +55,15 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   bool _collectPaymentNow = false;
   PaymentMethod _selectedPaymentMethod = PaymentMethod.cash;
   bool _isLoading = false;
+  late final String _registrationOperationId;
 
   bool get isEditing => widget.customerToEdit != null;
 
   @override
   void initState() {
     super.initState();
+    _registrationOperationId =
+        '${DateTime.now().microsecondsSinceEpoch}_${identityHashCode(this)}';
     _nameController = TextEditingController(text: widget.customerToEdit?.name ?? '');
     String initialPhone = widget.customerToEdit?.phone ?? '';
     if (initialPhone.isNotEmpty) {
@@ -220,6 +223,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         initialPaymentMethod: _collectPaymentNow ? _selectedPaymentMethod : null,
         membershipStartDate: _membershipStartDate,
         membershipEndDate: _membershipEndDate,
+        membershipFee: GymService().settings.getPriceForDuration(
+          _selectedPlan, _selectedDurationMonths,
+        ),
+        operationId: _registrationOperationId,
       );
     }
 
@@ -363,7 +370,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
                               'Card No.',
@@ -678,11 +686,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       children: [
         Row(
           children: [
-            Text(
+            Expanded(child: Text(
               'Package Duration (Combo Pricing)',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
+            )),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
@@ -735,7 +743,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            runSpacing: 4,
                             children: [
                               Text(
                                 pkg.title,
@@ -854,7 +864,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
             ],
           ),
-          if (_collectPaymentNow) ...[
+          ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
@@ -1002,6 +1012,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
             ),
             const SizedBox(height: 12),
+            if (_collectPaymentNow) ...[
             Text(
               'Payment Method',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700),
@@ -1057,6 +1068,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     );
                   }).toList(),
             ),
+            ],
           ],
         ],
       ),
