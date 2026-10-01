@@ -70,6 +70,8 @@ class MarkPaymentDialog extends StatefulWidget {
 
 class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   late TextEditingController _amountController;
+  TextEditingController? _legacyFeeController;
+  late DateTime _initialReceivedDate;
   late TextEditingController _refController;
   late TextEditingController _notesController;
   late PaymentMethod _selectedMethod;
@@ -82,6 +84,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   late DateTime _lastExpiryDate;
   int _cycleModeIndex = 0; // 0: Fresh Start, 1: Continuous, 2: Custom
   bool _isLoading = false;
+  final _operationId = GymService().newPaymentOperationId();
 
   final List<PaymentMethod> _methods = [
     PaymentMethod.gpay,
@@ -101,9 +104,15 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         : widget.customer.planDurationMonths;
     _selectedDurationMonths = initialDuration;
 
-    _totalDue = widget.currentRecord.totalDue > 0
+    _totalDue = widget.currentRecord.isPaid || widget.currentRecord.totalDue > 0
         ? widget.currentRecord.totalDue
         : GymService().settings.getPriceForDuration(widget.customer.planType, _selectedDurationMonths);
+    if (widget.currentRecord.isPaid &&
+        widget.currentRecord.amount > _totalDue + 0.005) {
+      _legacyFeeController = TextEditingController(
+        text: _totalDue.toStringAsFixed(2),
+      );
+    }
     final initialAmount = widget.currentRecord.isPaid
         ? widget.currentRecord.amount
         : _totalDue;
@@ -116,6 +125,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     _notesController = TextEditingController(text: widget.currentRecord.notes ?? '');
     _selectedMethod = widget.currentRecord.method ?? PaymentMethod.gpay;
     _selectedDate = widget.currentRecord.paidAt ?? DateTime.now();
+    _initialReceivedDate = _selectedDate;
 
     final gymService = GymService();
     final hasPaid = gymService.hasPaidMembership(widget.customer);
@@ -125,10 +135,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     _lastExpiryDate = latestExpiry;
     _isCurrentlyActive = hasPaid && !latestExpiry.isBefore(today);
 
-    if (widget.currentRecord.startDate != null) {
-      _startDate = widget.currentRecord.startDate!;
-      _endDate = widget.currentRecord.endDate ??
-          GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+    if (widget.currentRecord.isPaid || widget.currentRecord.startDate != null) {
+      _startDate = widget.currentRecord.effectiveStartDate;
+      _endDate = widget.currentRecord.effectiveEndDate;
       _cycleModeIndex = 2; // custom
     } else if (_isCurrentlyActive) {
       _startDate = latestExpiry.add(const Duration(days: 1));
@@ -177,6 +186,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   @override
   void dispose() {
     _amountController.dispose();
+    _legacyFeeController?.dispose();
     _refController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -238,18 +248,20 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   Future<void> _submitPayment() async {
     if (_isLoading) return;
     final amount = double.tryParse(_amountController.text.trim());
+    final isUpdate = widget.currentRecord.isPaid &&
+        !widget.currentRecord.id.startsWith('pending_');
+    final unchangedMoney =
+        isUpdate &&
+        amount == widget.currentRecord.amount &&
+        _totalDue == widget.currentRecord.totalDue;
     if (amount == null ||
         !amount.isFinite ||
-        amount <= 0 ||
-        amount > _totalDue + 0.005) {
+        (!unchangedMoney && (amount <= 0 || amount > _totalDue + 0.005))) {
       _showError('Enter a positive amount no greater than the membership fee.');
       return;
     }
 
     setState(() => _isLoading = true);
-
-    final isUpdate = widget.currentRecord.isPaid &&
-        !widget.currentRecord.id.startsWith('pending_');
     try {
       final bill = isUpdate
         ? await GymService().updatePayment(
@@ -257,7 +269,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             amount: amount,
             totalDue: _totalDue,
             method: _selectedMethod,
-            paidAt: _selectedDate,
+            paidAt: _selectedDate == _initialReceivedDate
+                ? widget.currentRecord.paidAt : _selectedDate,
             startDate: _startDate,
             endDate: _endDate,
             durationMonths: _selectedDurationMonths,
@@ -277,6 +290,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
             transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
             paidAt: _selectedDate,
+            operationId: _operationId,
           );
 
       if (mounted) {
@@ -509,6 +523,24 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               ],
             ),
             const SizedBox(height: 10),
+
+            if (_legacyFeeController != null) ...[
+              TextField(
+                controller: _legacyFeeController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Correct membership fee (optional)',
+                  helperText:
+                      'Reference edits keep the existing fee and received amount.',
+                ),
+                onChanged: (value) => setState(() {
+                  _totalDue = double.tryParse(value.trim()) ?? double.nan;
+                }),
+              ),
+              const SizedBox(height: 10),
+            ],
 
             // Amount field
             Text(

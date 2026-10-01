@@ -47,6 +47,12 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   DateRangePreset _selectedPreset = DateRangePreset.allOutstanding;
   late DateTime _startDate;
   late DateTime _endDate;
+  DateTime get _rangeStart => _selectedPreset == DateRangePreset.allOutstanding
+      ? GymService().outstandingStartDate
+      : _startDate;
+  DateTime get _rangeEnd => _selectedPreset == DateRangePreset.allOutstanding
+      ? GymService().outstandingEndDate
+      : _endDate;
   ReportViewMode _viewMode = ReportViewMode.byMember;
   ReportSortOrder _sortOrder = ReportSortOrder.highestDue;
 
@@ -102,7 +108,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   Future<void> _pickCustomDateRange() async {
     final picked = await showDateRangePicker(
       context: context,
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+      initialDateRange: DateTimeRange(start: _rangeStart, end: _rangeEnd),
       firstDate: DateTime(2022),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
@@ -227,8 +233,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
         final gym = GymService();
         final currency = gym.settings.currencySymbol;
 
-        final rawMemberSummaries = gym.getPendingDuesByMember(_startDate, _endDate);
-        final rawMonthGroups = gym.getPendingDuesByMonth(_startDate, _endDate);
+        final start = _rangeStart;
+        final end = _rangeEnd;
+        final rawMemberSummaries = gym.getPendingDuesByMember(start, end);
+        final rawMonthGroups = gym.getPendingDuesByMonth(start, end);
 
         final totalPending = rawMemberSummaries.fold<double>(0.0, (s, m) => s + m.totalPendingAmount);
         final totalPendingRecords = rawMemberSummaries.fold<int>(0, (s, m) => s + m.pendingRecords.length);
@@ -247,8 +255,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                 onPressed: () {
                   ExportReportDialog.show(
                     context,
-                    startDate: _startDate,
-                    endDate: _endDate,
+                    startDate: start,
+                    endDate: end,
                     memberSummaries: rawMemberSummaries,
                     totalPending: totalPending,
                   );
@@ -326,8 +334,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   }
 
   Widget _buildDateRangeHeader() {
-    final startStr = GymDateUtils.formatDate(_startDate);
-    final endStr = GymDateUtils.formatDate(_endDate);
+    final startStr = GymDateUtils.formatDate(_rangeStart);
+    final endStr = GymDateUtils.formatDate(_rangeEnd);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

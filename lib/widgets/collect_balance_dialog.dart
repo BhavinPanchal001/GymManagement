@@ -26,6 +26,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
   PaymentMethod _method = PaymentMethod.cash;
   bool _saving = false;
   String? _error;
+  final _operationId = GymService().newPaymentOperationId();
   @override
   void initState() {
     super.initState();
@@ -63,6 +64,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
         method: _method,
         paidAt: _received,
         transactionRef: _reference.text.trim(),
+        operationId: _operationId,
       );
       if (mounted) Navigator.pop(context, receipt);
     } catch (error) {

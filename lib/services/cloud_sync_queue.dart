@@ -83,19 +83,34 @@ class CloudSyncQueue extends ChangeNotifier {
     );
   }
 
-  Future<void> _persist() {
-    // Capture each revision so overlapping edits cannot restore an older queue.
-    final saved = json.encode(_pending.map((b) => b.toMap()).toList());
+  Future<void> _changePending(void Function(List<_PendingBatch>) update) {
     final write = _persistTail.catchError((Object _) {}).then((_) async {
-      if (!await preferences.setString(_key, saved)) {
+      final next = List<_PendingBatch>.from(_pending);
+      update(next);
+      final saved = json.encode(next.map((b) => b.toMap()).toList());
+      bool stored;
+      try {
+        stored = await preferences.setString(_key, saved);
+      } catch (_) {
+        await preferences.reload();
+        rethrow;
+      }
+      if (!stored) {
+        await preferences.reload();
         throw StateError('Could not save changes on this phone.');
       }
+      _pending
+        ..clear()
+        ..addAll(next);
+      if (!_closed) notifyListeners();
     });
     _persistTail = write;
     return write;
   }
 
-  Future<void> enqueue(List<CloudChange> changes) async {
+  Future<void> enqueue(List<CloudChange> changes, {
+    bool autoFlush = true,
+  }) async {
     if (_closed) throw StateError('This account is no longer connected.');
     if (changes.isEmpty) return;
     if (changes.length > 450) {
@@ -113,16 +128,8 @@ class CloudSyncQueue extends ChangeNotifier {
       '${DateTime.now().microsecondsSinceEpoch}_${_sequence++}',
       copied,
     );
-    _pending.add(batch);
-    notifyListeners();
-    try {
-      await _persist();
-    } catch (_) {
-      _pending.remove(batch);
-      if (!_closed) notifyListeners();
-      rethrow;
-    }
-    if (!_closed) unawaited(flush());
+    await _changePending((next) => next.add(batch));
+    if (!_closed && autoFlush) unawaited(flush());
   }
 
   /// Apply pending local edits over an arriving server snapshot.
@@ -156,19 +163,12 @@ class CloudSyncQueue extends ChangeNotifier {
   Future<void> _drain() async {
     try {
       while (!_closed && _pending.isNotEmpty) {
-        await _persistTail;
+        await _persistTail.catchError((Object _) {});
         if (_closed || _pending.isEmpty) return;
         final batch = _pending.first;
         await upload(batch.changes).timeout(uploadTimeout);
         if (_closed) return;
-        _pending.remove(batch);
-        try {
-          await _persist();
-        } catch (_) {
-          // Acknowledged uploads are safe to replay; never lose retry data.
-          _pending.insert(0, batch);
-          rethrow;
-        }
+        await _changePending((next) => next.remove(batch));
         lastError = null;
         notifyListeners();
       }

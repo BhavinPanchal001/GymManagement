@@ -76,6 +76,93 @@ class MonthCardData {
   }
 }
 
+class _PendingIndex {
+  final Map<String, List<PaymentRecord>> payments = {};
+  final Map<String, Map<String, List<String>>> unpaid = {};
+  final Map<String, List<(String, String)>> _coverage = {};
+  DateTime earliest = DateTime.now();
+  DateTime latest = DateTime.now();
+
+  _PendingIndex(
+    List<Customer> customers,
+    Iterable<PaymentRecord> records,
+    Iterable<AttendanceRecord> attendance,
+  ) {
+    for (final customer in customers) {
+      if (customer.joinDate.isBefore(earliest)) earliest = customer.joinDate;
+    }
+    for (final payment in records) {
+      final start = payment.effectiveStartDate;
+      final end = payment.effectiveEndDate;
+      if (start.isBefore(earliest)) earliest = start;
+      if (payment.balanceDue > 0 && start.isAfter(latest)) latest = start;
+      if (!payment.isPaid) continue;
+      (payments[payment.customerId] ??= []).add(payment);
+      if (!end.isBefore(start)) {
+        (_coverage[payment.customerId] ??= []).add((
+          GymDateUtils.toDateKey(start),
+          GymDateUtils.toDateKey(end),
+        ));
+      }
+    }
+    for (final list in payments.values) {
+      list.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
+    }
+    for (final entry in _coverage.entries) {
+      entry.value.sort((a, b) => a.$1.compareTo(b.$1));
+      final merged = <(String, String)>[];
+      for (final range in entry.value) {
+        if (merged.isNotEmpty && range.$1.compareTo(merged.last.$2) <= 0) {
+          final previous = merged.removeLast();
+          merged.add((
+            previous.$1,
+            range.$2.compareTo(previous.$2) > 0 ? range.$2 : previous.$2,
+          ));
+        } else {
+          merged.add(range);
+        }
+      }
+      _coverage[entry.key] = merged;
+    }
+    var earliestKey = GymDateUtils.toDateKey(earliest);
+    for (final record in attendance) {
+      if (record.dateKey.compareTo(earliestKey) < 0) {
+        final date = DateTime.tryParse(record.dateKey);
+        if (date != null && date.isBefore(earliest)) {
+          earliest = date;
+          earliestKey = GymDateUtils.toDateKey(date);
+        }
+      }
+      if (record.status != AttendanceStatus.present ||
+          record.dateKey.length < 7 ||
+          covers(record.customerId, record.dateKey)) {
+        continue;
+      }
+      final months = unpaid[record.customerId] ??= {};
+      (months[record.dateKey.substring(0, 7)] ??= []).add(record.dateKey);
+    }
+  }
+
+  bool covers(String customerId, String dateKey) {
+    final ranges = _coverage[customerId];
+    if (ranges == null) return false;
+    var low = 0;
+    var high = ranges.length - 1;
+    while (low <= high) {
+      final middle = (low + high) ~/ 2;
+      final range = ranges[middle];
+      if (dateKey.compareTo(range.$1) < 0) {
+        high = middle - 1;
+      } else if (dateKey.compareTo(range.$2) > 0) {
+        low = middle + 1;
+      } else {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
 class GymService extends ChangeNotifier {
   static final GymService _instance = GymService._internal();
   factory GymService() => _instance;
@@ -94,19 +181,63 @@ class GymService extends ChangeNotifier {
   bool _suppressCloudUpdates = false; // Prevents re-entrant updates during local writes
   CloudSyncQueue? _syncQueue;
   String? _cloudReadError;
+  String? _financialCacheError;
+  Future<void>? _financialTail;
+  Future<void>? _financialCacheTail;
+  int _operationSequence = 0;
+  _PendingIndex? _pendingIndex;
+  final Map<String, List<MemberPendingSummary>> _pendingByRange = {};
+  String? _pendingCacheDay;
+
+  _PendingIndex get _duesIndex {
+    final day = GymDateUtils.toDateKey(DateTime.now());
+    if (_pendingCacheDay != day) {
+      _pendingIndex = null;
+      _pendingByRange.clear();
+      _pendingCacheDay = day;
+    }
+    return _pendingIndex ??= _PendingIndex(
+      _customers,
+      _paymentMap.values,
+      _attendanceMap.values,
+    );
+  }
+
+  @override
+  void notifyListeners() {
+    _pendingIndex = null;
+    _pendingByRange.clear();
+    super.notifyListeners();
+  }
+
+  void _notifySyncStatus() => super.notifyListeners();
+
   int get pendingUploadCount => _syncQueue?.pendingCount ?? 0;
-  String? get syncError => _cloudReadError ?? _syncQueue?.lastError;
+  String? get syncError =>
+      _financialCacheError ?? _cloudReadError ?? _syncQueue?.lastError;
 
   Future<void> _prepareSyncQueue(String userId) async {
     _syncQueue?.dispose();
     final queue = CloudSyncQueue(
       preferences: await SharedPreferences.getInstance(),
       userId: userId,
-      upload: (changes) => FirestoreService().commitChanges(userId, changes),
+      upload: (changes) async {
+        if (_currentUserId != userId) {
+          throw StateError('This account is no longer connected.');
+        }
+        final payments = _overlay('payments', {
+          for (final p in _paymentMap.values) p.id: p.toMap(),
+        }).map((key, value) => MapEntry(key, PaymentRecord.fromMap(value)));
+        final bills = _overlay('bills', {
+          for (final b in _billsMap.values) b.id: b.toMap(),
+        }).map((key, value) => MapEntry(key, BillRecord.fromMap(value)));
+        await _saveFinancialSnapshot(payments, bills);
+        await FirestoreService().commitChanges(userId, changes);
+      },
     );
     queue.load();
     _syncQueue = queue;
-    queue.addListener(notifyListeners);
+    queue.addListener(_notifySyncStatus);
     // Recover changes saved to the outbox just before an interrupted local save.
     _onFirestoreData(
       customers: _customers,
@@ -126,7 +257,7 @@ class GymService extends ChangeNotifier {
         onError: (_) {
           _cloudReadError =
               'Could not refresh cloud data. Changes stay on this phone.';
-          notifyListeners();
+          _notifySyncStatus();
         },
       );
       _isCloudAttached = FirestoreService().isAttached;
@@ -142,15 +273,18 @@ class GymService extends ChangeNotifier {
   Future<void> retryCloudSync() async {
     final owner = _currentUserId;
     if (owner == null) return;
+    await _refreshFinancialCache();
     if (!_isCloudAttached || _cloudReadError != null) {
       await FirestoreService().detachUser();
       await _connectCloud(owner);
     }
     await _syncQueue?.flush();
-    notifyListeners();
+    _notifySyncStatus();
   }
 
-  Future<void> _queueChanges(List<CloudChange> changes) async {
+  Future<void> _queueChanges(List<CloudChange> changes, {
+    bool autoFlush = true,
+  }) async {
     if (_currentUserId == null) return; // Local exploration mode.
     final queue = _syncQueue;
     if (queue == null) {
@@ -160,9 +294,117 @@ class GymService extends ChangeNotifier {
     for (var i = 0; i < changes.length; i += 450) {
       writes.add(queue.enqueue(
         changes.sublist(i, (i + 450).clamp(0, changes.length)),
+        autoFlush: autoFlush,
       ));
     }
     await Future.wait(writes);
+  }
+
+  String newPaymentOperationId() =>
+      '${DateTime.now().microsecondsSinceEpoch}_${_operationSequence++}';
+
+  Future<BillRecord> _serializeFinancialSave(
+    Future<BillRecord> Function() save,
+  ) {
+    final result = (_financialTail ?? Future.value()).then((_) => save());
+    late final Future<void> tail;
+    void clear() {
+      if (identical(_financialTail, tail)) _financialTail = null;
+    }
+
+    tail = result.then<void>(
+      (_) => clear(),
+      onError: (Object error, StackTrace stack) => clear(),
+    );
+    _financialTail = tail;
+    return result;
+  }
+
+  String _financialKey(String? owner) =>
+      owner == null ? 'gym_financial_v1' : 'gym_${owner}_financial_v1';
+
+  void _loadFinancialSnapshot(SharedPreferences preferences) {
+    final saved = preferences.getString(_financialKey(_currentUserId));
+    if (saved == null) return;
+    final data = json.decode(saved) as Map<String, dynamic>;
+    _paymentMap = {
+      for (final item in data['payments'] as List)
+        (item['id'] as String): PaymentRecord.fromMap(
+          Map<String, dynamic>.from(item as Map),
+        ),
+    };
+    _billsMap = {
+      for (final item in data['bills'] as List)
+        (item['id'] as String): BillRecord.fromMap(
+          Map<String, dynamic>.from(item as Map),
+        ),
+    };
+  }
+
+  Future<void> _saveFinancialSnapshot(
+    Map<String, PaymentRecord> payments,
+    Map<String, BillRecord> bills,
+  ) {
+    final key = _financialKey(_currentUserId);
+    final saved = json.encode({
+      'payments': payments.values.map((p) => p.toMap()).toList(),
+      'bills': bills.values.map((b) => b.toMap()).toList(),
+    });
+    final write = (_financialCacheTail ?? Future.value())
+        .catchError((Object _) {})
+        .then((_) async {
+          final preferences = await SharedPreferences.getInstance();
+          bool stored;
+          try {
+            stored = await preferences.setString(key, saved);
+          } catch (_) {
+            await preferences.reload();
+            rethrow;
+          }
+          if (!stored) {
+            await preferences.reload();
+            throw StateError('Could not save payment history on this phone.');
+          }
+        });
+    late final Future<void> result;
+    result = write.whenComplete(() {
+      if (identical(_financialCacheTail, result)) _financialCacheTail = null;
+    });
+    _financialCacheTail = result;
+    return result;
+  }
+
+  Future<void> _refreshFinancialCache() async {
+    try {
+      await _savePayments();
+      await _saveBills();
+      _financialCacheError = null;
+    } catch (_) {
+      _financialCacheError =
+          'Payment saved. Local history refresh needs a retry.';
+    }
+  }
+
+  Future<void> _commitFinancialChange(
+    PaymentRecord payment,
+    BillRecord bill,
+  ) async {
+    if (_currentUserId == null) {
+      await _saveFinancialSnapshot(
+        {..._paymentMap, payment.id: payment},
+        {..._billsMap, bill.id: bill},
+      );
+    } else {
+      await _queueChanges([
+        CloudChange('payments', payment.id, payment.toMap()),
+        CloudChange('bills', bill.id, bill.toMap()),
+      ], autoFlush: false);
+    }
+    _paymentMap[payment.id] = payment;
+    _billsMap[bill.id] = bill;
+    await _refreshFinancialCache();
+    notifyListeners();
+    unawaited(_syncQueue?.flush() ?? Future.value());
   }
 
   Map<String, Map<String, dynamic>> _overlay(
@@ -256,6 +498,7 @@ class GymService extends ChangeNotifier {
               (item['id'] as String? ?? ''): BillRecord.fromMap(item as Map<String, dynamic>)
           };
         }
+        _loadFinancialSnapshot(prefs);
 
         final expensesJson = prefs.getString(_keyExpenses);
         if (expensesJson != null) {
@@ -338,6 +581,7 @@ class GymService extends ChangeNotifier {
       } else {
         _billsMap = {};
       }
+      _loadFinancialSnapshot(prefs);
 
       final expensesJson = prefs.getString(_expensesKey(userId));
       if (expensesJson != null) {
@@ -415,9 +659,11 @@ class GymService extends ChangeNotifier {
 
   /// Detach Firestore sync. Call this on logout.
   Future<void> detachUser({bool clearMemory = true}) async {
+    await _financialTail;
     _syncQueue?.dispose();
     _syncQueue = null;
     _cloudReadError = null;
+    _financialCacheError = null;
     await FirestoreService().detachUser();
     _isCloudAttached = false;
     _isMigratedToCloud = false;
@@ -439,6 +685,7 @@ class GymService extends ChangeNotifier {
         await prefs.remove(_keyAttendance);
         await prefs.remove(_keyPayments);
         await prefs.remove(_keyBills);
+        await prefs.remove(_financialKey(null));
         await prefs.remove(_keySettings);
       } catch (e) {
         debugPrint('GymService.detachUser prefs cleanup warning: $e');
@@ -479,14 +726,12 @@ class GymService extends ChangeNotifier {
       _paymentMap = _overlay('payments', {
         for (final e in paymentMap.entries) e.key: e.value.toMap(),
       }).map((k, v) => MapEntry(k, PaymentRecord.fromMap(v)));
-      _savePayments();
       changed = true;
     }
     if (billsMap != null) {
       _billsMap = _overlay('bills', {
         for (final e in billsMap.entries) e.key: e.value.toMap(),
       }).map((k, v) => MapEntry(k, BillRecord.fromMap(v)));
-      _saveBills();
       changed = true;
     }
     if (expenses != null) {
@@ -502,6 +747,9 @@ class GymService extends ChangeNotifier {
       );
       _saveSettingsLocallyOnly();
       changed = true;
+    }
+    if (paymentMap != null || billsMap != null) {
+      unawaited(_refreshFinancialCache());
     }
 
     if ((paymentMap != null || billsMap != null) && _hasLegacyPaymentShapes()) {
@@ -683,33 +931,12 @@ class GymService extends ChangeNotifier {
   bool isDateCoveredByPayment(String customerId, String dateKey) {
     final date = DateTime.tryParse(dateKey);
     if (date == null) return false;
-    final targetDay = DateTime(date.year, date.month, date.day);
-
-    for (final p in _paymentMap.values) {
-      if (p.customerId == customerId && p.isPaid) {
-        final start = DateTime(p.effectiveStartDate.year, p.effectiveStartDate.month, p.effectiveStartDate.day);
-        final end = DateTime(p.effectiveEndDate.year, p.effectiveEndDate.month, p.effectiveEndDate.day);
-        if (!targetDay.isBefore(start) && !targetDay.isAfter(end)) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return _duesIndex.covers(customerId, GymDateUtils.toDateKey(date));
   }
 
   /// Returns the count of attended (present) days in a month that have NOT been covered by any paid payment.
   int getUnpaidAttendedDaysInMonth(String customerId, String monthKey) {
-    int count = 0;
-    for (final record in _attendanceMap.values) {
-      if (record.customerId == customerId &&
-          record.status == AttendanceStatus.present &&
-          record.dateKey.startsWith(monthKey)) {
-        if (!isDateCoveredByPayment(customerId, record.dateKey)) {
-          count++;
-        }
-      }
-    }
-    return count;
+    return _duesIndex.unpaid[customerId]?[monthKey]?.length ?? 0;
   }
 
   /// Returns the count of attended (present) days in a month that ARE covered by a paid payment.
@@ -766,13 +993,11 @@ class GymService extends ChangeNotifier {
     final monthEnd = DateTime(y, m, GymDateUtils.daysInMonth(y, m));
 
     final covering = <PaymentRecord>[];
-    for (final p in _paymentMap.values) {
-      if (p.customerId == customerId && p.isPaid) {
+    for (final p in _duesIndex.payments[customerId] ?? <PaymentRecord>[]) {
         final start = DateTime(p.effectiveStartDate.year, p.effectiveStartDate.month, p.effectiveStartDate.day);
         final end = DateTime(p.effectiveEndDate.year, p.effectiveEndDate.month, p.effectiveEndDate.day);
         if (!start.isAfter(monthEnd) && !end.isBefore(monthStart)) {
           covering.add(p);
-        }
       }
     }
     if (covering.isEmpty) return null;
@@ -1201,18 +1426,7 @@ class GymService extends ChangeNotifier {
   }
 
   List<String> getUnpaidAttendedMonthKeys(String customerId) {
-    final monthsWithUnpaidAttendance = <String>{};
-    for (final record in _attendanceMap.values) {
-      if (record.customerId == customerId && record.status == AttendanceStatus.present) {
-        if (!isDateCoveredByPayment(customerId, record.dateKey)) {
-          if (record.dateKey.length >= 7) {
-            monthsWithUnpaidAttendance.add(record.dateKey.substring(0, 7));
-          }
-        }
-      }
-    }
-    final list = monthsWithUnpaidAttendance.toList()..sort();
-    return list;
+    return (_duesIndex.unpaid[customerId]?.keys.toList() ?? <String>[])..sort();
   }
 
 
@@ -1259,11 +1473,7 @@ class GymService extends ChangeNotifier {
 
   /// All paid payment records for a customer, latest cycle start first.
   List<PaymentRecord> getPaidPaymentsForCustomer(String customerId) {
-    final list = _paymentMap.values
-        .where((p) => p.customerId == customerId && p.isPaid)
-        .toList();
-    list.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
-    return list;
+    return List.of(_duesIndex.payments[customerId] ?? <PaymentRecord>[]);
   }
 
   PaymentRecord? getPaymentById(String id) => _paymentMap[id];
@@ -1339,32 +1549,26 @@ class GymService extends ChangeNotifier {
       final monthStart = DateTime(y, m, 1);
 
       DateTime? firstUnpaid;
-      for (final record in _attendanceMap.values) {
-        if (record.customerId == customerId &&
-            record.status == AttendanceStatus.present &&
-            record.dateKey.startsWith(monthYear) &&
-            !isDateCoveredByPayment(customerId, record.dateKey)) {
-          final d = DateTime.tryParse(record.dateKey);
-          if (d != null) {
-            final day = DateTime(d.year, d.month, d.day);
-            if (firstUnpaid == null || day.isBefore(firstUnpaid)) {
-              firstUnpaid = day;
-            }
+      for (final dateKey
+          in _duesIndex.unpaid[customerId]?[monthYear] ?? <String>[]) {
+        final d = DateTime.tryParse(dateKey);
+        if (d != null) {
+          final day = DateTime(d.year, d.month, d.day);
+          if (firstUnpaid == null || day.isBefore(firstUnpaid)) {
+            firstUnpaid = day;
           }
         }
       }
 
       if (firstUnpaid != null) {
         DateTime? prevEndPlusOne;
-        for (final p in _paymentMap.values) {
-          if (p.customerId == customerId && p.isPaid) {
-            final e = p.effectiveEndDate;
-            final endPlusOne = DateTime(e.year, e.month, e.day + 1);
-            if (!endPlusOne.isAfter(firstUnpaid) &&
-                !endPlusOne.isBefore(monthStart)) {
-              if (prevEndPlusOne == null || endPlusOne.isAfter(prevEndPlusOne)) {
-                prevEndPlusOne = endPlusOne;
-              }
+        for (final p in _duesIndex.payments[customerId] ?? <PaymentRecord>[]) {
+          final e = p.effectiveEndDate;
+          final endPlusOne = DateTime(e.year, e.month, e.day + 1);
+          if (!endPlusOne.isAfter(firstUnpaid) &&
+              !endPlusOne.isBefore(monthStart)) {
+            if (prevEndPlusOne == null || endPlusOne.isAfter(prevEndPlusOne)) {
+              prevEndPlusOne = endPlusOne;
             }
           }
         }
@@ -1437,7 +1641,27 @@ class GymService extends ChangeNotifier {
       if (existing != null) return existing;
 
       // Legacy gap: a paid payment with no persisted bill — create + persist once.
-      final bill = BillRecord(
+      final bill = _buildPaidBill(customer, payment);
+      _billsMap[bill.id] = bill;
+      unawaited(_refreshFinancialCache());
+      _cloudSaveBill(bill);
+      return bill;
+    }
+
+    // Transient/pending payment: return a non-persisted preview bill.
+    final effectiveAmount = payment.amount > 0.0
+        ? payment.amount
+        : _feeForCustomer(customer, durationMonths: payment.durationMonths);
+    return _buildPaidBill(customer, payment).copyWith(
+      id: 'bill_${customer.id}_${payment.monthYear}',
+      amount: effectiveAmount,
+      billType: 'FULL',
+      status: payment.isPaid ? 'PAID' : 'PENDING',
+    );
+  }
+
+  BillRecord _buildPaidBill(Customer customer, PaymentRecord payment) =>
+      BillRecord(
         id: 'bill_${customer.id}_${DateTime.now().millisecondsSinceEpoch}',
         billNumber: generateBillNumber(payment.monthYear),
         customerId: customer.id,
@@ -1460,39 +1684,6 @@ class GymService extends ChangeNotifier {
         endDate: payment.endDate ?? payment.effectiveEndDate,
         coveragePeriod: payment.formattedDateRange,
       );
-      _billsMap[bill.id] = bill;
-      _saveBills();
-      _cloudSaveBill(bill);
-      return bill;
-    }
-
-    // Transient/pending payment: return a non-persisted preview bill.
-    final effectiveAmount = payment.amount > 0.0
-        ? payment.amount
-        : _feeForCustomer(customer, durationMonths: payment.durationMonths);
-    return BillRecord(
-      id: 'bill_${customer.id}_${payment.monthYear}',
-      billNumber: generateBillNumber(payment.monthYear),
-      customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      planType: customer.planType,
-      monthYear: payment.monthYear,
-      amount: effectiveAmount,
-      paymentId: payment.id,
-      method: payment.method ?? PaymentMethod.cash,
-      paidAt: payment.paidAt ?? DateTime.now(),
-      notes: payment.notes,
-      transactionRef: payment.transactionRef,
-      gymName: _settings.gymName,
-      issuedAt: payment.paidAt ?? DateTime.now(),
-      status: payment.isPaid ? 'PAID' : 'PENDING',
-      durationMonths: payment.durationMonths,
-      startDate: payment.startDate ?? payment.effectiveStartDate,
-      endDate: payment.endDate ?? payment.effectiveEndDate,
-      coveragePeriod: payment.formattedDateRange,
-    );
-  }
 
   /// Sequential bill number BILL-YYYYMM-NNNN where NNNN = max sequence parsed
   /// from existing bill numbers with the same prefix (any status) + 1.
@@ -1543,7 +1734,13 @@ class GymService extends ChangeNotifier {
     String? notes,
     String? transactionRef,
     DateTime? paidAt,
-  }) async {
+    String? operationId,
+  }) => _serializeFinancialSave(() async {
+    final receiptId = operationId == null
+        ? _newBillId(customerId)
+        : 'bill_operation_$operationId';
+    final saved = _billsMap[receiptId];
+    if (saved != null) return saved;
     final effectivePaidAt = paidAt ?? DateTime.now();
     final customer = getCustomerById(customerId);
     if (customer == null || !customer.isActive) {
@@ -1598,10 +1795,8 @@ class GymService extends ChangeNotifier {
       transactionRef: transactionRef,
       durationMonths: durationMonths,
     );
-    _paymentMap[record.id] = record;
-
     final bill = BillRecord(
-      id: _newBillId(customerId),
+      id: receiptId,
       billNumber: generateBillNumber(startMonthKey),
       customerId: customerId,
       customerName: customer.name,
@@ -1623,18 +1818,10 @@ class GymService extends ChangeNotifier {
       durationMonths: durationMonths,
       coveragePeriod: coveragePeriod,
     );
-    _billsMap[bill.id] = bill;
-
-    await _queueChanges([
-      CloudChange('payments', record.id, record.toMap()),
-      CloudChange('bills', bill.id, bill.toMap()),
-    ]);
-    notifyListeners();
-    await _savePayments();
-    await _saveBills();
+    await _commitFinancialChange(record, bill);
 
     return bill;
-  }
+  });
 
   /// Collects (part of) the remaining balance on a paid payment. Issues its own
   /// BALANCE bill with its own bill number.
@@ -1645,7 +1832,12 @@ class GymService extends ChangeNotifier {
     DateTime? paidAt,
     String? notes,
     String? transactionRef,
-  }) async {
+    String? operationId,
+  }) => _serializeFinancialSave(() async {
+    final saved = operationId == null
+        ? null
+        : _billsMap['bill_operation_$operationId'];
+    if (saved != null) return saved;
     final record = _paymentMap[paymentId];
     if (record == null || !record.isPaid) {
       throw ArgumentError('No paid payment found for id $paymentId');
@@ -1672,10 +1864,10 @@ class GymService extends ChangeNotifier {
     final customer = getCustomerById(record.customerId);
 
     final updated = record.copyWith(amount: record.amount + collected);
-    _paymentMap[paymentId] = updated;
-
     final bill = BillRecord(
-      id: _newBillId(record.customerId),
+      id: operationId == null
+          ? _newBillId(record.customerId)
+          : 'bill_operation_$operationId',
       billNumber: generateBillNumber(record.monthYear),
       customerId: record.customerId,
       customerName: customer?.name ?? 'Member',
@@ -1697,18 +1889,10 @@ class GymService extends ChangeNotifier {
       durationMonths: record.durationMonths,
       coveragePeriod: record.formattedDateRange,
     );
-    _billsMap[bill.id] = bill;
-
-    await _queueChanges([
-      CloudChange('payments', updated.id, updated.toMap()),
-      CloudChange('bills', bill.id, bill.toMap()),
-    ]);
-    notifyListeners();
-    await _savePayments();
-    await _saveBills();
+    await _commitFinancialChange(updated, bill);
 
     return bill;
-  }
+  });
 
   /// Updates an existing paid payment in place (same record id) and syncs its
   /// primary (non-BALANCE) bill in place, keeping the bill's id and billNumber.
@@ -1725,7 +1909,7 @@ class GymService extends ChangeNotifier {
     int? durationMonths,
     String? notes,
     String? transactionRef,
-  }) async {
+  }) => _serializeFinancialSave(() async {
     final record = _paymentMap[paymentId];
     if (record == null || !record.isPaid) {
       throw ArgumentError('No paid payment found for id $paymentId');
@@ -1743,11 +1927,11 @@ class GymService extends ChangeNotifier {
     } else {
       newEnd = record.endDate;
     }
-    final newMonthYear = newStart != null
+    final newMonthYear = newStart != null && newStart != record.effectiveStartDate
         ? GymDateUtils.toMonthKey(newStart)
         : record.monthYear;
 
-    final updated = record.copyWith(
+    var updated = record.copyWith(
       amount: amount,
       totalDue: totalDue,
       method: method,
@@ -1759,28 +1943,47 @@ class GymService extends ChangeNotifier {
       transactionRef: transactionRef,
       monthYear: newMonthYear,
     );
-    _validatePayment(
-      updated.amount,
-      updated.totalDue,
-      updated.durationMonths,
-      updated.effectiveStartDate,
-      updated.effectiveEndDate,
-      updated.paidAt ?? DateTime.now(),
-    );
+    final financialEdit =
+        updated.amount != record.amount ||
+        updated.totalDue != record.totalDue ||
+        updated.durationMonths != record.durationMonths ||
+        updated.effectiveStartDate != record.effectiveStartDate ||
+        updated.effectiveEndDate != record.effectiveEndDate ||
+        updated.paidAt != record.paidAt;
+    if (financialEdit) {
+      _validatePayment(
+        updated.amount,
+        updated.totalDue,
+        updated.durationMonths,
+        updated.effectiveStartDate,
+        updated.effectiveEndDate,
+        updated.paidAt ?? DateTime.now(),
+      );
+    } else {
+      updated = record.copyWith(
+        method: method,
+        notes: notes,
+        transactionRef: transactionRef,
+      );
+    }
     final balanceReceipts = getBillsForPayment(paymentId)
         .where((b) => b.billType == 'BALANCE')
         .fold<double>(0, (sum, b) => sum + b.amount);
-    if (updated.amount <= balanceReceipts) {
+    if (financialEdit && updated.amount <= balanceReceipts) {
       throw ArgumentError(
         'The total received must include the original payment and all balance receipts.',
       );
     }
-    _paymentMap[paymentId] = updated;
-
     final customer = getCustomerById(record.customerId);
     BillRecord bill;
     final existing = getBillForPayment(paymentId);
-    if (existing != null) {
+    if (existing != null && !financialEdit) {
+      bill = existing.copyWith(
+        method: updated.method,
+        notes: updated.notes,
+        transactionRef: updated.transactionRef,
+      );
+    } else if (existing != null) {
       var balanceCollected = 0.0;
       for (final b in _billsMap.values) {
         if (b.paymentId == paymentId &&
@@ -1803,9 +2006,8 @@ class GymService extends ChangeNotifier {
         notes: updated.notes,
         transactionRef: updated.transactionRef,
       );
-      _billsMap[bill.id] = bill;
     } else {
-      bill = getOrCreateBillForPayment(
+      bill = _buildPaidBill(
           customer ??
               Customer(
                 id: record.customerId,
@@ -1816,16 +2018,10 @@ class GymService extends ChangeNotifier {
           updated);
     }
 
-    await _queueChanges([
-      CloudChange('payments', updated.id, updated.toMap()),
-      CloudChange('bills', bill.id, bill.toMap()),
-    ]);
-    notifyListeners();
-    await _savePayments();
-    await _saveBills();
+    await _commitFinancialChange(updated, bill);
 
     return bill;
-  }
+  });
 
   /// Removes a payment record entirely (pending state is derived, so nothing
   /// needs to be kept) and marks all of its bills CANCELLED. Bills are never
@@ -2060,19 +2256,7 @@ class GymService extends ChangeNotifier {
   // ==================== PENDING RANGE OPERATIONS ====================
 
   DateTime get outstandingStartDate {
-    var earliest = DateTime.now();
-    for (final c in _customers) {
-      if (c.joinDate.isBefore(earliest)) earliest = c.joinDate;
-    }
-    for (final p in _paymentMap.values) {
-      if (p.effectiveStartDate.isBefore(earliest)) {
-        earliest = p.effectiveStartDate;
-      }
-    }
-    for (final a in _attendanceMap.values) {
-      final date = DateTime.tryParse(a.dateKey);
-      if (date != null && date.isBefore(earliest)) earliest = date;
-    }
+    final earliest = _duesIndex.earliest;
     return DateTime(earliest.year, earliest.month, 1);
   }
 
@@ -2080,12 +2264,7 @@ class GymService extends ChangeNotifier {
       getPendingDuesByMember(outstandingStartDate, outstandingEndDate);
 
   DateTime get outstandingEndDate {
-    var latest = DateTime.now();
-    for (final p in _paymentMap.values) {
-      if (p.balanceDue > 0 && p.effectiveStartDate.isAfter(latest)) {
-        latest = p.effectiveStartDate;
-      }
-    }
+    final latest = _duesIndex.latest;
     return DateTime(latest.year, latest.month + 1, 0);
   }
 
@@ -2104,18 +2283,19 @@ class GymService extends ChangeNotifier {
     return list;
   }
 
-  /// Returns all active customers with pending dues across months in the date range.
+  /// Returns outstanding debt, including archived members, in the date range.
   List<MemberPendingSummary> getPendingDuesByMember(DateTime start, DateTime end) {
+    final index = _duesIndex;
     final monthKeys = getMonthKeysInRange(start, end);
+    final rangeKey = '${monthKeys.first}:${monthKeys.last}';
+    final cached = _pendingByRange[rangeKey];
+    if (cached != null) return List.of(cached);
     final results = <MemberPendingSummary>[];
 
     for (final customer in _customers) {
       final pendingRecords = <PaymentRecord>[];
       for (final monthKey in monthKeys) {
-        final stage = getMemberLifecycleStage(customer, monthKey);
-        if (customer.isActive &&
-            stage == MemberLifecycleStage.due &&
-            getUnpaidAttendedDaysInMonth(customer.id, monthKey) > 0) {
+        if (index.unpaid[customer.id]?[monthKey]?.isNotEmpty ?? false) {
           final record = getPaymentRecord(customer.id, monthKey);
           pendingRecords.add(record);
         }
@@ -2123,10 +2303,8 @@ class GymService extends ChangeNotifier {
 
       // Partial balances: paid cycles with an outstanding balance whose
       // start month falls inside the range still owe money.
-      for (final p in _paymentMap.values) {
-        if (p.customerId == customer.id &&
-            p.isPaid &&
-            p.balanceDue > 0 &&
+      for (final p in index.payments[customer.id] ?? <PaymentRecord>[]) {
+        if (p.balanceDue > 0 &&
             monthKeys.contains(p.monthYear)) {
           pendingRecords.add(p);
         }
@@ -2136,57 +2314,38 @@ class GymService extends ChangeNotifier {
         final total = pendingRecords.fold<double>(0.0, (sum, r) => sum + pendingAmountOf(r));
         results.add(MemberPendingSummary(
           customer: customer,
-          pendingRecords: pendingRecords,
+          pendingRecords: List.unmodifiable(pendingRecords),
           totalPendingAmount: total,
         ));
       }
     }
 
-    return results;
+    _pendingByRange[rangeKey] = List.unmodifiable(results);
+    return List.of(results);
   }
 
   /// Returns pending dues grouped by each month in the date range.
   List<MonthPendingGroup> getPendingDuesByMonth(DateTime start, DateTime end) {
-    final monthKeys = getMonthKeysInRange(start, end);
-    final sortedMonths = List<String>.from(monthKeys)..sort((a, b) => b.compareTo(a));
-    final groups = <MonthPendingGroup>[];
-
-    for (final monthKey in sortedMonths) {
-      final items = <MonthPendingItem>[];
-      double monthTotal = 0.0;
-
-      for (final customer in _customers) {
-        final stage = getMemberLifecycleStage(customer, monthKey);
-        if (customer.isActive &&
-            stage == MemberLifecycleStage.due &&
-            getUnpaidAttendedDaysInMonth(customer.id, monthKey) > 0) {
-          final record = getPaymentRecord(customer.id, monthKey);
-          items.add(MonthPendingItem(customer: customer, payment: record));
-          monthTotal += pendingAmountOf(record);
-        }
-
-        // Partial balances owed on paid cycles starting in this month.
-        for (final p in _paymentMap.values) {
-          if (p.customerId == customer.id &&
-              p.isPaid &&
-              p.balanceDue > 0 &&
-              p.monthYear == monthKey) {
-            items.add(MonthPendingItem(customer: customer, payment: p));
-            monthTotal += p.balanceDue;
-          }
-        }
-      }
-
-      if (items.isNotEmpty) {
-        groups.add(MonthPendingGroup(
-          monthKey: monthKey,
-          items: items,
-          totalAmount: monthTotal,
-        ));
+    final byMonth = <String, List<MonthPendingItem>>{};
+    for (final member in getPendingDuesByMember(start, end)) {
+      for (final payment in member.pendingRecords) {
+        (byMonth[payment.monthYear] ??= []).add(
+          MonthPendingItem(customer: member.customer, payment: payment),
+        );
       }
     }
-
-    return groups;
+    final months = byMonth.keys.toList()..sort((a, b) => b.compareTo(a));
+    return [
+      for (final month in months)
+        MonthPendingGroup(
+          monthKey: month,
+          items: List.unmodifiable(byMonth[month]!),
+          totalAmount: byMonth[month]!.fold<double>(
+            0,
+            (sum, item) => sum + pendingAmountOf(item.payment),
+          ),
+        ),
+    ];
   }
 
   // ==================== SETTINGS OPERATIONS ====================
@@ -2591,6 +2750,7 @@ class GymService extends ChangeNotifier {
   }
 
   Future<void> _savePayments() async {
+    await _saveFinancialSnapshot(_paymentMap, _billsMap);
     final key = _paymentsKey(_currentUserId);
     final data = json.encode(_paymentMap.values.map((p) => p.toMap()).toList());
     final prefs = await SharedPreferences.getInstance();

@@ -41,10 +41,12 @@ class _CustomersTabState extends State<CustomersTab> {
       builder: (context, _) {
         final gymService = GymService();
         final currentMonth = GymDateUtils.toMonthKey(DateTime.now());
-        final owingIds = gymService
-            .getAllPendingDues()
-            .map((s) => s.customer.id)
-            .toSet();
+        final owingIds = _selectedFilter == CustomerFilter.pendingPayment
+            ? gymService
+                .getAllPendingDues()
+                .map((s) => s.customer.id)
+                .toSet()
+            : <String>{};
         var list = gymService.searchCustomers(_searchController.text);
 
         if (_selectedFilter == CustomerFilter.active) {
