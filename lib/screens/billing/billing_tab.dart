@@ -28,6 +28,7 @@ class _BillingTabState extends State<BillingTab> {
   late DateTime _selectedMonth;
   BillingFilter _filter = BillingFilter.all;
   int _billingSection = 0; // 0: Collections, 1: Expenses, 2: Balance Sheet
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -36,15 +37,29 @@ class _BillingTabState extends State<BillingTab> {
     _selectedMonth = DateTime(now.year, now.month, 1);
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _prevMonth() {
     setState(() {
-      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1, 1);
+      _selectedMonth = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month - 1,
+        1,
+      );
     });
   }
 
   void _nextMonth() {
     setState(() {
-      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 1);
+      _selectedMonth = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month + 1,
+        1,
+      );
     });
   }
 
@@ -63,13 +78,19 @@ class _BillingTabState extends State<BillingTab> {
         final totalPending = summary['totalPending'] as double;
         final paidCount = summary['paidCount'] as int;
         final pendingCount = summary['pendingCount'] as int;
-        final progress = totalExpected > 0 ? (totalCollected / totalExpected).clamp(0.0, 1.0) : 0.0;
+        final progress = totalExpected > 0
+            ? (totalCollected / totalExpected).clamp(0.0, 1.0)
+            : 0.0;
 
         final dueIds = <String>{};
         for (final g in gym.getPendingDuesByMonth(
-            DateTime(_selectedMonth.year, _selectedMonth.month, 1),
-            DateTime(_selectedMonth.year, _selectedMonth.month,
-                GymDateUtils.daysInMonth(_selectedMonth.year, _selectedMonth.month)))) {
+          DateTime(_selectedMonth.year, _selectedMonth.month, 1),
+          DateTime(
+            _selectedMonth.year,
+            _selectedMonth.month,
+            GymDateUtils.daysInMonth(_selectedMonth.year, _selectedMonth.month),
+          ),
+        )) {
           if (g.monthKey == monthKey) {
             for (final it in g.items) {
               dueIds.add(it.customer.id);
@@ -77,7 +98,10 @@ class _BillingTabState extends State<BillingTab> {
           }
         }
 
-        var customers = gym.customers.where((c) => c.isActive).toList();
+        var customers = gym
+            .searchCustomers(_searchController.text)
+            .where((customer) => customer.isActive)
+            .toList();
         if (_filter == BillingFilter.pending) {
           customers = customers.where((c) => dueIds.contains(c.id)).toList();
         } else if (_filter == BillingFilter.paid) {
@@ -104,7 +128,10 @@ class _BillingTabState extends State<BillingTab> {
                 },
               ),
               IconButton(
-                icon: Icon(Icons.receipt_long_outlined, color: AppColors.primary),
+                icon: Icon(
+                  Icons.receipt_long_outlined,
+                  color: AppColors.primary,
+                ),
                 tooltip: 'Pending Dues Report',
                 onPressed: () {
                   Navigator.push(
@@ -117,7 +144,10 @@ class _BillingTabState extends State<BillingTab> {
               ),
               Container(
                 margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(10),
@@ -142,13 +172,20 @@ class _BillingTabState extends State<BillingTab> {
             children: [
               // Month Selector Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.event_note_rounded, color: AppColors.primary, size: 20),
+                        Icon(
+                          Icons.event_note_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           GymDateUtils.formatMonthYearKey(monthKey),
@@ -163,12 +200,18 @@ class _BillingTabState extends State<BillingTab> {
                     Row(
                       children: [
                         IconButton(
-                          icon: Icon(Icons.chevron_left_rounded, color: AppColors.textPrimary),
+                          icon: Icon(
+                            Icons.chevron_left_rounded,
+                            color: AppColors.textPrimary,
+                          ),
                           onPressed: _prevMonth,
                           tooltip: 'Previous Month',
                         ),
                         IconButton(
-                          icon: Icon(Icons.chevron_right_rounded, color: AppColors.textPrimary),
+                          icon: Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.textPrimary,
+                          ),
                           onPressed: _nextMonth,
                           tooltip: 'Next Month',
                         ),
@@ -180,7 +223,10 @@ class _BillingTabState extends State<BillingTab> {
 
               // Segmented Sub-Navigation: Collections | Expenses | Balance Sheet
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.surfaceElevated,
@@ -225,13 +271,17 @@ class _BillingTabState extends State<BillingTab> {
                 Expanded(
                   child: BalanceSheetTab(
                     selectedMonth: _selectedMonth,
-                    onSwitchToExpenses: () => setState(() => _billingSection = 1),
+                    onSwitchToExpenses: () =>
+                        setState(() => _billingSection = 1),
                   ),
                 )
               else ...[
                 // Summary Card
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -245,7 +295,9 @@ class _BillingTabState extends State<BillingTab> {
                     border: Border.all(color: AppColors.surfaceBorder),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: AppColors.isDark ? 0.25 : 0.06),
+                        color: Colors.black.withValues(
+                          alpha: AppColors.isDark ? 0.25 : 0.06,
+                        ),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -258,25 +310,42 @@ class _BillingTabState extends State<BillingTab> {
                           Expanded(
                             child: _buildStatBox(
                               'Collected',
-                              GymDateUtils.formatCurrency(totalCollected, symbol: currency),
+                              GymDateUtils.formatCurrency(
+                                totalCollected,
+                                symbol: currency,
+                              ),
                               AppColors.paid,
                               '$paidCount paid',
                             ),
                           ),
-                          Container(width: 1, height: 40, color: AppColors.surfaceBorder),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: AppColors.surfaceBorder,
+                          ),
                           Expanded(
                             child: _buildStatBox(
                               'Pending Dues',
-                              GymDateUtils.formatCurrency(totalPending, symbol: currency),
+                              GymDateUtils.formatCurrency(
+                                totalPending,
+                                symbol: currency,
+                              ),
                               AppColors.pending,
                               '$pendingCount pending',
                             ),
                           ),
-                          Container(width: 1, height: 40, color: AppColors.surfaceBorder),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: AppColors.surfaceBorder,
+                          ),
                           Expanded(
                             child: _buildStatBox(
                               'Total Expected',
-                              GymDateUtils.formatCurrency(totalExpected, symbol: currency),
+                              GymDateUtils.formatCurrency(
+                                totalExpected,
+                                symbol: currency,
+                              ),
                               AppColors.textPrimary,
                               '$totalMembers members',
                             ),
@@ -295,8 +364,8 @@ class _BillingTabState extends State<BillingTab> {
                             progress >= 0.8
                                 ? AppColors.paid
                                 : progress >= 0.5
-                                    ? AppColors.pending
-                                    : AppColors.absent,
+                                ? AppColors.pending
+                                : AppColors.absent,
                           ),
                         ),
                       ),
@@ -328,7 +397,10 @@ class _BillingTabState extends State<BillingTab> {
 
                 // Multi-Month Pending Dues Banner
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: InkWell(
                     onTap: () {
                       Navigator.push(
@@ -340,7 +412,10 @@ class _BillingTabState extends State<BillingTab> {
                     },
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceElevated,
                         borderRadius: BorderRadius.circular(14),
@@ -354,7 +429,11 @@ class _BillingTabState extends State<BillingTab> {
                               color: AppColors.pending.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(Icons.history_rounded, color: AppColors.pending, size: 18),
+                            child: Icon(
+                              Icons.history_rounded,
+                              color: AppColors.pending,
+                              size: 18,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -379,7 +458,11 @@ class _BillingTabState extends State<BillingTab> {
                               ],
                             ),
                           ),
-                          Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 20),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.textMuted,
+                            size: 20,
+                          ),
                         ],
                       ),
                     ),
@@ -388,15 +471,59 @@ class _BillingTabState extends State<BillingTab> {
 
                 const SizedBox(height: 4),
 
-                // Filter Chips
+                // Search and Filter Chips
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: Row(
                     children: [
-                      _buildFilterChip('All ($totalMembers)', BillingFilter.all),
+                      SizedBox(
+                        width: 240,
+                        height: 44,
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (_) => setState(() {}),
+                          textInputAction: TextInputAction.search,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: 'Search name, phone, or card...',
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search_rounded,
+                              color: AppColors.textMuted,
+                              size: 20,
+                            ),
+                            suffixIcon: _searchController.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Clear Search',
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(
+                                      Icons.close_rounded,
+                                      size: 18,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Pending ($pendingCount)', BillingFilter.pending),
+                      _buildFilterChip(
+                        'All ($totalMembers)',
+                        BillingFilter.all,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(
+                        'Pending ($pendingCount)',
+                        BillingFilter.pending,
+                      ),
                       const SizedBox(width: 8),
                       _buildFilterChip('Paid ($paidCount)', BillingFilter.paid),
                     ],
@@ -409,24 +536,48 @@ class _BillingTabState extends State<BillingTab> {
                   child: customers.isEmpty
                       ? Center(
                           child: Text(
-                            _filter == BillingFilter.pending
+                            _searchController.text.trim().isNotEmpty
+                                ? 'No member matches this search.'
+                                : _filter == BillingFilter.pending
                                 ? 'All member payments are cleared for this month!'
                                 : 'No records found for this month.',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
                           ),
                         )
                       : ListView.separated(
                           physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           itemCount: customers.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 10),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 10),
                           itemBuilder: (context, i) {
                             final customer = customers[i];
-                            final payment = gym.getPaymentRecord(customer.id, monthKey);
-                            final attendanceSummary = gym.getMonthlyAttendanceSummary(customer.id, monthKey);
-                            final presentDays = attendanceSummary['present'] ?? 0;
+                            final payment = gym.getPaymentRecord(
+                              customer.id,
+                              monthKey,
+                            );
+                            final attendanceSummary = gym
+                                .getMonthlyAttendanceSummary(
+                                  customer.id,
+                                  monthKey,
+                                );
+                            final presentDays =
+                                attendanceSummary['present'] ?? 0;
 
-                            return _buildBillingRow(customer, payment, monthKey, presentDays, currency, dueIds.contains(customer.id));
+                            return _buildBillingRow(
+                              customer,
+                              payment,
+                              monthKey,
+                              presentDays,
+                              currency,
+                              dueIds.contains(customer.id),
+                            );
                           },
                         ),
                 ),
@@ -462,14 +613,18 @@ class _BillingTabState extends State<BillingTab> {
               Icon(
                 icon,
                 size: 16,
-                color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primaryOn
+                    : AppColors.textSecondary,
               ),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
+                    color: isSelected
+                        ? AppColors.primaryOn
+                        : AppColors.textSecondary,
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   ),
@@ -479,7 +634,10 @@ class _BillingTabState extends State<BillingTab> {
               if (badge != null) ...[
                 const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primaryOn.withValues(alpha: 0.2)
@@ -489,7 +647,9 @@ class _BillingTabState extends State<BillingTab> {
                   child: Text(
                     badge,
                     style: TextStyle(
-                      color: isSelected ? AppColors.primaryOn : AppColors.textMuted,
+                      color: isSelected
+                          ? AppColors.primaryOn
+                          : AppColors.textMuted,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -508,7 +668,11 @@ class _BillingTabState extends State<BillingTab> {
       children: [
         Text(
           title,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -517,7 +681,11 @@ class _BillingTabState extends State<BillingTab> {
           fit: BoxFit.scaleDown,
           child: Text(
             amount,
-            style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
         const SizedBox(height: 2),
@@ -586,7 +754,9 @@ class _BillingTabState extends State<BillingTab> {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isPaid ? AppColors.surfaceBorder : AppColors.pending.withValues(alpha: 0.4),
+            color: isPaid
+                ? AppColors.surfaceBorder
+                : AppColors.pending.withValues(alpha: 0.4),
             width: isPaid ? 1 : 1.2,
           ),
         ),
@@ -622,13 +792,18 @@ class _BillingTabState extends State<BillingTab> {
                           Icon(
                             Icons.calendar_today_rounded,
                             size: 12,
-                            color: presentDays > 0 ? AppColors.paid : AppColors.textMuted,
+                            color: presentDays > 0
+                                ? AppColors.paid
+                                : AppColors.textMuted,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               '$presentDays days attended in ${GymDateUtils.formatMonthYearKey(monthKey).split(' ').first}',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -641,58 +816,69 @@ class _BillingTabState extends State<BillingTab> {
                 const SizedBox(width: 10),
                 Flexible(
                   child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      GymDateUtils.formatCurrency(payment.displayAmount, symbol: currency),
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isPaid
-                            ? AppColors.paid.withValues(alpha: 0.15)
-                            : (isDue
-                                ? AppColors.pending.withValues(alpha: 0.15)
-                                : AppColors.surfaceElevated),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: isPaid
-                              ? AppColors.paid.withValues(alpha: 0.5)
-                              : (isDue
-                                  ? AppColors.pending.withValues(alpha: 0.5)
-                                  : AppColors.surfaceBorder),
-                          width: 0.8,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        GymDateUtils.formatCurrency(
+                          payment.displayAmount,
+                          symbol: currency,
                         ),
-                      ),
-                      child: Text(
-                        isPaid
-                            ? (payment.isPartiallyPaid
-                                ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
-                                : 'PAID')
-                            : (isDue ? 'PENDING' : 'NOT DUE'),
                         style: TextStyle(
-                          color: isPaid
-                              ? AppColors.paid
-                              : (isDue ? AppColors.pending : AppColors.textMuted),
-                          fontSize: 10,
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isPaid
+                              ? AppColors.paid.withValues(alpha: 0.15)
+                              : (isDue
+                                    ? AppColors.pending.withValues(alpha: 0.15)
+                                    : AppColors.surfaceElevated),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: isPaid
+                                ? AppColors.paid.withValues(alpha: 0.5)
+                                : (isDue
+                                      ? AppColors.pending.withValues(alpha: 0.5)
+                                      : AppColors.surfaceBorder),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          isPaid
+                              ? (payment.isPartiallyPaid
+                                    ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
+                                    : 'PAID')
+                              : (isDue ? 'PENDING' : 'NOT DUE'),
+                          style: TextStyle(
+                            color: isPaid
+                                ? AppColors.paid
+                                : (isDue
+                                      ? AppColors.pending
+                                      : AppColors.textMuted),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
 
             const SizedBox(height: 10),
-            Container(height: 1, color: AppColors.surfaceBorder.withValues(alpha: 0.6)),
+            Container(
+              height: 1,
+              color: AppColors.surfaceBorder.withValues(alpha: 0.6),
+            ),
             const SizedBox(height: 10),
 
             // Bottom Section: Payment Mode / Status info + Action Button
@@ -702,7 +888,11 @@ class _BillingTabState extends State<BillingTab> {
                   child: isPaid && payment.method != null
                       ? Row(
                           children: [
-                            const Icon(Icons.verified_rounded, size: 14, color: AppColors.paid),
+                            const Icon(
+                              Icons.verified_rounded,
+                              size: 14,
+                              color: AppColors.paid,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -721,16 +911,26 @@ class _BillingTabState extends State<BillingTab> {
                         )
                       : Row(
                           children: [
-                            Icon(Icons.pending_actions_rounded, size: 14, color: isDue ? AppColors.pending : AppColors.textMuted),
+                            Icon(
+                              Icons.pending_actions_rounded,
+                              size: 14,
+                              color: isDue
+                                  ? AppColors.pending
+                                  : AppColors.textMuted,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                isDue ? 'Due this month' :
-                                    payment.isMembershipAgreement && payment.balanceDue > 0
-                                        ? 'Fee due in ${GymDateUtils.formatMonthYearKey(payment.monthYear)}'
-                                        : 'No unpaid attendance yet',
+                                isDue
+                                    ? 'Due this month'
+                                    : payment.isMembershipAgreement &&
+                                          payment.balanceDue > 0
+                                    ? 'Fee due in ${GymDateUtils.formatMonthYearKey(payment.monthYear)}'
+                                    : 'No unpaid attendance yet',
                                 style: TextStyle(
-                                  color: isDue ? AppColors.pending : AppColors.textMuted,
+                                  color: isDue
+                                      ? AppColors.pending
+                                      : AppColors.textMuted,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -753,16 +953,27 @@ class _BillingTabState extends State<BillingTab> {
                       );
                     },
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: AppColors.whatsapp.withValues(alpha: 0.12),
+                      backgroundColor: AppColors.whatsapp.withValues(
+                        alpha: 0.12,
+                      ),
                       foregroundColor: AppColors.whatsapp,
-                      side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.4)),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      side: BorderSide(
+                        color: AppColors.whatsapp.withValues(alpha: 0.4),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       minimumSize: const Size(0, 30),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: const Icon(Icons.chat_bubble_rounded, size: 13, color: AppColors.whatsapp),
+                    icon: const Icon(
+                      Icons.chat_bubble_rounded,
+                      size: 13,
+                      color: AppColors.whatsapp,
+                    ),
                     label: const Text(
                       'Remind',
                       style: TextStyle(
@@ -784,14 +995,23 @@ class _BillingTabState extends State<BillingTab> {
                     style: OutlinedButton.styleFrom(
                       backgroundColor: AppColors.paid.withValues(alpha: 0.1),
                       foregroundColor: AppColors.paid,
-                      side: BorderSide(color: AppColors.paid.withValues(alpha: 0.4)),
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                      side: BorderSide(
+                        color: AppColors.paid.withValues(alpha: 0.4),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 6,
+                      ),
                       minimumSize: const Size(0, 30),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: const Icon(Icons.receipt_long_rounded, size: 13, color: AppColors.paid),
+                    icon: const Icon(
+                      Icons.receipt_long_rounded,
+                      size: 13,
+                      color: AppColors.paid,
+                    ),
                     label: const Text(
                       'Bill',
                       style: TextStyle(
@@ -813,8 +1033,12 @@ class _BillingTabState extends State<BillingTab> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isPaid ? AppColors.surfaceElevated : AppColors.primary,
-                    foregroundColor: isPaid ? AppColors.textPrimary : AppColors.primaryOn,
+                    backgroundColor: isPaid
+                        ? AppColors.surfaceElevated
+                        : AppColors.primary,
+                    foregroundColor: isPaid
+                        ? AppColors.textPrimary
+                        : AppColors.primaryOn,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -822,20 +1046,29 @@ class _BillingTabState extends State<BillingTab> {
                           ? BorderSide(color: AppColors.surfaceBorder)
                           : BorderSide.none,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     minimumSize: const Size(0, 30),
                   ),
                   icon: Icon(
-                    isPaid ? Icons.edit_note_rounded : Icons.check_circle_rounded,
+                    isPaid
+                        ? Icons.edit_note_rounded
+                        : Icons.check_circle_rounded,
                     size: 14,
-                    color: isPaid ? AppColors.textSecondary : AppColors.primaryOn,
+                    color: isPaid
+                        ? AppColors.textSecondary
+                        : AppColors.primaryOn,
                   ),
                   label: Text(
                     isPaid ? 'Edit' : 'Mark Paid',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: isPaid ? AppColors.textPrimary : AppColors.primaryOn,
+                      color: isPaid
+                          ? AppColors.textPrimary
+                          : AppColors.primaryOn,
                     ),
                   ),
                 ),

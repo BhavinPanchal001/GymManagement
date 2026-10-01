@@ -17,11 +17,20 @@ class DailyAttendanceTab extends StatefulWidget {
 
 class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
   DateTime _selectedDate = DateTime.now();
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate.isAfter(DateTime.now()) ? DateTime.now() : _selectedDate,
+      initialDate: _selectedDate.isAfter(DateTime.now())
+          ? DateTime.now()
+          : _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -46,7 +55,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
   void _markAllPresent() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final targetDay = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final targetDay = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
     if (targetDay.isAfter(today)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -94,15 +107,28 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         final dateKey = GymDateUtils.toDateKey(_selectedDate);
-        final targetDay = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+        final targetDay = DateTime(
+          _selectedDate.year,
+          _selectedDate.month,
+          _selectedDate.day,
+        );
         final isToday = targetDay == today;
         final isFutureDate = targetDay.isAfter(today);
         final overview = gym.getDailyOverview(dateKey);
-        final activeCustomers = gym.customers.where((c) => c.isActive &&
+        final activeCustomers = gym
+            .searchCustomers(_searchController.text)
+            .where(
+              (customer) =>
+                  customer.isActive &&
                   !targetDay.isBefore(
-                    DateTime(c.joinDate.year, c.joinDate.month, c.joinDate.day),
+                    DateTime(
+                      customer.joinDate.year,
+                      customer.joinDate.month,
+                      customer.joinDate.day,
+                    ),
                   ),
-            ).toList();
+            )
+            .toList();
         final total = overview['total'] ?? 0;
         final present = overview['present'] ?? 0;
         final absent = overview['absent'] ?? 0;
@@ -114,12 +140,18 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
             title: const Text('Daily Attendance'),
             actions: [
               IconButton(
-                icon: Icon(Icons.calendar_today_rounded, color: AppColors.primary),
+                icon: Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppColors.primary,
+                ),
                 tooltip: 'Change Date',
                 onPressed: _pickDate,
               ),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded, color: AppColors.textPrimary),
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.textPrimary,
+                ),
                 tooltip: 'More Attendance Options',
                 color: AppColors.surface,
                 shape: RoundedRectangleBorder(
@@ -128,12 +160,17 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                 ),
                 onSelected: (val) async {
                   if (val == 'mark_month') {
-                    final isFutureMonth = DateTime(_selectedDate.year, _selectedDate.month, 1)
-                        .isAfter(DateTime(now.year, now.month, 1));
+                    final isFutureMonth = DateTime(
+                      _selectedDate.year,
+                      _selectedDate.month,
+                      1,
+                    ).isAfter(DateTime(now.year, now.month, 1));
                     if (isFutureMonth) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Cannot mark attendance for future months.'),
+                          content: Text(
+                            'Cannot mark attendance for future months.',
+                          ),
                           backgroundColor: AppColors.pending,
                           behavior: SnackBarBehavior.floating,
                         ),
@@ -163,11 +200,19 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                     value: 'mark_month',
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 20),
+                        Icon(
+                          Icons.calendar_month_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           'Mark Month (All Members)...',
-                          style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -212,7 +257,10 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                   if (isToday) ...[
                                     const SizedBox(width: 8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: AppColors.primary,
                                         borderRadius: BorderRadius.circular(6),
@@ -232,7 +280,10 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                               const SizedBox(height: 2),
                               Text(
                                 GymDateUtils.formatDayOfWeek(_selectedDate),
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),
@@ -242,14 +293,26 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                           onPressed: isFutureDate ? null : _markAllPresent,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.paid,
-                            side: BorderSide(color: isFutureDate ? AppColors.surfaceBorder : AppColors.paid),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            side: BorderSide(
+                              color: isFutureDate
+                                  ? AppColors.surfaceBorder
+                                  : AppColors.paid,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                           ),
                           icon: const Icon(Icons.done_all_rounded, size: 16),
                           label: const Text(
                             'Mark All',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -257,15 +320,24 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                     if (isFutureDate) ...[
                       const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.pending.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.pending.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: AppColors.pending.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.info_outline_rounded, color: AppColors.pending, size: 16),
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              color: AppColors.pending,
+                              size: 16,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -287,15 +359,35 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildMetricCol('Present', '$present', AppColors.paid),
+                          child: _buildMetricCol(
+                            'Present',
+                            '$present',
+                            AppColors.paid,
+                          ),
                         ),
-                        Container(width: 1, height: 28, color: AppColors.surfaceBorder),
-                        Expanded(
-                          child: _buildMetricCol('Absent', '$absent', AppColors.absent),
+                        Container(
+                          width: 1,
+                          height: 28,
+                          color: AppColors.surfaceBorder,
                         ),
-                        Container(width: 1, height: 28, color: AppColors.surfaceBorder),
                         Expanded(
-                          child: _buildMetricCol('Turnout', '$rate%', AppColors.primary),
+                          child: _buildMetricCol(
+                            'Absent',
+                            '$absent',
+                            AppColors.absent,
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 28,
+                          color: AppColors.surfaceBorder,
+                        ),
+                        Expanded(
+                          child: _buildMetricCol(
+                            'Turnout',
+                            '$rate%',
+                            AppColors.primary,
+                          ),
                         ),
                       ],
                     ),
@@ -304,28 +396,66 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
               ),
 
               const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (_) => setState(() {}),
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Search name, phone, or card number...',
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                    suffixIcon: _searchController.text.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Clear Search',
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {});
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
 
               // Attendance List
               Expanded(
                 child: activeCustomers.isEmpty
                     ? Center(
                         child: Text(
-                          'No active members to record attendance.',
+                          _searchController.text.trim().isEmpty
+                              ? 'No active members to record attendance.'
+                              : 'No member matches this search.',
                           style: TextStyle(color: AppColors.textMuted),
                         ),
                       )
                     : ListView.separated(
                         physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         itemCount: activeCustomers.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 10),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
                         itemBuilder: (context, i) {
                           final customer = activeCustomers[i];
-                          final status = gym.getAttendanceStatus(customer.id, dateKey);
+                          final status = gym.getAttendanceStatus(
+                            customer.id,
+                            dateKey,
+                          );
                           final isPresent = status == AttendanceStatus.present;
 
                           return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surface,
                               borderRadius: BorderRadius.circular(16),
@@ -345,7 +475,9 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => CustomerDetailScreen(customerId: customer.id),
+                                        builder: (_) => CustomerDetailScreen(
+                                          customerId: customer.id,
+                                        ),
                                       ),
                                     );
                                   },
@@ -357,12 +489,15 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => CustomerDetailScreen(customerId: customer.id),
+                                          builder: (_) => CustomerDetailScreen(
+                                            customerId: customer.id,
+                                          ),
                                         ),
                                       );
                                     },
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           customer.name,
@@ -375,7 +510,10 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                         const SizedBox(height: 2),
                                         Text(
                                           customer.phone,
-                                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -395,7 +533,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                       onTap: isFutureDate
                                           ? null
                                           : () {
-                                              gym.toggleAttendance(customer.id, dateKey, AttendanceStatus.present);
+                                              gym.toggleAttendance(
+                                                customer.id,
+                                                dateKey,
+                                                AttendanceStatus.present,
+                                              );
                                             },
                                     ),
                                     const SizedBox(width: 6),
@@ -403,12 +545,17 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                       label: 'Absent',
                                       icon: Icons.cancel_rounded,
                                       color: AppColors.absent,
-                                      isActive: status == AttendanceStatus.absent,
+                                      isActive:
+                                          status == AttendanceStatus.absent,
                                       isDisabled: isFutureDate,
                                       onTap: isFutureDate
                                           ? null
                                           : () {
-                                              gym.toggleAttendance(customer.id, dateKey, AttendanceStatus.absent);
+                                              gym.toggleAttendance(
+                                                customer.id,
+                                                dateKey,
+                                                AttendanceStatus.absent,
+                                              );
                                             },
                                     ),
                                   ],
@@ -467,7 +614,9 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
         decoration: BoxDecoration(
           color: isDisabled
               ? AppColors.surfaceElevated.withValues(alpha: 0.4)
-              : (isActive ? color.withValues(alpha: 0.2) : AppColors.surfaceElevated),
+              : (isActive
+                    ? color.withValues(alpha: 0.2)
+                    : AppColors.surfaceElevated),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isDisabled
@@ -494,7 +643,9 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                     ? AppColors.textMuted.withValues(alpha: 0.35)
                     : (isActive ? color : AppColors.textSecondary),
                 fontSize: 11,
-                fontWeight: isActive && !isDisabled ? FontWeight.w800 : FontWeight.w500,
+                fontWeight: isActive && !isDisabled
+                    ? FontWeight.w800
+                    : FontWeight.w500,
               ),
             ),
           ],
