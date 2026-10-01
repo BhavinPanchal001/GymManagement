@@ -80,6 +80,9 @@ needs the billing and live-account checks listed below before owner handover.
 Branch: codex/critical-gym-workflows. Nothing is merged into the original repo.
 Tested with Flutter 3.47.2 and Dart 3.13.2. The lockfile and Android settings
 include changes required by that SDK.
+The Android build requires Android 7.0 or newer (API 24).
+Static analysis reports no issues. All 73 tests pass, including 19 new regression
+tests covering the changed workflows.
 
     flutter pub get
     flutter analyze --no-pub
