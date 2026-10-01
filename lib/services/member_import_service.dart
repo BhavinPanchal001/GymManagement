@@ -159,8 +159,9 @@ class MemberImportService {
           if (amountPaid > fee + 0.005) {
             errors.add('Amount Paid cannot be more than Agreed Fee.');
           }
-          final paymentMethod = PaymentMethod.fromString(
+          final paymentMethod = _parsePaymentMethod(
             _value(values, _paymentMethodHeaders),
+            errors,
           );
           var paidAt = _parseDate(
             _value(values, _paidDateHeaders),
@@ -170,6 +171,14 @@ class MemberImportService {
           if (amountPaid > 0 && paidAt == null) {
             paidAt = startDate;
             warnings.add('Paid Date was empty; Membership Start will be used.');
+          }
+          final todayDate = DateTime(
+            effectiveToday.year,
+            effectiveToday.month,
+            effectiveToday.day,
+          );
+          if (amountPaid > 0 && paidAt != null && paidAt.isAfter(todayDate)) {
+            errors.add('Paid Date cannot be in the future.');
           }
 
           MemberImportData? data;
@@ -272,6 +281,29 @@ class MemberImportService {
     }
     errors.add('$fieldName must use DD/MM/YYYY or YYYY-MM-DD.');
     return null;
+  }
+
+  static PaymentMethod _parsePaymentMethod(String value, List<String> errors) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) return PaymentMethod.cash;
+    const supported = {
+      'cash',
+      'gpay',
+      'google pay',
+      'phonepe',
+      'paytm',
+      'upi',
+      'card',
+      'netbanking',
+      'net banking',
+    };
+    if (!supported.contains(normalized)) {
+      errors.add(
+        'Payment Method must be Cash, GPay, PhonePe, Paytm, UPI, Card, or Net Banking.',
+      );
+      return PaymentMethod.cash;
+    }
+    return PaymentMethod.fromString(normalized);
   }
 
   static const _nameHeaders = [

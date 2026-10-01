@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/managed_media_service.dart';
 import '../theme/app_theme.dart';
 import 'customer_avatar.dart';
 
@@ -52,8 +53,12 @@ class _AvatarSelectorState extends State<AvatarSelector> {
         maxHeight: 800,
       );
       if (pickedFile != null) {
+        final managedPath = await ManagedMediaService().savePickedFile(
+          pickedFile.path,
+          'member',
+        );
         setState(() {
-          _currentSelection = pickedFile.path;
+          _currentSelection = managedPath;
         });
         widget.onImageSelected(_currentSelection);
       }
@@ -134,7 +139,8 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: 8,
-                  separatorBuilder: (context, index) => const SizedBox(width: 10),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 10),
                   itemBuilder: (context, i) {
                     final avatarKey = 'avatar:${i + 1}';
                     final isSelected = _currentSelection == avatarKey;
@@ -151,7 +157,10 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: isSelected
-                              ? Border.all(color: const Color(0xFFCCFF00), width: 3)
+                              ? Border.all(
+                                  color: const Color(0xFFCCFF00),
+                                  width: 3,
+                                )
                               : null,
                         ),
                         child: CustomerAvatar(
@@ -176,7 +185,10 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                     icon: const Icon(Icons.delete_outline_rounded, size: 20),
                     label: const Text(
                       'Remove Photo',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                     onPressed: () {
                       setState(() {
@@ -249,10 +261,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFCCFF00),
-                  width: 2.5,
-                ),
+                border: Border.all(color: const Color(0xFFCCFF00), width: 2.5),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFFCCFF00).withValues(alpha: 0.2),
@@ -263,7 +272,9 @@ class _AvatarSelectorState extends State<AvatarSelector> {
               ),
               child: CustomerAvatar(
                 imagePath: _currentSelection,
-                name: widget.customerName.isNotEmpty ? widget.customerName : 'New User',
+                name: widget.customerName.isNotEmpty
+                    ? widget.customerName
+                    : 'New User',
                 radius: widget.radius,
               ),
             ),

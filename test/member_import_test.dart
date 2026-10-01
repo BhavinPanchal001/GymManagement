@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym/models/customer.dart';
 import 'package:gym/models/gym_settings.dart';
+import 'package:gym/models/payment.dart';
 import 'package:gym/services/gym_service.dart';
 import 'package:gym/services/member_import_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -116,4 +117,59 @@ void main() {
       );
     },
   );
+
+  test('CSV rejects unsupported payment methods', () {
+    final preview = importer.parseCsv(
+      csvText:
+          'Name,Phone,Plan,Agreed Fee,Amount Paid,Payment Method,Paid Date\n'
+          'Unsupported,9876543210,Normal,600,600,Bank Transfer,01/01/2026\n',
+      existingCustomers: const [],
+      settings: const GymSettings(),
+      today: DateTime(2026, 1, 1),
+    );
+
+    expect(
+      preview.rows.single.errors,
+      contains(
+        'Payment Method must be Cash, GPay, PhonePe, Paytm, UPI, Card, or Net Banking.',
+      ),
+    );
+  });
+
+  test('CSV rejects explicit and defaulted future paid dates', () {
+    final preview = importer.parseCsv(
+      csvText:
+          'Name,Phone,Plan,Membership Start,Agreed Fee,Amount Paid,'
+          'Payment Method,Paid Date\n'
+          'Explicit Future,9876543210,Normal,01/01/2026,600,600,Cash,'
+          '02/01/2026\n'
+          'Default Future,9999999999,Normal,02/01/2026,600,600,Cash,\n',
+      existingCustomers: const [],
+      settings: const GymSettings(),
+      today: DateTime(2026, 1, 1),
+    );
+
+    expect(
+      preview.rows[0].errors,
+      contains('Paid Date cannot be in the future.'),
+    );
+    expect(
+      preview.rows[1].errors,
+      contains('Paid Date cannot be in the future.'),
+    );
+  });
+
+  test('CSV keeps an empty payment method as Cash', () {
+    final preview = importer.parseCsv(
+      csvText:
+          'Name,Phone,Plan,Agreed Fee,Amount Paid,Payment Method,Paid Date\n'
+          'Cash Default,9876543210,Normal,600,600,,01/01/2026\n',
+      existingCustomers: const [],
+      settings: const GymSettings(),
+      today: DateTime(2026, 1, 1),
+    );
+
+    expect(preview.rows.single.errors, isEmpty);
+    expect(preview.rows.single.data!.paymentMethod, PaymentMethod.cash);
+  });
 }

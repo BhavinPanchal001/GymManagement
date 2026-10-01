@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -158,41 +158,161 @@ class _SettingsTabState extends State<SettingsTab> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['json'],
-      withData: true,
+      withData: false,
+      withReadStream: true,
     );
     if (result == null || !mounted) return;
 
     setState(() => _isRestoringBackup = true);
     try {
       final picked = result.files.single;
-      final bytes =
-          picked.bytes ??
-          (picked.path == null ? null : await File(picked.path!).readAsBytes());
-      if (bytes == null) {
-        throw const FileSystemException('The selected file could not be read.');
-      }
       final service = GymBackupService();
-      final backup = service.parseBackupString(utf8.decode(bytes));
+      final backup = service.parseBackupBytes(await _readPickedBackup(picked));
       if (!mounted) return;
-      final confirmed = await _confirmRestore(backup.preview);
-      if (!confirmed || !mounted) return;
-
-      await service.createBackupFile(GymService());
-      await service.restoreBackup(GymService(), backup);
-      if (!mounted) return;
-      _syncControllersFromSettings();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Backup restored. A safety copy of the old data was also saved.',
-          ),
-          backgroundColor: AppColors.paid,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      await _restoreBackup(service, backup);
     } catch (error) {
       if (!mounted) return;
       _showDataError('Could not restore backup', error);
+    } finally {
+      if (mounted) setState(() => _isRestoringBackup = false);
+    }
+  }
+
+  Future<Uint8List> _readPickedBackup(PlatformFile picked) async {
+    if (picked.size > GymBackupService.maxBackupFileBytes) {
+      throw const FormatException(
+        'This backup is too large to restore safely.',
+      );
+    }
+    if (picked.path != null) {
+      final file = File(picked.path!);
+      if (await file.length() > GymBackupService.maxBackupFileBytes) {
+        throw const FormatException(
+          'This backup is too large to restore safely.',
+        );
+      }
+      return file.readAsBytes();
+    }
+    if (picked.bytes != null) return picked.bytes!;
+    final stream = picked.readStream;
+    if (stream == null) {
+      throw const FileSystemException('The selected file could not be read.');
+    }
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in stream) {
+      builder.add(chunk);
+      if (builder.length > GymBackupService.maxBackupFileBytes) {
+        throw const FormatException(
+          'This backup is too large to restore safely.',
+        );
+      }
+    }
+    return builder.takeBytes();
+  }
+
+  Future<void> _restoreBackup(
+    GymBackupService service,
+    ParsedGymBackup backup,
+  ) async {
+    final confirmed = await _confirmRestore(backup.preview);
+    if (!confirmed || !mounted) return;
+    await service.createBackupFile(GymService(), safetyCopy: true);
+    await service.restoreBackup(GymService(), backup);
+    if (!mounted) return;
+    _syncControllersFromSettings();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Backup restored. The previous data is in Saved Backups.',
+        ),
+        backgroundColor: AppColors.paid,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _showSavedBackups() async {
+    if (_isCreatingBackup || _isRestoringBackup) return;
+    try {
+      final backups = await GymBackupService().listBackupFiles();
+      if (!mounted) return;
+      final selected = await showDialog<File>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Text(
+            'Saved Backups',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SizedBox(
+            width: 520,
+            child: backups.isEmpty
+                ? Text(
+                    'No backups are saved on this device yet.',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: backups.length,
+                    separatorBuilder: (_, _) =>
+                        Divider(color: AppColors.surfaceBorder),
+                    itemBuilder: (_, index) {
+                      final file = backups[index];
+                      final name = file.uri.pathSegments.last;
+                      final isSafetyCopy = name.contains('_safety_');
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          isSafetyCopy
+                              ? Icons.health_and_safety_rounded
+                              : Icons.backup_rounded,
+                          color: isSafetyCopy
+                              ? AppColors.pending
+                              : AppColors.primary,
+                        ),
+                        title: Text(
+                          isSafetyCopy ? 'Safety copy' : 'Backup',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          GymDateUtils.formatDateTime(file.lastModifiedSync()),
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                        trailing: const Icon(Icons.restore_rounded),
+                        onTap: () => Navigator.pop(dialogContext, file),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                'Close',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (selected == null || !mounted) return;
+      setState(() => _isRestoringBackup = true);
+      final service = GymBackupService();
+      final backup = await service.readBackupFile(selected);
+      if (!mounted) return;
+      await _restoreBackup(service, backup);
+    } catch (error) {
+      if (!mounted) return;
+      _showDataError('Could not open saved backup', error);
     } finally {
       if (mounted) setState(() => _isRestoringBackup = false);
     }
@@ -1529,6 +1649,20 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: _isCreatingBackup || _isRestoringBackup
+                              ? null
+                              : _showSavedBackups,
+                          icon: const Icon(Icons.folder_copy_rounded, size: 18),
+                          label: const Text(
+                            'Saved Backups',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
                       ),
                       Divider(height: 28, color: AppColors.surfaceBorder),
                       SizedBox(

@@ -10,14 +10,15 @@ import '../models/gym_settings.dart';
 import 'cloud_sync_queue.dart';
 
 /// Callback typedef for when Firestore snapshot data arrives.
-typedef FirestoreDataCallback = void Function({
-  List<Customer>? customers,
-  Map<String, AttendanceRecord>? attendanceMap,
-  Map<String, PaymentRecord>? paymentMap,
-  Map<String, BillRecord>? billsMap,
-  List<ExpenseRecord>? expenses,
-  GymSettings? settings,
-});
+typedef FirestoreDataCallback =
+    void Function({
+      List<Customer>? customers,
+      Map<String, AttendanceRecord>? attendanceMap,
+      Map<String, PaymentRecord>? paymentMap,
+      Map<String, BillRecord>? billsMap,
+      List<ExpenseRecord>? expenses,
+      GymSettings? settings,
+    });
 
 class FirestoreService {
   FirestoreService._internal();
@@ -38,11 +39,13 @@ class FirestoreService {
   bool get isAttached => _isAttached;
   String? get userId => _userId;
 
-
-
   DocumentReference? get _settingsDoc {
     if (_firestore == null || _userId == null) return null;
-    return _firestore!.collection('gyms').doc(_userId).collection('settings').doc('config');
+    return _firestore!
+        .collection('gyms')
+        .doc(_userId)
+        .collection('settings')
+        .doc('config');
   }
 
   CollectionReference? get _customersCol {
@@ -73,7 +76,9 @@ class FirestoreService {
   // ==================== LIFECYCLE ====================
 
   /// Attach to a gym owner's Firestore data and start listening.
-  Future<void> attachUser(String userId, {FirestoreDataCallback? callback,
+  Future<void> attachUser(
+    String userId, {
+    FirestoreDataCallback? callback,
     void Function(Object)? onError,
   }) async {
     if (_isAttached && _userId == userId) return;
@@ -86,10 +91,10 @@ class FirestoreService {
       // Enable offline persistence (default on mobile, explicit for web)
       if (!_persistenceConfigured) {
         _firestore!.settings = const Settings(
-        persistenceEnabled: true,
-        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-      );
-    }
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+      }
       _persistenceConfigured = true;
     } catch (e) {
       debugPrint('FirestoreService: Error getting Firestore instance: $e');
@@ -130,20 +135,25 @@ class FirestoreService {
     final col = _customersCol;
     if (col == null) return;
 
-    final sub = col.snapshots().listen((snapshot) {
-      final customers = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return Customer.fromMap(data);
-      }).toList();
+    final sub = col.snapshots().listen(
+      (snapshot) {
+        final customers = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return Customer.fromMap(data);
+        }).toList();
 
-      // Sort by name for consistent ordering
-      customers.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        // Sort by name for consistent ordering
+        customers.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
 
-      onDataChanged?.call(customers: customers);
-    }, onError: (e) {
-      debugPrint('FirestoreService: Customers listener error: $e');
+        onDataChanged?.call(customers: customers);
+      },
+      onError: (e) {
+        debugPrint('FirestoreService: Customers listener error: $e');
         onSyncError?.call(e);
-      });
+      },
+    );
 
     _subscriptions.add(sub);
   }
@@ -152,18 +162,21 @@ class FirestoreService {
     final col = _attendanceCol;
     if (col == null) return;
 
-    final sub = col.snapshots().listen((snapshot) {
-      final map = <String, AttendanceRecord>{};
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final record = AttendanceRecord.fromMap(data);
-        map["${record.customerId}_${record.dateKey}"] = record;
-      }
-      onDataChanged?.call(attendanceMap: map);
-    }, onError: (e) {
-      debugPrint('FirestoreService: Attendance listener error: $e');
+    final sub = col.snapshots().listen(
+      (snapshot) {
+        final map = <String, AttendanceRecord>{};
+        for (final doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final record = AttendanceRecord.fromMap(data);
+          map["${record.customerId}_${record.dateKey}"] = record;
+        }
+        onDataChanged?.call(attendanceMap: map);
+      },
+      onError: (e) {
+        debugPrint('FirestoreService: Attendance listener error: $e');
         onSyncError?.call(e);
-      });
+      },
+    );
 
     _subscriptions.add(sub);
   }
@@ -172,18 +185,21 @@ class FirestoreService {
     final col = _paymentsCol;
     if (col == null) return;
 
-    final sub = col.snapshots().listen((snapshot) {
-      final map = <String, PaymentRecord>{};
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final record = PaymentRecord.fromMap(data);
-        map[record.id.isNotEmpty ? record.id : doc.id] = record;
-      }
-      onDataChanged?.call(paymentMap: map);
-    }, onError: (e) {
-      debugPrint('FirestoreService: Payments listener error: $e');
+    final sub = col.snapshots().listen(
+      (snapshot) {
+        final map = <String, PaymentRecord>{};
+        for (final doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final record = PaymentRecord.fromMap(data);
+          map[record.id.isNotEmpty ? record.id : doc.id] = record;
+        }
+        onDataChanged?.call(paymentMap: map);
+      },
+      onError: (e) {
+        debugPrint('FirestoreService: Payments listener error: $e');
         onSyncError?.call(e);
-      });
+      },
+    );
 
     _subscriptions.add(sub);
   }
@@ -192,18 +208,21 @@ class FirestoreService {
     final col = _billsCol;
     if (col == null) return;
 
-    final sub = col.snapshots().listen((snapshot) {
-      final map = <String, BillRecord>{};
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final record = BillRecord.fromMap(data);
-        map[record.id.isNotEmpty ? record.id : doc.id] = record;
-      }
-      onDataChanged?.call(billsMap: map);
-    }, onError: (e) {
-      debugPrint('FirestoreService: Bills listener error: $e');
+    final sub = col.snapshots().listen(
+      (snapshot) {
+        final map = <String, BillRecord>{};
+        for (final doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final record = BillRecord.fromMap(data);
+          map[record.id.isNotEmpty ? record.id : doc.id] = record;
+        }
+        onDataChanged?.call(billsMap: map);
+      },
+      onError: (e) {
+        debugPrint('FirestoreService: Bills listener error: $e');
         onSyncError?.call(e);
-      });
+      },
+    );
 
     _subscriptions.add(sub);
   }
@@ -212,20 +231,23 @@ class FirestoreService {
     final col = _expensesCol;
     if (col == null) return;
 
-    final sub = col.snapshots().listen((snapshot) {
-      final expenses = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return ExpenseRecord.fromMap(data);
-      }).toList();
+    final sub = col.snapshots().listen(
+      (snapshot) {
+        final expenses = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return ExpenseRecord.fromMap(data);
+        }).toList();
 
-      // Sort by date descending (most recent first)
-      expenses.sort((a, b) => b.date.compareTo(a.date));
+        // Sort by date descending (most recent first)
+        expenses.sort((a, b) => b.date.compareTo(a.date));
 
-      onDataChanged?.call(expenses: expenses);
-    }, onError: (e) {
-      debugPrint('FirestoreService: Expenses listener error: $e');
+        onDataChanged?.call(expenses: expenses);
+      },
+      onError: (e) {
+        debugPrint('FirestoreService: Expenses listener error: $e');
         onSyncError?.call(e);
-      });
+      },
+    );
 
     _subscriptions.add(sub);
   }
@@ -234,21 +256,58 @@ class FirestoreService {
     final doc = _settingsDoc;
     if (doc == null) return;
 
-    final sub = doc.snapshots().listen((snapshot) {
-      if (snapshot.exists && snapshot.data() != null) {
-        final data = snapshot.data() as Map<String, dynamic>;
-        final settings = GymSettings.fromMap(data);
-        onDataChanged?.call(settings: settings);
-      }
-    }, onError: (e) {
-      debugPrint('FirestoreService: Settings listener error: $e');
+    final sub = doc.snapshots().listen(
+      (snapshot) {
+        if (snapshot.exists && snapshot.data() != null) {
+          final data = snapshot.data() as Map<String, dynamic>;
+          final settings = GymSettings.fromMap(data);
+          onDataChanged?.call(settings: settings);
+        }
+      },
+      onError: (e) {
+        debugPrint('FirestoreService: Settings listener error: $e');
         onSyncError?.call(e);
-      });
+      },
+    );
 
     _subscriptions.add(sub);
   }
 
   // ==================== WRITE OPERATIONS ====================
+
+  Future<Map<String, Set<String>>> fetchAllDocumentIds(String ownerId) async {
+    if (!_isAttached || _firestore == null || _userId != ownerId) {
+      throw StateError('Connect to the cloud before restoring this account.');
+    }
+    const collections = [
+      'customers',
+      'attendance',
+      'payments',
+      'bills',
+      'expenses',
+    ];
+    try {
+      final snapshots = await Future.wait(
+        collections.map(
+          (collection) => _firestore!
+              .collection('gyms')
+              .doc(ownerId)
+              .collection(collection)
+              .get(const GetOptions(source: Source.server)),
+        ),
+      );
+      return {
+        for (var index = 0; index < collections.length; index++)
+          collections[index]: snapshots[index].docs
+              .map((document) => document.id)
+              .toSet(),
+      };
+    } catch (_) {
+      throw StateError(
+        'Could not verify all cloud records. Connect to the internet and try restore again.',
+      );
+    }
+  }
 
   /// Owner checks prevent a delayed retry from writing to another account.
   Future<void> commitChanges(String ownerId, List<CloudChange> changes) async {
@@ -449,7 +508,9 @@ class FirestoreService {
       // Check if cloud already has data (settings doc exists = already migrated)
       final settingsSnap = await _settingsDoc?.get();
       if (settingsSnap != null && settingsSnap.exists) {
-        debugPrint('FirestoreService: Cloud data already exists, skipping migration.');
+        debugPrint(
+          'FirestoreService: Cloud data already exists, skipping migration.',
+        );
         return false;
       }
 
@@ -497,12 +558,14 @@ class FirestoreService {
         await batch.commit();
       }
 
-      debugPrint('FirestoreService: Migration complete! '
-          '${customers.length} customers, '
-          '${attRecords.length} attendance, '
-          '${payRecords.length} payments, '
-          '${billRecords.length} bills, '
-          '${expenses.length} expenses.');
+      debugPrint(
+        'FirestoreService: Migration complete! '
+        '${customers.length} customers, '
+        '${attRecords.length} attendance, '
+        '${payRecords.length} payments, '
+        '${billRecords.length} bills, '
+        '${expenses.length} expenses.',
+      );
 
       return true;
     } catch (e) {

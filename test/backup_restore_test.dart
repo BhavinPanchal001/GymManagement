@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym/models/attendance.dart';
@@ -10,6 +11,22 @@ import 'package:gym/models/payment.dart';
 import 'package:gym/services/gym_backup_service.dart';
 import 'package:gym/services/gym_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+
+class FailingBackupStore extends InMemorySharedPreferencesStore {
+  FailingBackupStore(super.data) : super.withData();
+
+  String? rejectedSuffix;
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (rejectedSuffix != null && key.endsWith(rejectedSuffix!)) {
+      rejectedSuffix = null;
+      return false;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -147,6 +164,60 @@ void main() {
     expect(
       () => backupService.parseBackupString(jsonEncode(damaged)),
       throwsFormatException,
+    );
+  });
+
+  test('backup rejects media larger than the per-file limit', () async {
+    final document = await backupService.createBackupDocument(gym);
+    document['assets'] = [
+      {
+        'id': 'oversized',
+        'fileName': 'large.jpg',
+        'base64': base64Encode(Uint8List(GymBackupService.maxAssetBytes + 1)),
+      },
+    ];
+
+    expect(
+      () => backupService.parseBackupString(jsonEncode(document)),
+      throwsFormatException,
+    );
+  });
+
+  test('interrupted restore leaves a complete recovery snapshot', () async {
+    final store = FailingBackupStore(
+      await SharedPreferencesStorePlatform.instance.getAll(),
+    )..rejectedSuffix = 'attendance_v1';
+    SharedPreferencesStorePlatform.instance = store;
+
+    await expectLater(
+      gym.replaceAllData(
+        customers: [
+          Customer(
+            id: 'replacement',
+            name: 'Replacement Member',
+            phone: '9999999999',
+            joinDate: start,
+            cardNumber: 'NEW-1',
+          ),
+        ],
+        attendance: const [],
+        payments: const [],
+        bills: const [],
+        expenses: const [],
+        settings: const GymSettings(gymName: 'Replacement Gym'),
+      ),
+      throwsStateError,
+    );
+
+    final stored = await store.getAll();
+    final transaction =
+        jsonDecode(stored['flutter.gym_restore_transaction_v1']! as String)
+            as Map<String, dynamic>;
+    final data = transaction['data'] as Map<String, dynamic>;
+    expect((data['customers'] as List).single['id'], 'replacement');
+    expect(
+      (data['settings'] as Map<String, dynamic>)['gymName'],
+      'Replacement Gym',
     );
   });
 }

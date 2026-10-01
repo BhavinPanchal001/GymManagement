@@ -294,6 +294,7 @@ class GymService extends ChangeNotifier {
   String? _financialCacheError;
   Future<void>? _financialTail;
   Future<void>? _financialCacheTail;
+  List<CloudChange>? _pendingRestoreCloudChanges;
   int _operationSequence = 0;
   _PendingIndex? _pendingIndex;
   final Map<String, List<MemberPendingSummary>> _pendingByRange = {};
@@ -385,6 +386,7 @@ class GymService extends ChangeNotifier {
     final owner = _currentUserId;
     if (owner == null) return;
     await _refreshFinancialCache();
+    await _recoverPendingRestore(owner);
     if (!_isCloudAttached || _cloudReadError != null) {
       await FirestoreService().detachUser();
       await _connectCloud(owner);
@@ -402,16 +404,7 @@ class GymService extends ChangeNotifier {
     if (queue == null) {
       throw StateError('Please wait for your account to finish loading.');
     }
-    final writes = <Future<void>>[];
-    for (var i = 0; i < changes.length; i += 450) {
-      writes.add(
-        queue.enqueue(
-          changes.sublist(i, (i + 450).clamp(0, changes.length)),
-          autoFlush: autoFlush,
-        ),
-      );
-    }
-    await Future.wait(writes);
+    await queue.enqueueAll(changes, autoFlush: autoFlush);
   }
 
   String newPaymentOperationId() =>
@@ -587,21 +580,53 @@ class GymService extends ChangeNotifier {
     };
     final nextPayments = {for (final record in payments) record.id: record};
     final nextBills = {for (final record in bills) record.id: record};
-
+    final nextExpenses = {for (final record in expenses) record.id: record};
+    final nextCustomers = {for (final record in customers) record.id: record};
+    final ownerId = _currentUserId;
+    var existingIds = <String, Set<String>>{};
+    if (ownerId != null) {
+      existingIds = await FirestoreService().fetchAllDocumentIds(ownerId);
+      for (final entry in <String, Iterable<String>>{
+        'customers': _customers.map((record) => record.id),
+        'attendance': _attendanceMap.keys,
+        'payments': _paymentMap.keys,
+        'bills': _billsMap.keys,
+        'expenses': _expenses.map((record) => record.id),
+      }.entries) {
+        existingIds
+            .putIfAbsent(entry.key, () => <String>{})
+            .addAll(entry.value);
+        existingIds[entry.key]!.addAll(
+          _syncQueue?.overlay(entry.key, const {}).keys ?? const [],
+        );
+      }
+    }
     final changes = <CloudChange>[
-      for (final customer in _customers)
-        if (!customers.any((next) => next.id == customer.id))
-          CloudChange('customers', customer.id, null),
-      for (final key in _attendanceMap.keys)
-        if (!nextAttendance.containsKey(key))
-          CloudChange('attendance', key, null),
-      for (final key in _paymentMap.keys)
-        if (!nextPayments.containsKey(key)) CloudChange('payments', key, null),
-      for (final key in _billsMap.keys)
-        if (!nextBills.containsKey(key)) CloudChange('bills', key, null),
-      for (final expense in _expenses)
-        if (!expenses.any((next) => next.id == expense.id))
-          CloudChange('expenses', expense.id, null),
+      ..._replacementChanges(
+        'customers',
+        existingIds['customers'] ?? const {},
+        nextCustomers.map((key, value) => MapEntry(key, value.toMap())),
+      ),
+      ..._replacementChanges(
+        'attendance',
+        existingIds['attendance'] ?? const {},
+        nextAttendance.map((key, value) => MapEntry(key, value.toMap())),
+      ),
+      ..._replacementChanges(
+        'payments',
+        existingIds['payments'] ?? const {},
+        nextPayments.map((key, value) => MapEntry(key, value.toMap())),
+      ),
+      ..._replacementChanges(
+        'bills',
+        existingIds['bills'] ?? const {},
+        nextBills.map((key, value) => MapEntry(key, value.toMap())),
+      ),
+      ..._replacementChanges(
+        'expenses',
+        existingIds['expenses'] ?? const {},
+        nextExpenses.map((key, value) => MapEntry(key, value.toMap())),
+      ),
       ...customers.map(
         (record) => CloudChange('customers', record.id, record.toMap()),
       ),
@@ -617,31 +642,61 @@ class GymService extends ChangeNotifier {
       ),
       CloudChange('settings', 'config', settings.toMap()),
     ];
-
+    final transaction = _restoreTransaction(
+      customers: customers,
+      attendance: attendance,
+      payments: payments,
+      bills: bills,
+      expenses: expenses,
+      settings: settings,
+      cloudChanges: ownerId == null ? const [] : changes,
+    );
+    final preferences = await SharedPreferences.getInstance();
+    if (!await preferences.setString(
+      _restoreTransactionKey(ownerId),
+      json.encode(transaction),
+    )) {
+      throw StateError('Could not prepare the restore on this phone.');
+    }
     _suppressCloudUpdates = true;
     try {
-      if (_currentUserId != null) {
-        await _queueChanges(changes, autoFlush: false);
-      }
       _customers = List.of(customers);
       _attendanceMap = nextAttendance;
       _paymentMap = nextPayments;
       _billsMap = nextBills;
       _expenses = List.of(expenses);
       _settings = settings;
-      await _saveCustomers();
-      await _saveAttendance();
-      await _savePayments();
-      await _saveBills();
-      await _saveExpenses();
-      await _saveSettingsLocallyOnly();
+      await _persistAllLocalData();
+      if (ownerId != null) {
+        await _queueChanges(changes, autoFlush: false);
+      }
+      await preferences.remove(_restoreTransactionKey(ownerId));
       _financialCacheError = null;
       _cloudReadError = null;
+    } catch (_) {
+      if (ownerId != null) {
+        _pendingRestoreCloudChanges = changes;
+        await FirestoreService().detachUser();
+        _isCloudAttached = false;
+      }
+      rethrow;
     } finally {
       _suppressCloudUpdates = false;
     }
     notifyListeners();
     unawaited(_syncQueue?.flush() ?? Future.value());
+  }
+
+  Iterable<CloudChange> _replacementChanges(
+    String collection,
+    Set<String> existingIds,
+    Map<String, Map<String, dynamic>> replacements,
+  ) sync* {
+    for (final id in existingIds) {
+      if (!replacements.containsKey(id)) {
+        yield CloudChange(collection, id, null);
+      }
+    }
   }
 
   /// Effective gym logo path with fallback to cached owner profile photo
@@ -684,6 +739,9 @@ class GymService extends ChangeNotifier {
       (uid != null && uid.isNotEmpty) ? 'gym_${uid}_bills_v1' : _keyBills;
   String _settingsKey(String? uid) =>
       (uid != null && uid.isNotEmpty) ? 'gym_${uid}_settings_v1' : _keySettings;
+  String _restoreTransactionKey(String? uid) => uid != null && uid.isNotEmpty
+      ? 'gym_${uid}_restore_transaction_v1'
+      : 'gym_restore_transaction_v1';
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -696,60 +754,64 @@ class GymService extends ChangeNotifier {
         await _loadUserLocalData(currentUser.uid);
       } else if (Firebase.apps.isEmpty) {
         // Fallback for offline exploration mode when Firebase is not configured
-        final settingsJson = prefs.getString(_keySettings);
-        if (settingsJson != null) {
-          _settings = GymSettings.fromJson(settingsJson);
-        }
+        if (await _loadRestoreTransaction(prefs, null)) {
+          await prefs.remove(_restoreTransactionKey(null));
+        } else {
+          final settingsJson = prefs.getString(_keySettings);
+          if (settingsJson != null) {
+            _settings = GymSettings.fromJson(settingsJson);
+          }
 
-        final customersJson = prefs.getString(_keyCustomers);
-        if (customersJson != null) {
-          final list = json.decode(customersJson) as List<dynamic>;
-          _customers = list
-              .map((item) => Customer.fromMap(item as Map<String, dynamic>))
-              .toList();
-        }
+          final customersJson = prefs.getString(_keyCustomers);
+          if (customersJson != null) {
+            final list = json.decode(customersJson) as List<dynamic>;
+            _customers = list
+                .map((item) => Customer.fromMap(item as Map<String, dynamic>))
+                .toList();
+          }
 
-        final attendanceJson = prefs.getString(_keyAttendance);
-        if (attendanceJson != null) {
-          final list = json.decode(attendanceJson) as List<dynamic>;
-          _attendanceMap = {
-            for (var item in list)
-              "${item['customerId']}_${item['dateKey']}":
-                  AttendanceRecord.fromMap(item as Map<String, dynamic>),
-          };
-        }
+          final attendanceJson = prefs.getString(_keyAttendance);
+          if (attendanceJson != null) {
+            final list = json.decode(attendanceJson) as List<dynamic>;
+            _attendanceMap = {
+              for (var item in list)
+                "${item['customerId']}_${item['dateKey']}":
+                    AttendanceRecord.fromMap(item as Map<String, dynamic>),
+            };
+          }
 
-        final paymentsJson = prefs.getString(_keyPayments);
-        if (paymentsJson != null) {
-          final list = json.decode(paymentsJson) as List<dynamic>;
-          _paymentMap = {
-            for (var item in list)
-              (item['id'] as String? ?? ''): PaymentRecord.fromMap(
-                item as Map<String, dynamic>,
-              ),
-          };
-        }
+          final paymentsJson = prefs.getString(_keyPayments);
+          if (paymentsJson != null) {
+            final list = json.decode(paymentsJson) as List<dynamic>;
+            _paymentMap = {
+              for (var item in list)
+                (item['id'] as String? ?? ''): PaymentRecord.fromMap(
+                  item as Map<String, dynamic>,
+                ),
+            };
+          }
 
-        final billsJson = prefs.getString(_keyBills);
-        if (billsJson != null) {
-          final list = json.decode(billsJson) as List<dynamic>;
-          _billsMap = {
-            for (var item in list)
-              (item['id'] as String? ?? ''): BillRecord.fromMap(
-                item as Map<String, dynamic>,
-              ),
-          };
-        }
-        _loadFinancialSnapshot(prefs);
+          final billsJson = prefs.getString(_keyBills);
+          if (billsJson != null) {
+            final list = json.decode(billsJson) as List<dynamic>;
+            _billsMap = {
+              for (var item in list)
+                (item['id'] as String? ?? ''): BillRecord.fromMap(
+                  item as Map<String, dynamic>,
+                ),
+            };
+          }
+          _loadFinancialSnapshot(prefs);
 
-        final expensesJson = prefs.getString(_keyExpenses);
-        if (expensesJson != null) {
-          final list = json.decode(expensesJson) as List<dynamic>;
-          _expenses = list
-              .map(
-                (item) => ExpenseRecord.fromMap(item as Map<String, dynamic>),
-              )
-              .toList();
+          final expensesJson = prefs.getString(_keyExpenses);
+          if (expensesJson != null) {
+            final list = json.decode(expensesJson) as List<dynamic>;
+            _expenses = list
+                .map(
+                  (item) => ExpenseRecord.fromMap(item as Map<String, dynamic>),
+                )
+                .toList();
+          }
         }
       } else {
         // Firebase is active but no user is currently authenticated:
@@ -777,6 +839,7 @@ class GymService extends ChangeNotifier {
   Future<void> _loadUserLocalData(String userId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (await _loadRestoreTransaction(prefs, userId)) return;
 
       final settingsJson = prefs.getString(_settingsKey(userId));
       if (settingsJson != null) {
@@ -845,6 +908,7 @@ class GymService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('GymService._loadUserLocalData error: $e');
+      if (_pendingRestoreCloudChanges != null) rethrow;
     }
   }
 
@@ -904,6 +968,7 @@ class GymService extends ChangeNotifier {
 
     // 2. Attach Firestore sync (Firestore is source of truth)
     await _prepareSyncQueue(userId);
+    await _recoverPendingRestore(userId);
     await _connectCloud(userId);
 
     notifyListeners();
@@ -914,6 +979,7 @@ class GymService extends ChangeNotifier {
     await _financialTail;
     _syncQueue?.dispose();
     _syncQueue = null;
+    _pendingRestoreCloudChanges = null;
     _cloudReadError = null;
     _financialCacheError = null;
     await FirestoreService().detachUser();
@@ -1249,6 +1315,9 @@ class GymService extends ChangeNotifier {
       }
     }
     for (final row in rows) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final effectivePaidAt = row.paidAt ?? row.membershipStartDate;
       final card = row.cardNumber.trim().toLowerCase();
       if (card.isNotEmpty && !usedCards.add(card)) {
         throw ArgumentError('Card number ${row.cardNumber} is already used.');
@@ -1259,6 +1328,7 @@ class GymService extends ChangeNotifier {
           row.membershipFee <= 0 ||
           row.amountPaid < 0 ||
           row.amountPaid > row.membershipFee + 0.005 ||
+          (row.amountPaid > 0 && effectivePaidAt.isAfter(today)) ||
           row.membershipEndDate.isBefore(row.membershipStartDate)) {
         throw ArgumentError('CSV row ${row.rowNumber} is not valid.');
       }
@@ -3495,6 +3565,94 @@ class GymService extends ChangeNotifier {
     await _savePayments();
     await _saveBills();
     await _saveSettings();
+  }
+
+  Map<String, dynamic> _restoreTransaction({
+    required List<Customer> customers,
+    required List<AttendanceRecord> attendance,
+    required List<PaymentRecord> payments,
+    required List<BillRecord> bills,
+    required List<ExpenseRecord> expenses,
+    required GymSettings settings,
+    required List<CloudChange> cloudChanges,
+  }) => {
+    'data': {
+      'customers': customers.map((record) => record.toMap()).toList(),
+      'attendance': attendance.map((record) => record.toMap()).toList(),
+      'payments': payments.map((record) => record.toMap()).toList(),
+      'bills': bills.map((record) => record.toMap()).toList(),
+      'expenses': expenses.map((record) => record.toMap()).toList(),
+      'settings': settings.toMap(),
+    },
+    'cloudChanges': cloudChanges.map((change) => change.toMap()).toList(),
+  };
+
+  Future<bool> _loadRestoreTransaction(
+    SharedPreferences preferences,
+    String? ownerId,
+  ) async {
+    final saved = preferences.getString(_restoreTransactionKey(ownerId));
+    if (saved == null) return false;
+    final transaction = Map<String, dynamic>.from(json.decode(saved) as Map);
+    final data = Map<String, dynamic>.from(transaction['data'] as Map);
+    _customers = (data['customers'] as List)
+        .map(
+          (record) =>
+              Customer.fromMap(Map<String, dynamic>.from(record as Map)),
+        )
+        .toList();
+    _attendanceMap = {
+      for (final record in data['attendance'] as List)
+        "${record['customerId']}_${record['dateKey']}":
+            AttendanceRecord.fromMap(Map<String, dynamic>.from(record as Map)),
+    };
+    _paymentMap = {
+      for (final record in data['payments'] as List)
+        (record['id'] as String): PaymentRecord.fromMap(
+          Map<String, dynamic>.from(record as Map),
+        ),
+    };
+    _billsMap = {
+      for (final record in data['bills'] as List)
+        (record['id'] as String): BillRecord.fromMap(
+          Map<String, dynamic>.from(record as Map),
+        ),
+    };
+    _expenses = (data['expenses'] as List)
+        .map(
+          (record) =>
+              ExpenseRecord.fromMap(Map<String, dynamic>.from(record as Map)),
+        )
+        .toList();
+    _settings = GymSettings.fromMap(
+      Map<String, dynamic>.from(data['settings'] as Map),
+    );
+    _pendingRestoreCloudChanges = (transaction['cloudChanges'] as List)
+        .map(
+          (change) =>
+              CloudChange.fromMap(Map<String, dynamic>.from(change as Map)),
+        )
+        .toList();
+    await _persistAllLocalData();
+    return true;
+  }
+
+  Future<void> _recoverPendingRestore(String ownerId) async {
+    final changes = _pendingRestoreCloudChanges;
+    if (changes == null) return;
+    await _queueChanges(changes, autoFlush: false);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_restoreTransactionKey(ownerId));
+    _pendingRestoreCloudChanges = null;
+  }
+
+  Future<void> _persistAllLocalData() async {
+    await _saveCustomers();
+    await _saveAttendance();
+    await _savePayments();
+    await _saveBills();
+    await _saveExpenses();
+    await _saveSettingsLocallyOnly();
   }
 
   /// Completely clears all gym members, attendance, payments, bills, and expenses.

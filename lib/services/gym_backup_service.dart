@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -62,21 +63,64 @@ class GymBackupService {
   static const format = 'gym_management_backup';
   static const version = 1;
   static const assetPrefix = 'backup-asset://';
+  static const maxBackupFileBytes = 25 * 1024 * 1024;
+  static const maxAssetBytes = 5 * 1024 * 1024;
+  static const maxTotalAssetBytes = 20 * 1024 * 1024;
 
-  Future<File> createBackupFile(GymService gym) async {
+  Future<File> createBackupFile(
+    GymService gym, {
+    bool safetyCopy = false,
+  }) async {
     final document = await createBackupDocument(gym);
-    final root = await getApplicationDocumentsDirectory();
-    final directory = Directory('${root.path}/gym_backups');
-    await directory.create(recursive: true);
+    final directory = await _backupDirectory();
     final timestamp = DateTime.now()
         .toUtc()
         .toIso8601String()
         .replaceAll(':', '-')
         .replaceAll('.', '-');
     final gymName = _safeFileName(gym.settings.gymName);
-    final file = File('${directory.path}/${gymName}_backup_$timestamp.json');
-    await file.writeAsString(jsonEncode(document), flush: true);
+    final label = safetyCopy ? 'safety' : 'backup';
+    final file = File('${directory.path}/${gymName}_${label}_$timestamp.json');
+    final contents = utf8.encode(jsonEncode(document));
+    if (contents.length > maxBackupFileBytes) {
+      throw const FileSystemException(
+        'The backup is too large. Remove some local photos and try again.',
+      );
+    }
+    await file.writeAsBytes(contents, flush: true);
     return file;
+  }
+
+  Future<List<File>> listBackupFiles() async {
+    final directory = await _backupDirectory();
+    final files = await directory
+        .list()
+        .where((entry) => entry is File && entry.path.endsWith('.json'))
+        .cast<File>()
+        .toList();
+    files.sort(
+      (left, right) =>
+          right.lastModifiedSync().compareTo(left.lastModifiedSync()),
+    );
+    return files;
+  }
+
+  Future<ParsedGymBackup> readBackupFile(File file) async {
+    if (await file.length() > maxBackupFileBytes) {
+      throw const FormatException(
+        'This backup is too large to restore safely.',
+      );
+    }
+    return parseBackupBytes(await file.readAsBytes());
+  }
+
+  ParsedGymBackup parseBackupBytes(Uint8List bytes) {
+    if (bytes.length > maxBackupFileBytes) {
+      throw const FormatException(
+        'This backup is too large to restore safely.',
+      );
+    }
+    return parseBackupString(utf8.decode(bytes));
   }
 
   Future<Map<String, dynamic>> createBackupDocument(GymService gym) async {
@@ -88,21 +132,24 @@ class GymBackupService {
         .toList();
     final settings = Map<String, dynamic>.from(gym.settings.toMap());
     final assets = <Map<String, dynamic>>[];
+    var totalAssetBytes = 0;
 
     for (final customer in customers) {
-      await _attachAsset(
+      totalAssetBytes += await _attachAsset(
         record: customer,
         field: 'imagePath',
         assetId: 'customer_${customer['id']}_image',
         assets: assets,
+        totalAssetBytes: totalAssetBytes,
       );
     }
     for (final expense in expenses) {
-      await _attachAsset(
+      totalAssetBytes += await _attachAsset(
         record: expense,
         field: 'receiptPath',
         assetId: 'expense_${expense['id']}_receipt',
         assets: assets,
+        totalAssetBytes: totalAssetBytes,
       );
     }
     await _attachAsset(
@@ -110,6 +157,7 @@ class GymBackupService {
       field: 'gymLogoPath',
       assetId: 'gym_logo',
       assets: assets,
+      totalAssetBytes: totalAssetBytes,
     );
 
     return {
@@ -131,6 +179,11 @@ class GymBackupService {
   }
 
   ParsedGymBackup parseBackupString(String source) {
+    if (utf8.encode(source).length > maxBackupFileBytes) {
+      throw const FormatException(
+        'This backup is too large to restore safely.',
+      );
+    }
     Object? decoded;
     try {
       decoded = jsonDecode(source);
@@ -157,6 +210,7 @@ class GymBackupService {
     }
     final data = _dataMap(document);
     final assets = _assetMaps(document);
+    var totalAssetBytes = 0;
     for (final asset in assets) {
       if ((asset['id'] as String? ?? '').isEmpty ||
           (asset['fileName'] as String? ?? '').isEmpty ||
@@ -166,11 +220,21 @@ class GymBackupService {
         );
       }
       try {
-        base64Decode(asset['base64'] as String);
+        final normalized = base64.normalize(asset['base64'] as String);
+        final decodedBytes = _decodedBase64Length(normalized);
+        if (decodedBytes > maxAssetBytes) {
+          throw const FormatException(
+            'The backup contains a media file that is too large.',
+          );
+        }
+        totalAssetBytes += decodedBytes;
+        if (totalAssetBytes > maxTotalAssetBytes) {
+          throw const FormatException(
+            'The backup contains too much media to restore safely.',
+          );
+        }
       } on FormatException {
-        throw const FormatException(
-          'The backup contains a damaged media file.',
-        );
+        rethrow;
       }
     }
     final decodedData = _decodeData(data);
@@ -209,22 +273,28 @@ class GymBackupService {
     return _decodeData(_dataMap(document));
   }
 
-  Future<void> _attachAsset({
+  Future<int> _attachAsset({
     required Map<String, dynamic> record,
     required String field,
     required String assetId,
     required List<Map<String, dynamic>> assets,
+    required int totalAssetBytes,
   }) async {
     final path = record[field] as String?;
     if (path == null || path.trim().isEmpty || path.startsWith('avatar:')) {
-      return;
+      return 0;
     }
     final file = File(path);
-    if (!await file.exists()) {
+    if (!await file.exists() || !await _isManagedMediaFile(file)) {
       record[field] = null;
-      return;
+      return 0;
     }
     try {
+      final size = await file.length();
+      if (size > maxAssetBytes || totalAssetBytes + size > maxTotalAssetBytes) {
+        record[field] = null;
+        return 0;
+      }
       final bytes = await file.readAsBytes();
       final fileName = _safeFileName(
         file.uri.pathSegments.isEmpty ? assetId : file.uri.pathSegments.last,
@@ -235,8 +305,10 @@ class GymBackupService {
         'base64': base64Encode(bytes),
       });
       record[field] = '$assetPrefix$assetId';
+      return bytes.length;
     } on FileSystemException {
       record[field] = null;
+      return 0;
     }
   }
 
@@ -251,11 +323,19 @@ class GymBackupService {
     );
     await directory.create(recursive: true);
     final paths = <String, String>{};
+    var totalAssetBytes = 0;
     for (final asset in assets) {
       final id = asset['id'] as String;
       final fileName = _safeFileName(asset['fileName'] as String);
       final file = File('${directory.path}/${_safeFileName(id)}_$fileName');
       final bytes = base64Decode(asset['base64'] as String);
+      if (bytes.length > maxAssetBytes ||
+          totalAssetBytes + bytes.length > maxTotalAssetBytes) {
+        throw const FormatException(
+          'The backup contains too much media to restore safely.',
+        );
+      }
+      totalAssetBytes += bytes.length;
       await file.writeAsBytes(bytes, flush: true);
       paths[id] = file.path;
     }
@@ -453,5 +533,42 @@ class GymBackupService {
         .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
         .replaceAll(RegExp(r'_+'), '_');
     return sanitized.isEmpty ? 'gym' : sanitized;
+  }
+
+  Future<Directory> _backupDirectory() async {
+    final root = await getApplicationDocumentsDirectory();
+    final directory = Directory('${root.path}/gym_backups');
+    await directory.create(recursive: true);
+    return directory;
+  }
+
+  Future<bool> _isManagedMediaFile(File file) async {
+    try {
+      final root = await getApplicationDocumentsDirectory();
+      final resolvedFile = await file.resolveSymbolicLinks();
+      for (final name in ['gym_media', 'restored_media']) {
+        final directory = Directory('${root.path}/$name');
+        if (!await directory.exists()) continue;
+        final resolvedDirectory = await directory.resolveSymbolicLinks();
+        if (resolvedFile.startsWith(
+          '$resolvedDirectory${Platform.pathSeparator}',
+        )) {
+          return true;
+        }
+      }
+    } on FileSystemException {
+      return false;
+    }
+    return false;
+  }
+
+  static int _decodedBase64Length(String value) {
+    var padding = 0;
+    if (value.endsWith('==')) {
+      padding = 2;
+    } else if (value.endsWith('=')) {
+      padding = 1;
+    }
+    return (value.length * 3 ~/ 4) - padding;
   }
 }

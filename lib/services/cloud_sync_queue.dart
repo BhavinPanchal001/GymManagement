@@ -108,7 +108,8 @@ class CloudSyncQueue extends ChangeNotifier {
     return write;
   }
 
-  Future<void> enqueue(List<CloudChange> changes, {
+  Future<void> enqueue(
+    List<CloudChange> changes, {
     bool autoFlush = true,
   }) async {
     if (_closed) throw StateError('This account is no longer connected.');
@@ -129,6 +130,32 @@ class CloudSyncQueue extends ChangeNotifier {
       copied,
     );
     await _changePending((next) => next.add(batch));
+    if (!_closed && autoFlush) unawaited(flush());
+  }
+
+  Future<void> enqueueAll(
+    List<CloudChange> changes, {
+    bool autoFlush = true,
+  }) async {
+    if (_closed) throw StateError('This account is no longer connected.');
+    if (changes.isEmpty) return;
+    final copied = changes
+        .map(
+          (change) => CloudChange.fromMap(
+            json.decode(json.encode(change.toMap())) as Map<String, dynamic>,
+          ),
+        )
+        .toList(growable: false);
+    final batches = <_PendingBatch>[];
+    for (var index = 0; index < copied.length; index += 450) {
+      batches.add(
+        _PendingBatch(
+          '${DateTime.now().microsecondsSinceEpoch}_${_sequence++}',
+          copied.sublist(index, (index + 450).clamp(0, copied.length)),
+        ),
+      );
+    }
+    await _changePending((next) => next.addAll(batches));
     if (!_closed && autoFlush) unawaited(flush());
   }
 
