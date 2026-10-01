@@ -15,7 +15,7 @@ import '../../widgets/dashboard_metrics_grid.dart';
 import 'add_customer_sheet.dart';
 import 'customer_detail_screen.dart';
 
-enum CustomerFilter { all, active, pendingPayment }
+enum CustomerFilter { all, active, pendingPayment, archived }
 
 class CustomersTab extends StatefulWidget {
   const CustomersTab({super.key});
@@ -41,14 +41,20 @@ class _CustomersTabState extends State<CustomersTab> {
       builder: (context, _) {
         final gymService = GymService();
         final currentMonth = GymDateUtils.toMonthKey(DateTime.now());
+        final owingIds = gymService
+            .getAllPendingDues()
+            .map((s) => s.customer.id)
+            .toSet();
         var list = gymService.searchCustomers(_searchController.text);
 
         if (_selectedFilter == CustomerFilter.active) {
           list = list.where((c) => c.isActive).toList();
         } else if (_selectedFilter == CustomerFilter.pendingPayment) {
           list = list.where((c) {
-            return gymService.getMemberLifecycleStage(c, currentMonth) == MemberLifecycleStage.due;
+            return owingIds.contains(c.id);
           }).toList();
+        } else if (_selectedFilter == CustomerFilter.archived) {
+          list = list.where((c) => !c.isActive).toList();
         }
 
         return Scaffold(
@@ -117,9 +123,11 @@ class _CustomersTabState extends State<CustomersTab> {
                     ),
                     const SizedBox(width: 8),
                     _buildFilterChip(
-                      'Pending Dues (${gymService.customers.where((c) => gymService.getMemberLifecycleStage(c, currentMonth) == MemberLifecycleStage.due).length})',
+                      'Pending Dues (${owingIds.length})',
                       CustomerFilter.pendingPayment,
                     ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Archived', CustomerFilter.archived),
                   ],
                 ),
               ),
@@ -294,7 +302,8 @@ class _CustomersTabState extends State<CustomersTab> {
                     runSpacing: 4,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 6,
+                          vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(4),
@@ -309,7 +318,8 @@ class _CustomersTabState extends State<CustomersTab> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 6,
+                          vertical: 2),
                         decoration: BoxDecoration(
                           color: customer.planType == CustomerPlan.personalTrainingDiet
                               ? const Color(0xFFFF9100).withValues(alpha: 0.15)
@@ -352,7 +362,8 @@ class _CustomersTabState extends State<CustomersTab> {
                               ? 'Expired'
                               : (days == 0 ? 'Exp Today' : '${days}d left');
                           return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 6,
+                              vertical: 2),
                             decoration: BoxDecoration(
                               color: color.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),

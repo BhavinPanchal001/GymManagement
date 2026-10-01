@@ -3,7 +3,6 @@ import '../services/gym_service.dart';
 import '../services/notification_service.dart';
 import '../services/theme_service.dart';
 import '../theme/app_theme.dart';
-import '../utils/date_utils.dart';
 import 'customers/customers_tab.dart';
 import 'attendance/daily_attendance_tab.dart';
 import 'billing/billing_tab.dart';
@@ -54,14 +53,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       listenable: Listenable.merge([GymService(), ThemeService()]),
       builder: (context, _) {
         final gym = GymService();
-        final currentMonth = GymDateUtils.toMonthKey(DateTime.now());
-        final summary = gym.getMonthlyFinancialSummary(currentMonth);
-        final pendingDuesCount = summary['pendingCount'] as int? ?? 0;
+        final pendingDuesCount = gym.getAllPendingDues().length;
 
         return Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
-            children: _tabs,
+          body: Column(
+            children: [
+              if (gym.currentUserId != null &&
+                  (gym.pendingUploadCount > 0 ||
+                      gym.syncError != null ||
+                      !gym.isCloudAttached))
+                SafeArea(
+                  bottom: false,
+                  child: Material(
+                    color: AppColors.pending.withValues(alpha: 0.12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.cloud_upload_outlined, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              gym.syncError ??
+                                  'Saved on this phone. Waiting to upload changes.',
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: gym.retryCloudSync,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              Expanded(
+                child: IndexedStack(index: _currentIndex, children: _tabs),
+              ),
+            ],
           ),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(

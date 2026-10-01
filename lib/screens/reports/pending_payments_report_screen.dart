@@ -8,10 +8,13 @@ import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
+import '../../widgets/collect_balance_dialog.dart';
+import '../../widgets/bill_receipt_dialog.dart';
 import '../../widgets/whatsapp_reminder_sheet.dart';
 import 'export_report_dialog.dart';
 
 enum DateRangePreset {
+  allOutstanding('All Outstanding'),
   thisMonth('This Month'),
   last3Months('Last 3 Months'),
   last6Months('Last 6 Months'),
@@ -41,7 +44,7 @@ class PendingPaymentsReportScreen extends StatefulWidget {
 }
 
 class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScreen> {
-  DateRangePreset _selectedPreset = DateRangePreset.last3Months;
+  DateRangePreset _selectedPreset = DateRangePreset.allOutstanding;
   late DateTime _startDate;
   late DateTime _endDate;
   ReportViewMode _viewMode = ReportViewMode.byMember;
@@ -53,7 +56,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   @override
   void initState() {
     super.initState();
-    _applyPreset(DateRangePreset.last3Months);
+    _applyPreset(DateRangePreset.allOutstanding);
   }
 
   @override
@@ -68,6 +71,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     DateTime end = DateTime(now.year, now.month + 1, 0); // end of current month
 
     switch (preset) {
+      case DateRangePreset.allOutstanding:
+        start = GymService().outstandingStartDate;
+        end = GymService().outstandingEndDate;
+        break;
       case DateRangePreset.thisMonth:
         start = DateTime(now.year, now.month, 1);
         break;
@@ -185,6 +192,15 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   }
 
   Future<void> _openMarkPaid(Customer customer, PaymentRecord record) async {
+    if (record.isPaid) {
+      final current = GymService().getPaymentById(record.id);
+      if (current == null || current.balanceDue <= 0) return;
+      final bill = await CollectBalanceDialog.show(context, current);
+      if (bill != null && mounted) {
+        await BillReceiptDialog.show(context, bill: bill);
+      }
+      return;
+    }
     final success = await MarkPaymentDialog.show(
       context,
       customer: customer,
@@ -814,7 +830,9 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         elevation: 0,
                       ),
                       icon: const Icon(Icons.check_circle_outline_rounded, size: 15),
-                      label: const Text('Mark Paid', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      label: Text(
+                        item.pendingRecords.first.isPaid ? 'Collect Balance' : 'Record Payment',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       onPressed: () => _openMarkPaid(customer, item.pendingRecords.first),
                     ),
                   ),
@@ -970,7 +988,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       // Quick Pay Icon
                       IconButton(
                         icon: Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
-                        tooltip: 'Mark Paid',
+                        tooltip: payment.isPaid ? 'Collect Balance' : 'Record Payment',
                         visualDensity: VisualDensity.compact,
                         onPressed: () => _openMarkPaid(customer, payment),
                       ),

@@ -127,41 +127,54 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     }
   }
 
-  void _deleteCustomer(Customer customer) {
-    showDialog(
+  void _archiveCustomer(Customer customer) async {
+    final archive = customer.isActive;
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text('Delete Member?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text(archive ? 'Archive member?' : 'Restore member?'),
         content: Text(
-          'Are you sure you want to remove "${customer.name}"? All associated attendance and payment records will also be removed.',
-          style: TextStyle(color: AppColors.textSecondary),
+          archive
+              ? 'The member will leave the active list. Attendance, payments, receipts and outstanding balances will be kept.'
+              : 'The member will return to the active list with their history.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.absent),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await GymService().deleteCustomer(customer.id);
-              if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Member "${customer.name}" deleted.'),
-                    backgroundColor: AppColors.absent,
-                  ),
-                );
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(archive ? 'Archive' : 'Restore'),
           ),
         ],
       ),
     );
+    if (confirmed != true) return;
+    try {
+      if (archive) {
+        await GymService().archiveCustomer(customer.id);
+      } else {
+        await GymService().restoreCustomer(customer.id);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              archive
+                  ? 'Member archived. History preserved.'
+                  : 'Member restored.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save. Please try again.')),
+        );
+      }
+    }
   }
 
   @override
@@ -212,14 +225,40 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 onPressed: () => _editCustomer(customer),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.absent),
-                tooltip: 'Delete Member',
-                onPressed: () => _deleteCustomer(customer),
+                icon: Icon(
+                  customer.isActive
+                      ? Icons.archive_outlined
+                      : Icons.unarchive_outlined,
+                ),
+                tooltip: customer.isActive
+                    ? 'Archive Member'
+                    : 'Restore Member',
+                onPressed: () => _archiveCustomer(customer),
               ),
             ],
           ),
           body: Column(
             children: [
+              if (!customer.isActive)
+                const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text('Archived member • History preserved'),
+                ),
+              if (customer.isActive && GymService().hasPaidMembership(customer))
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => MarkPaymentDialog.showRenewal(
+                        context,
+                        customer: customer,
+                      ),
+                      icon: const Icon(Icons.autorenew),
+                      label: const Text('Renew Membership'),
+                    ),
+                  ),
+                ),
               // Sleek Segmented TabBar
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -418,7 +457,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           memberName: customer.name,
                         );
                       },
-                      borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(6),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -606,7 +645,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           border: Border.all(color: statusColor.withValues(alpha: 0.35)),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                              mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               isNew ? Icons.fiber_new_rounded : Icons.warning_amber_rounded,
@@ -883,7 +922,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               ),
               const SizedBox(width: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10,
+                  vertical: 6),
                 decoration: BoxDecoration(
                   color: badgeColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -1083,7 +1123,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.primaryOn,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10),
+                      ),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     ),
                     icon: const Icon(Icons.calendar_month_rounded, size: 16),
@@ -1603,7 +1644,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       : (isBeforeJoinMonth || (isPastMonth && present == 0)
                           ? AppColors.textSecondary
                           : (unpaidAttendedDays > 0 || present > 0
-                              ? AppColors.pending
+                                  ? AppColors.pending
                               : AppColors.textSecondary)),
                   size: 20,
                 ),
@@ -1630,7 +1671,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               : (isBeforeJoinMonth || (isPastMonth && present == 0)
                                   ? AppColors.textSecondary
                                   : (unpaidAttendedDays > 0 || present > 0
-                                      ? AppColors.pending
+                                          ? AppColors.pending
                                       : AppColors.textSecondary)),
                           fontWeight: FontWeight.w900,
                           fontSize: 11.5,
@@ -1704,7 +1745,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           : AppColors.primary,
                       foregroundColor: Colors.black,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10),
+                      ),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     icon: const Icon(Icons.payment_rounded, size: 15),

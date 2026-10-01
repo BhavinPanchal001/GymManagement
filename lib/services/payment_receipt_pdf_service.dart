@@ -70,7 +70,9 @@ class PaymentReceiptPdfService {
     final parts = <String>[];
     if (crores > 0) parts.add('${convertLessThanOneThousand(crores)} Crore');
     if (lakhs > 0) parts.add('${convertLessThanOneThousand(lakhs)} Lakh');
-    if (thousands > 0) parts.add('${convertLessThanOneThousand(thousands)} Thousand');
+    if (thousands > 0) {
+      parts.add('${convertLessThanOneThousand(thousands)} Thousand');
+    }
     if (hundreds > 0) parts.add(convertLessThanOneThousand(hundreds));
 
     final result = parts.join(' ').trim();
@@ -86,41 +88,8 @@ class PaymentReceiptPdfService {
     final gymSettings = settings ?? GymService().settings;
     final effectiveCustomer = customer ?? GymService().getCustomerById(bill.customerId);
 
-    // Resolve placeholder/preview bills to a real bill via the payment link.
+    // Render the actual receipt amount; never substitute a current plan price.
     BillRecord effectiveBill = bill;
-    if (effectiveBill.amount <= 0.0) {
-      final gym = GymService();
-      if (effectiveBill.paymentId.isNotEmpty) {
-        final primary = gym.getBillForPayment(effectiveBill.paymentId);
-        if (primary != null && primary.amount > 0) {
-          effectiveBill = primary;
-        } else {
-          final pay = gym.getPaymentById(effectiveBill.paymentId);
-          if (pay != null && pay.amount > 0 && effectiveCustomer != null) {
-            effectiveBill = gym.getOrCreateBillForPayment(effectiveCustomer, pay);
-          }
-        }
-      }
-
-      // Legacy bills without paymentId: resolve via the covering payment.
-      if (effectiveBill.amount <= 0.0) {
-        final covering = gym.getPaymentCoveringMonth(
-            effectiveBill.customerId, effectiveBill.monthYear);
-        if (covering != null && effectiveCustomer != null) {
-          effectiveBill = gym.getOrCreateBillForPayment(effectiveCustomer, covering);
-        }
-      }
-
-      if (effectiveBill.amount <= 0.0) {
-        final planPrice = gymSettings.getPriceForDuration(
-          effectiveCustomer?.planType ?? effectiveBill.planType,
-          effectiveBill.durationMonths,
-        );
-        if (planPrice > 0) {
-          effectiveBill = effectiveBill.copyWith(amount: planPrice);
-        }
-      }
-    }
 
     // Gym name resolution: Always prioritize the CURRENT name configured in GymSettings
     final currentGymName = gymSettings.gymName.trim().isNotEmpty
@@ -943,7 +912,8 @@ class PaymentReceiptPdfService {
           pw.SizedBox(width: 6),
           pw.Text(
             value,
-            style: pw.TextStyle(font: valueFont, fontSize: 8.5, color: slateDark),
+            style: pw.TextStyle(font: valueFont,
+              fontSize: 8.5, color: slateDark),
           ),
         ],
       ),

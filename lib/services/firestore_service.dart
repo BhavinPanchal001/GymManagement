@@ -7,6 +7,7 @@ import '../models/payment.dart';
 import '../models/bill.dart';
 import '../models/expense.dart';
 import '../models/gym_settings.dart';
+import 'cloud_sync_queue.dart';
 
 /// Callback typedef for when Firestore snapshot data arrives.
 typedef FirestoreDataCallback = void Function({
@@ -26,6 +27,8 @@ class FirestoreService {
   FirebaseFirestore? _firestore;
   String? _userId;
   bool _isAttached = false;
+  bool _persistenceConfigured = false;
+  void Function(Object)? onSyncError;
 
   final List<StreamSubscription> _subscriptions = [];
 
@@ -70,7 +73,9 @@ class FirestoreService {
   // ==================== LIFECYCLE ====================
 
   /// Attach to a gym owner's Firestore data and start listening.
-  Future<void> attachUser(String userId, {FirestoreDataCallback? callback}) async {
+  Future<void> attachUser(String userId, {FirestoreDataCallback? callback,
+    void Function(Object)? onError,
+  }) async {
     if (_isAttached && _userId == userId) return;
 
     // Detach previous user if any
@@ -79,18 +84,22 @@ class FirestoreService {
     try {
       _firestore = FirebaseFirestore.instance;
       // Enable offline persistence (default on mobile, explicit for web)
-      _firestore!.settings = const Settings(
+      if (!_persistenceConfigured) {
+        _firestore!.settings = const Settings(
         persistenceEnabled: true,
         cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
       );
+    }
+      _persistenceConfigured = true;
     } catch (e) {
       debugPrint('FirestoreService: Error getting Firestore instance: $e');
-      return;
+      rethrow;
     }
 
     _userId = userId;
     _isAttached = true;
     onDataChanged = callback;
+    onSyncError = onError;
 
     _listenToCustomers();
     _listenToAttendance();
@@ -111,6 +120,7 @@ class FirestoreService {
     _userId = null;
     _isAttached = false;
     onDataChanged = null;
+    onSyncError = null;
     debugPrint('FirestoreService: Detached');
   }
 
@@ -132,7 +142,8 @@ class FirestoreService {
       onDataChanged?.call(customers: customers);
     }, onError: (e) {
       debugPrint('FirestoreService: Customers listener error: $e');
-    });
+        onSyncError?.call(e);
+      });
 
     _subscriptions.add(sub);
   }
@@ -151,7 +162,8 @@ class FirestoreService {
       onDataChanged?.call(attendanceMap: map);
     }, onError: (e) {
       debugPrint('FirestoreService: Attendance listener error: $e');
-    });
+        onSyncError?.call(e);
+      });
 
     _subscriptions.add(sub);
   }
@@ -170,7 +182,8 @@ class FirestoreService {
       onDataChanged?.call(paymentMap: map);
     }, onError: (e) {
       debugPrint('FirestoreService: Payments listener error: $e');
-    });
+        onSyncError?.call(e);
+      });
 
     _subscriptions.add(sub);
   }
@@ -189,7 +202,8 @@ class FirestoreService {
       onDataChanged?.call(billsMap: map);
     }, onError: (e) {
       debugPrint('FirestoreService: Bills listener error: $e');
-    });
+        onSyncError?.call(e);
+      });
 
     _subscriptions.add(sub);
   }
@@ -210,7 +224,8 @@ class FirestoreService {
       onDataChanged?.call(expenses: expenses);
     }, onError: (e) {
       debugPrint('FirestoreService: Expenses listener error: $e');
-    });
+        onSyncError?.call(e);
+      });
 
     _subscriptions.add(sub);
   }
@@ -227,12 +242,47 @@ class FirestoreService {
       }
     }, onError: (e) {
       debugPrint('FirestoreService: Settings listener error: $e');
-    });
+        onSyncError?.call(e);
+      });
 
     _subscriptions.add(sub);
   }
 
   // ==================== WRITE OPERATIONS ====================
+
+  /// Owner checks prevent a delayed retry from writing to another account.
+  Future<void> commitChanges(String ownerId, List<CloudChange> changes) async {
+    if (!_isAttached || _firestore == null || _userId != ownerId) {
+      throw StateError('This account is not connected.');
+    }
+    const allowed = {
+      'customers',
+      'attendance',
+      'payments',
+      'bills',
+      'expenses',
+      'settings',
+    };
+    final batch = _firestore!.batch();
+    for (final change in changes) {
+      if (!allowed.contains(change.collection) ||
+          change.documentId.isEmpty ||
+          change.documentId.contains('/')) {
+        throw ArgumentError('Invalid document change.');
+      }
+      final ref = _firestore!
+          .collection('gyms')
+          .doc(ownerId)
+          .collection(change.collection)
+          .doc(change.documentId);
+      if (change.data == null) {
+        batch.delete(ref);
+      } else {
+        batch.set(ref, change.data!);
+      }
+    }
+    await batch.commit();
+  }
 
   /// Upsert a single customer document.
   Future<void> upsertCustomer(Customer customer) async {
@@ -240,45 +290,7 @@ class FirestoreService {
       await _customersCol?.doc(customer.id).set(customer.toMap());
     } catch (e) {
       debugPrint('FirestoreService: upsertCustomer error: $e');
-    }
-  }
-
-  /// Delete a customer and all their related data.
-  Future<void> deleteCustomer(String customerId) async {
-    try {
-      await _customersCol?.doc(customerId).delete();
-
-      // Delete related attendance records
-      final attSnap = await _attendanceCol?.where('customerId', isEqualTo: customerId).get();
-      if (attSnap != null) {
-        final batch = _firestore!.batch();
-        for (final doc in attSnap.docs) {
-          batch.delete(doc.reference);
-        }
-        await batch.commit();
-      }
-
-      // Delete related payment records
-      final paySnap = await _paymentsCol?.where('customerId', isEqualTo: customerId).get();
-      if (paySnap != null) {
-        final batch = _firestore!.batch();
-        for (final doc in paySnap.docs) {
-          batch.delete(doc.reference);
-        }
-        await batch.commit();
-      }
-
-      // Delete related bill records
-      final billSnap = await _billsCol?.where('customerId', isEqualTo: customerId).get();
-      if (billSnap != null) {
-        final batch = _firestore!.batch();
-        for (final doc in billSnap.docs) {
-          batch.delete(doc.reference);
-        }
-        await batch.commit();
-      }
-    } catch (e) {
-      debugPrint('FirestoreService: deleteCustomer error: $e');
+      rethrow;
     }
   }
 
@@ -289,6 +301,7 @@ class FirestoreService {
       await _attendanceCol?.doc(docId).set(record.toMap());
     } catch (e) {
       debugPrint('FirestoreService: upsertAttendance error: $e');
+      rethrow;
     }
   }
 
@@ -308,6 +321,7 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('FirestoreService: batchUpsertAttendance error: $e');
+      rethrow;
     }
   }
 
@@ -317,6 +331,7 @@ class FirestoreService {
       await _paymentsCol?.doc(record.id).set(record.toMap());
     } catch (e) {
       debugPrint('FirestoreService: upsertPayment error: $e');
+      rethrow;
     }
   }
 
@@ -334,6 +349,7 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('FirestoreService: batchUpsertPayments error: $e');
+      rethrow;
     }
   }
 
@@ -343,6 +359,7 @@ class FirestoreService {
       await _paymentsCol?.doc(docId).delete();
     } catch (e) {
       debugPrint('FirestoreService: deletePayment error: $e');
+      rethrow;
     }
   }
 
@@ -352,6 +369,7 @@ class FirestoreService {
       await _billsCol?.doc(record.id).set(record.toMap());
     } catch (e) {
       debugPrint('FirestoreService: upsertBill error: $e');
+      rethrow;
     }
   }
 
@@ -369,6 +387,7 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('FirestoreService: batchUpsertBills error: $e');
+      rethrow;
     }
   }
 
@@ -378,6 +397,7 @@ class FirestoreService {
       await _billsCol?.doc(docId).delete();
     } catch (e) {
       debugPrint('FirestoreService: deleteBill error: $e');
+      rethrow;
     }
   }
 
@@ -387,6 +407,7 @@ class FirestoreService {
       await _expensesCol?.doc(record.id).set(record.toMap());
     } catch (e) {
       debugPrint('FirestoreService: upsertExpense error: $e');
+      rethrow;
     }
   }
 
@@ -396,6 +417,7 @@ class FirestoreService {
       await _expensesCol?.doc(expenseId).delete();
     } catch (e) {
       debugPrint('FirestoreService: deleteExpense error: $e');
+      rethrow;
     }
   }
 
@@ -405,6 +427,7 @@ class FirestoreService {
       await _settingsDoc?.set(settings.toMap());
     } catch (e) {
       debugPrint('FirestoreService: upsertSettings error: $e');
+      rethrow;
     }
   }
 
@@ -503,6 +526,7 @@ class FirestoreService {
       await _settingsDoc?.delete();
     } catch (e) {
       debugPrint('FirestoreService: clearAllData error: $e');
+      rethrow;
     }
   }
 

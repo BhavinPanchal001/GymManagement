@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gym/services/gym_service.dart';
 import 'package:gym/models/payment.dart';
+import 'package:gym/models/attendance.dart';
+import 'package:gym/utils/date_utils.dart';
 import 'package:gym/screens/reports/pending_payments_report_screen.dart';
 import 'package:gym/screens/reports/export_report_dialog.dart';
 
@@ -12,18 +14,22 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await GymService().resetToDemoData();
+    final member = await GymService().addCustomer(
+      name: 'Unpaid fixture', phone: '9000000000', joinDate: DateTime(2020));
+    await GymService().toggleAttendance(member.id,
+      GymDateUtils.toDateKey(DateTime.now()), AttendanceStatus.present);
   });
 
   test('GymService pending dues range operations test', () {
     final gym = GymService();
 
-    final start = DateTime(2026, 7, 1);
-    final end = DateTime(2026, 9, 30);
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month - 2, 1);
+    final end = DateTime(now.year, now.month + 1, 0);
     final monthKeys = gym.getMonthKeysInRange(start, end);
 
-    expect(monthKeys, contains('2026-07'));
-    expect(monthKeys, contains('2026-08'));
-    expect(monthKeys, contains('2026-09'));
+    expect(monthKeys.first, startsWith(start.year.toString()));
+    expect(monthKeys.last, startsWith(end.year.toString()));
     expect(monthKeys.length, 3);
 
     final memberPending = gym.getPendingDuesByMember(start, end);

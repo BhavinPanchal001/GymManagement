@@ -233,6 +233,7 @@ class NotificationService {
   /// Checks for pending dues and triggers the notification if needed.
   /// Throttled to once per day, or immediately if new pending dues arise.
   Future<void> checkAndNotifyPendingPayments({bool force = false}) async {
+    if (!_isInitialized) return;
     final gym = GymService();
 
     // Respect gym owner toggle preference
@@ -240,12 +241,8 @@ class NotificationService {
       return;
     }
 
+    final summaries = gym.getAllPendingDues();
     final now = DateTime.now();
-    // Scan up to current month (last 3 months range)
-    final summaries = gym.getPendingDuesByMember(
-      DateTime(now.year, now.month - 2, 1),
-      now,
-    );
 
     if (summaries.isEmpty) {
       return;

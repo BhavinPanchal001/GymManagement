@@ -320,7 +320,9 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                 children: [
                   // Sundays as Rest Day Toggle (Only relevant when marking Present)
                   if (_selectedStatus == AttendanceStatus.present) ...[
-                    SwitchListTile(
+                    Material(
+                      color: Colors.transparent,
+                      child: SwitchListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       title: Text(
                         'Keep Sundays as Rest Day',
@@ -342,6 +344,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                       activeColor: AppColors.primary,
                       value: _excludeSundays,
                       onChanged: (val) => setState(() => _excludeSundays = val),
+                    ),
                     ),
                     if (_isCurrentMonth)
                       Divider(height: 1, color: AppColors.surfaceBorder, indent: 16, endIndent: 16),
@@ -462,7 +465,8 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                       foregroundColor: AppColors.textSecondary,
                       side: BorderSide(color: AppColors.surfaceBorder),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Text(
                       'Cancel',
@@ -486,7 +490,8 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                       disabledForegroundColor: AppColors.textMuted,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                     ),
                     icon: _isLoading
                         ? const SizedBox(

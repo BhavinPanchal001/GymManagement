@@ -398,7 +398,7 @@ class WhatsAppService {
     if (bill.notes != null && bill.notes!.trim().isNotEmpty) {
       buf.writeln('📝 *Remarks:* ${bill.notes!.trim()}');
     }
-    buf.writeln('✅ *Status:* PAID');
+    buf.writeln('*Status:* ${bill.status}');
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━');
     buf.writeln('Thank you for training with *$gym*!');
     buf.writeln('Stay consistent, stay fit, and keep crushing your goals! 💪🔥');

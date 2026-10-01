@@ -209,12 +209,21 @@ void main() {
     expect(mine.isNotEmpty, isTrue);
     expect(mine.first.totalPendingAmount, equals(1000.0));
 
-    // Overpaying the balance is clamped.
-    final balBill = await gym.collectBalance(
+      // Reject overpayments so the receipt always matches money entered.
+      await expectLater(
+        gym.collectBalance(
       paymentId: record.id,
       amount: 2000.0,
       method: PaymentMethod.upi,
       paidAt: DateTime(2026, 7, 10),
+        ),
+        throwsArgumentError,
+      );
+      final balBill = await gym.collectBalance(
+        paymentId: record.id,
+        amount: 1000.0,
+        method: PaymentMethod.upi,
+        paidAt: DateTime(2026, 7, 10),
     );
     expect(balBill.billType, equals('BALANCE'));
     expect(balBill.amount, equals(1000.0));
@@ -657,15 +666,15 @@ void main() {
       joinDate: DateTime(2026, 9, 1),
       markAsPaidNow: false,
     );
-    await gym.setMonthAttendance(
-      customerId: member.id,
-      year: 2026,
-      month: 8,
-      status: AttendanceStatus.present,
-      excludeSundays: true,
-    );
+      // Backdating individual records is deliberate; automatic month marking
+      // now skips dates before joining.
+      for (var day = 1; day <= 31; day++) {
+        final date = DateTime(2026, 8, day);
+        if (date.weekday == DateTime.sunday) continue;
+        await gym.toggleAttendance(member.id, GymDateUtils.toDateKey(date), AttendanceStatus.present);
+      }
 
-    final start = DateTime(2026, 8, 1);
+      final start = DateTime(2026, 8, 1);
     final end = DateTime(2026, 9, 30);
     expect(gym.getMonthlyAttendanceSummary(member.id, '2026-08')['present'], 26);
     expect(gym.getUnpaidAttendedDaysInMonth(member.id, '2026-08'), 26);
