@@ -640,6 +640,11 @@ class GymService extends ChangeNotifier {
       _isInitialized = true;
       notifyListeners();
     }
+    try {
+      await _ensureSubscriptionTrialStarted();
+    } catch (e) {
+      debugPrint('Could not stamp subscription trial start: $e');
+    }
   }
 
   Future<void> _loadUserLocalData(String userId) async {
@@ -755,6 +760,7 @@ class GymService extends ChangeNotifier {
       await _connectCloud(userId);
 
       notifyListeners();
+      await _ensureSubscriptionTrialStarted();
       return;
     }
 
@@ -767,6 +773,7 @@ class GymService extends ChangeNotifier {
     await _connectCloud(userId);
 
     notifyListeners();
+    await _ensureSubscriptionTrialStarted();
   }
 
   /// Detach Firestore sync. Call this on logout.
@@ -2564,6 +2571,41 @@ class GymService extends ChangeNotifier {
           ),
         ),
     ];
+  }
+
+  // ==================== APP SUBSCRIPTION ====================
+
+  /// Whether the owner's free trial has ended without a paid subscription.
+  bool get subscriptionRequired => _settings.subscriptionRequired;
+
+  /// Stamps the free-trial start once, on first launch of an account/device.
+  /// The timestamp lives on the synced settings doc, so reinstalls and other
+  /// devices share the same trial start instead of restarting it.
+  Future<void> _ensureSubscriptionTrialStarted() async {
+    if (_settings.trialStartedAt != null) return;
+    _settings = _settings.copyWith(trialStartedAt: DateTime.now());
+    notifyListeners();
+    await _saveSettings();
+  }
+
+  /// Extends the paid subscription by [months] after a successful payment.
+  /// Stacks on top of any remaining paid time.
+  Future<void> activateSubscription({
+    required int months,
+    required String paymentId,
+  }) async {
+    if (months <= 0) {
+      throw ArgumentError('Subscription length must be at least 1 month.');
+    }
+    final now = DateTime.now();
+    final current = _settings.subscriptionPaidUntil;
+    final base = current != null && current.isAfter(now) ? current : now;
+    _settings = _settings.copyWith(
+      subscriptionPaidUntil: DateTime(base.year, base.month + months, base.day),
+      subscriptionPaymentId: paymentId.trim().isNotEmpty ? paymentId.trim() : null,
+    );
+    notifyListeners();
+    await _saveSettings();
   }
 
   // ==================== SETTINGS OPERATIONS ====================

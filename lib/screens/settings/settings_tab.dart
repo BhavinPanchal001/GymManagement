@@ -5,9 +5,11 @@ import '../../services/gym_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/date_utils.dart';
 import '../../widgets/user_avatar.dart';
 import '../../widgets/gym_logo_widget.dart';
 import '../intro/intro_screen.dart';
+import '../subscription/subscription_screen.dart';
 import 'edit_profile_screen.dart';
 
 class SettingsTab extends StatefulWidget {
@@ -866,9 +868,11 @@ class _SettingsTabState extends State<SettingsTab> {
                         children: [
                           const Icon(Icons.bolt_rounded, color: Color(0xFF528FF0), size: 22),
                           const SizedBox(width: 8),
-                          Text(
-                            'Online Payments (Razorpay)',
-                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                          Expanded(
+                            child: Text(
+                              'Member Fee Collection (Razorpay)',
+                              style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                            ),
                           ),
                           const Spacer(),
                           Container(
@@ -894,7 +898,7 @@ class _SettingsTabState extends State<SettingsTab> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Collect membership fees online via UPI, cards & net banking through Razorpay Checkout.',
+                        'Let members pay their fees online via UPI, cards & net banking through your own Razorpay account.',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                       ),
                       const SizedBox(height: 14),
@@ -934,6 +938,66 @@ class _SettingsTabState extends State<SettingsTab> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 10),
+                      Divider(color: AppColors.surfaceBorder, height: 20),
+                      // App subscription status (trial / paid plan for the owner)
+                      Builder(builder: (context) {
+                        final settings = gym.settings;
+                        final status = settings.hasActiveSubscription
+                            ? 'Active until ${GymDateUtils.formatDate(settings.subscriptionPaidUntil!)}'
+                            : settings.isInTrialPeriod
+                                ? 'Free trial · ${settings.trialDaysRemaining} day${settings.trialDaysRemaining == 1 ? '' : 's'} left'
+                                : 'Expired — subscribe to continue';
+                        return InkWell(
+                          onTap: () => SubscriptionScreen.navigate(context),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.workspace_premium_rounded,
+                                  size: 18,
+                                  color: settings.subscriptionRequired
+                                      ? AppColors.absent
+                                      : AppColors.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'App Subscription',
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        status,
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  'Manage',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),

@@ -72,22 +72,27 @@ class RazorpayService {
 
   /// Opens Razorpay Checkout for [amountInr] (in rupees) and resolves once the
   /// member pays, fails, or dismisses checkout.
+  /// [keyIdOverride] pays a different Razorpay account than the owner's
+  /// configured key — used for the app subscription itself, which must be
+  /// collected into the publisher's account.
   Future<RazorpayPaymentResult> collectPayment({
     required double amountInr,
     required String description,
     String? memberName,
     String? contact,
     String? email,
+    String? keyIdOverride,
   }) async {
     if (!isSupported) {
       return RazorpayPaymentResult.failed(
         'Online payments are only available on Android and iOS.',
       );
     }
-    final keyId = GymService().settings.razorpayKeyId.trim();
+    final keyId =
+        (keyIdOverride ?? GymService().settings.razorpayKeyId).trim();
     if (keyId.isEmpty) {
       return RazorpayPaymentResult.failed(
-        'Add your Razorpay Key ID in Settings to collect payments online.',
+        'Razorpay payments are not configured yet.',
       );
     }
     if (!amountInr.isFinite || amountInr <= 0) {

@@ -7,6 +7,7 @@ import 'customers/customers_tab.dart';
 import 'attendance/daily_attendance_tab.dart';
 import 'billing/billing_tab.dart';
 import 'settings/settings_tab.dart';
+import 'subscription/subscription_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -55,6 +56,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final gym = GymService();
         final pendingDuesCount = gym.getAllPendingDues().length;
 
+        // Paywall: trial ended without a paid subscription.
+        if (gym.subscriptionRequired) {
+          return const SubscriptionScreen();
+        }
+
         return Scaffold(
           body: Column(
             children: [
@@ -86,6 +92,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             child: const Text('Retry'),
                           ),
                         ],
+                      ),
+                    ),
+                  ),
+                ),
+              if (gym.settings.isInTrialPeriod &&
+                  !gym.settings.hasActiveSubscription)
+                SafeArea(
+                  bottom: false,
+                  child: Material(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    child: InkWell(
+                      onTap: () => SubscriptionScreen.navigate(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.timer_outlined,
+                                size: 20, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Free trial · ${gym.settings.trialDaysRemaining} day${gym.settings.trialDaysRemaining == 1 ? '' : 's'} left — tap to subscribe',
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded,
+                                size: 20, color: AppColors.primary),
+                          ],
+                        ),
                       ),
                     ),
                   ),
