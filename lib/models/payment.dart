@@ -38,7 +38,8 @@ enum PaymentMethod {
   paytm,
   upi,
   card,
-  netBanking;
+  netBanking,
+  razorpay;
 
   String get label {
     switch (this) {
@@ -56,6 +57,8 @@ enum PaymentMethod {
         return 'Card';
       case PaymentMethod.netBanking:
         return 'Net Banking';
+      case PaymentMethod.razorpay:
+        return 'Razorpay';
     }
   }
 
@@ -75,6 +78,8 @@ enum PaymentMethod {
       case 'netbanking':
       case 'net banking':
         return PaymentMethod.netBanking;
+      case 'razorpay':
+        return PaymentMethod.razorpay;
       case 'cash':
       default:
         return PaymentMethod.cash;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/bill.dart';
 import '../models/payment.dart';
 import '../services/gym_service.dart';
+import '../services/razorpay_service.dart';
 import '../utils/date_utils.dart';
 
 /// A new collection is separate from correcting the original receipt.
@@ -40,6 +41,74 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
     _amount.dispose();
     _reference.dispose();
     super.dispose();
+  }
+
+  Future<void> _collectViaRazorpay() async {
+    final service = RazorpayService();
+    if (!service.isSupported) {
+      setState(() => _error =
+          'Online collection is only available on Android and iOS.');
+      return;
+    }
+    if (!service.isConfigured) {
+      setState(() => _error =
+          'Add your Razorpay Key ID in Settings to collect online.');
+      return;
+    }
+    final value = double.tryParse(_amount.text.trim());
+    if (value == null ||
+        !value.isFinite ||
+        value <= 0 ||
+        value > widget.payment.balanceDue + 0.005) {
+      setState(
+        () => _error = 'Enter a positive amount within the remaining balance.',
+      );
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final customer = GymService().getCustomerById(widget.payment.customerId);
+      final result = await service.collectPayment(
+        amountInr: value,
+        description:
+            'Balance for ${customer?.name ?? 'member'} • ${GymDateUtils.formatMonthYearKey(widget.payment.monthYear)}',
+        memberName: customer?.name,
+        contact: customer?.phone,
+      );
+      if (!mounted) return;
+      if (result.cancelled) {
+        setState(() => _error = 'Payment was cancelled.');
+        return;
+      }
+      if (!result.success) {
+        setState(
+          () => _error = result.errorMessage ?? 'The online payment failed.',
+        );
+        return;
+      }
+      final receipt = await GymService().collectBalance(
+        paymentId: widget.payment.id,
+        amount: value,
+        method: PaymentMethod.razorpay,
+        paidAt: DateTime.now(),
+        transactionRef: result.paymentId ?? '',
+        operationId: _operationId,
+      );
+      if (mounted) Navigator.pop(context, receipt);
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error is ArgumentError
+              ? error.message.toString()
+              : 'Could not save. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _save() async {
@@ -131,6 +200,21 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
               labelText: 'Transaction reference (optional)',
             ),
           ),
+          if (RazorpayService().isSupported) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _saving ? null : _collectViaRazorpay,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF528FF0),
+                  side: const BorderSide(color: Color(0xFF528FF0)),
+                ),
+                icon: const Icon(Icons.bolt_rounded, size: 18),
+                label: const Text('Collect online via Razorpay'),
+              ),
+            ),
+          ],
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),

@@ -108,6 +108,8 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
         return Icons.credit_card_rounded;
       case PaymentMethod.netBanking:
         return Icons.account_balance_rounded;
+      case PaymentMethod.razorpay:
+        return Icons.bolt_rounded;
     }
   }
 
@@ -127,6 +129,8 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
         return const Color(0xFFFF4081);
       case PaymentMethod.netBanking:
         return const Color(0xFF26A69A);
+      case PaymentMethod.razorpay:
+        return const Color(0xFF528FF0);
     }
   }
 

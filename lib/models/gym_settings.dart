@@ -13,6 +13,9 @@ class GymSettings {
   final bool isFirestoreConnected;
   final bool isPaymentDueNotificationEnabled;
   final List<PlanDurationPackage> durationPackages;
+  /// Razorpay publishable Key ID (rzp_test_... / rzp_live_...) used to open
+  /// Razorpay Checkout for online membership fee collection.
+  final String razorpayKeyId;
 
   static const List<PlanDurationPackage> defaultPackages = [
     // Normal Plan Packages
@@ -45,7 +48,11 @@ class GymSettings {
     this.isFirestoreConnected = false,
     this.isPaymentDueNotificationEnabled = true,
     this.durationPackages = defaultPackages,
+    this.razorpayKeyId = '',
   });
+
+  /// Whether a Razorpay Key ID has been configured for online collections.
+  bool get hasRazorpayKey => razorpayKeyId.trim().isNotEmpty;
 
   /// Returns all packages available for a given plan tier sorted by month count
   List<PlanDurationPackage> getPackagesForPlan(String? planType) {
@@ -105,6 +112,7 @@ class GymSettings {
     bool? isFirestoreConnected,
     bool? isPaymentDueNotificationEnabled,
     List<PlanDurationPackage>? durationPackages,
+    String? razorpayKeyId,
   }) {
     final effectiveNormalFee = normalPlanFee ?? this.normalPlanFee;
     final effectivePtFee = ptPlanFee ?? this.ptPlanFee;
@@ -139,6 +147,7 @@ class GymSettings {
       isFirestoreConnected: isFirestoreConnected ?? this.isFirestoreConnected,
       isPaymentDueNotificationEnabled: isPaymentDueNotificationEnabled ?? this.isPaymentDueNotificationEnabled,
       durationPackages: updatedPackages,
+      razorpayKeyId: razorpayKeyId ?? this.razorpayKeyId,
     );
   }
 
@@ -155,6 +164,7 @@ class GymSettings {
       'isFirestoreConnected': isFirestoreConnected,
       'isPaymentDueNotificationEnabled': isPaymentDueNotificationEnabled,
       'durationPackages': effectivePackages.map((p) => p.toMap()).toList(),
+      'razorpayKeyId': razorpayKeyId,
     };
   }
 
@@ -185,6 +195,7 @@ class GymSettings {
       isFirestoreConnected: map['isFirestoreConnected'] as bool? ?? false,
       isPaymentDueNotificationEnabled: map['isPaymentDueNotificationEnabled'] as bool? ?? true,
       durationPackages: packages,
+      razorpayKeyId: map['razorpayKeyId'] as String? ?? '',
     );
   }
 
