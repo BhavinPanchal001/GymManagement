@@ -35,6 +35,7 @@ class _BillingTabState extends State<BillingTab> {
   int _localBillingSection = 0;
   // HomeScreen owns this selection when it is tracking phone back navigation.
   int get _billingSection => widget.sectionIndex ?? _localBillingSection;
+  final TextEditingController _searchController = TextEditingController();
 
   void _selectSection(int section) {
     if (section == _billingSection) return;
@@ -51,6 +52,12 @@ class _BillingTabState extends State<BillingTab> {
     super.initState();
     final now = DateTime.now();
     _selectedMonth = DateTime(now.year, now.month, 1);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _prevMonth() {
@@ -101,6 +108,14 @@ class _BillingTabState extends State<BillingTab> {
           customers = customers
               .where((c) => gym.isMonthCoveredByPaidPayment(c.id, monthKey))
               .toList();
+        }
+        final searchQuery = _searchController.text.trim().toLowerCase();
+        if (searchQuery.isNotEmpty) {
+          customers = customers.where((c) {
+            return c.name.toLowerCase().contains(searchQuery) ||
+                c.phone.contains(searchQuery) ||
+                c.cardNumber.toLowerCase().contains(searchQuery);
+          }).toList();
         }
 
         return Scaffold(
@@ -157,6 +172,9 @@ class _BillingTabState extends State<BillingTab> {
           ),
           body: Column(
             children: [
+              // Month Selector Bar and section tabs are hidden while the keyboard
+              // is open so the search field and results fit on small screens.
+              if (MediaQuery.viewInsetsOf(context).bottom == 0) ...[
               // Month Selector Bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -229,6 +247,7 @@ class _BillingTabState extends State<BillingTab> {
                   ),
                 ),
               ),
+              ],
 
               if (_billingSection == 1)
                 Expanded(
@@ -245,7 +264,47 @@ class _BillingTabState extends State<BillingTab> {
                     onSwitchToExpenses: () => _selectSection(1),
                   ),
                 )
-              else
+              else ...[
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: TextField(
+                    controller: _searchController,
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, phone, or card #...',
+                      prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                              tooltip: 'Clear search',
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+
+                // Filter Chips
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Row(
+                    children: [
+                      _buildFilterChip('All ($totalMembers)', BillingFilter.all),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Pending ($pendingCount)', BillingFilter.pending),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Paid ($paidCount)', BillingFilter.paid),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
                 Expanded(
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(
@@ -412,22 +471,6 @@ class _BillingTabState extends State<BillingTab> {
                               ),
                             ),
 
-                            const SizedBox(height: 4),
-
-                            // Filter Chips
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              child: Row(
-                                children: [
-                                  _buildFilterChip('All ($totalMembers)', BillingFilter.all),
-                                  const SizedBox(width: 8),
-                                  _buildFilterChip('Pending ($pendingCount)', BillingFilter.pending),
-                                  const SizedBox(width: 8),
-                                  _buildFilterChip('Paid ($paidCount)', BillingFilter.paid),
-                                ],
-                              ),
-                            ),
                             const SizedBox(height: 8),
                           ],
                         ),
@@ -438,12 +481,23 @@ class _BillingTabState extends State<BillingTab> {
                           child: Center(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                              child: Text(
-                                _filter == BillingFilter.pending
-                                    ? 'All member payments are cleared for this month!'
-                                    : 'No records found for this month.',
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-                                textAlign: TextAlign.center,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (searchQuery.isNotEmpty) ...[
+                                    Icon(Icons.person_search_rounded, size: 54, color: AppColors.textMuted),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  Text(
+                                    searchQuery.isNotEmpty
+                                        ? 'No members found matching "${_searchController.text.trim()}"'
+                                        : _filter == BillingFilter.pending
+                                            ? 'All member payments are cleared for this month!'
+                                            : 'No records found for this month.',
+                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -474,6 +528,7 @@ class _BillingTabState extends State<BillingTab> {
                     ],
                   ),
                 ),
+              ],
             ],
           ),
         );
