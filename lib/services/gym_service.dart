@@ -1188,6 +1188,7 @@ class GymService extends ChangeNotifier {
     if (unpaidAttendedDays > 0) {
       return MemberLifecycleStage.due;
     }
+    var hasCurrentUnpaidAgreement = false;
     if (parts.length == 2) {
       final y = int.tryParse(parts[0]) ?? 2026;
       final m = int.tryParse(parts[1]) ?? 1;
@@ -1205,7 +1206,8 @@ class GymService extends ChangeNotifier {
             agreement.effectiveStartDate.isAfter(today)) {
           return MemberLifecycleStage.notEnrolled;
         }
-        return MemberLifecycleStage.due;
+        hasCurrentUnpaidAgreement = true;
+        break;
       }
     }
 
@@ -1226,8 +1228,15 @@ class GymService extends ChangeNotifier {
       (a) => a.customerId == customer.id && a.status == AttendanceStatus.present,
     );
 
-    if (!hasAttended && daysSinceJoined <= 3 && monthYear == currentMonthKey) {
+    if (!hasAttended &&
+        daysSinceJoined >= 0 &&
+        daysSinceJoined <= 3 &&
+        monthYear == currentMonthKey) {
       return MemberLifecycleStage.newMember;
+    }
+
+    if (hasCurrentUnpaidAgreement) {
+      return MemberLifecycleStage.due;
     }
 
     return MemberLifecycleStage.due;
