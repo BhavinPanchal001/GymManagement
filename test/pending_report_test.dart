@@ -13,7 +13,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    await GymService().resetToDemoData();
+    await GymService().resetToDemoData(force: true);
     final member = await GymService().addCustomer(
       name: 'Unpaid fixture', phone: '9000000000', joinDate: DateTime(2020));
     await GymService().toggleAttendance(member.id,
@@ -47,11 +47,7 @@ void main() {
   });
 
   testWidgets('PendingPaymentsReportScreen renders preset chips, KPIs and views', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: PendingPaymentsReportScreen(),
-      ),
-    );
+    await tester.pumpWidget(const MaterialApp(home: PendingPaymentsReportScreen()));
     await tester.pumpAndSettle();
 
     // Verify Title and AppBar

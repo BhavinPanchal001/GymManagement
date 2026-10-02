@@ -130,7 +130,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               children: [
                 Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
                 const SizedBox(width: 10),
-                const Text('Profile & plan pricing updated successfully!'),
+                Text(
+                  'Profile & plan pricing updated successfully!',
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
             backgroundColor: AppColors.surfaceElevated,

@@ -13,8 +13,7 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen>
-    with SingleTickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   // Sign In controllers
@@ -123,11 +122,7 @@ class _AuthScreenState extends State<AuthScreen>
 
       // Step 3: Attach with isNewUser: true to guarantee completely empty, clean state
       if (newUserId != null) {
-        await GymService().attachUser(
-          newUserId,
-          isNewUser: true,
-          initialSettings: freshSettings,
-        );
+        await GymService().attachUser(newUserId, isNewUser: true, initialSettings: freshSettings);
       }
       // Navigation is automatically handled by AuthGate
     } catch (e) {
@@ -165,9 +160,7 @@ class _AuthScreenState extends State<AuthScreen>
                   AnimatedSize(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeInOut,
-                    child: _tabController.index == 0
-                        ? _buildSignInCard()
-                        : _buildSignUpCard(),
+                    child: _tabController.index == 0 ? _buildSignInCard() : _buildSignUpCard(),
                   ),
                 ],
               ),
@@ -188,37 +181,21 @@ class _AuthScreenState extends State<AuthScreen>
             color: AppColors.primary,
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.25),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
+              BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 8)),
             ],
           ),
-          child: Icon(
-            Icons.fitness_center_rounded,
-            color: AppColors.primaryOn,
-            size: 38,
-          ),
+          child: Icon(Icons.fitness_center_rounded, color: AppColors.primaryOn, size: 38),
         ),
         const SizedBox(height: 18),
         Text(
           'GYM MANAGER',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 26,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 1.2),
         ),
         const SizedBox(height: 6),
         Text(
           'Manage members, attendance & subscriptions',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
       ],
     );
@@ -240,22 +217,13 @@ class _AuthScreenState extends State<AuthScreen>
         indicator: BoxDecoration(
           color: AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.5),
-            width: 1.2,
-          ),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.2),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.textSecondary,
-        labelStyle: const TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-        ),
+        labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
         tabs: const [
           Tab(text: 'Sign In'),
           Tab(text: 'Create Account'),
@@ -275,136 +243,112 @@ class _AuthScreenState extends State<AuthScreen>
       child: AutofillGroup(
         child: Form(
           key: _signInFormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_signInError != null) ...[
-              _buildErrorBanner(_signInError!),
-              const SizedBox(height: 18),
-            ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_signInError != null) ...[_buildErrorBanner(_signInError!), const SizedBox(height: 18)],
 
-            // Email input
-            _buildTextField(
-              controller: _signInEmailController,
-              label: 'Email Address',
-              hint: 'owner@example.com',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val.trim())) {
-                  return 'Please enter a valid email address';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Password input
-            _buildTextField(
-              controller: _signInPasswordController,
-              label: 'Password',
-              hint: '••••••••',
-              icon: Icons.lock_outline_rounded,
-              obscureText: _signInObscurePassword,
-              autofillHints: const [AutofillHints.password],
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _signInObscurePassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: AppColors.textMuted,
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _signInObscurePassword = !_signInObscurePassword;
-                  });
+              // Email input
+              _buildTextField(
+                controller: _signInEmailController,
+                label: 'Email Address',
+                hint: 'owner@example.com',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val.trim())) {
+                    return 'Please enter a valid email address';
+                  }
+                  return null;
                 },
               ),
-              validator: (val) {
-                if (val == null || val.isEmpty) {
-                  return 'Please enter your password';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 8),
+              const SizedBox(height: 16),
 
-            // Forgot Password button
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  ForgotPasswordSheet.show(
-                    context,
-                    initialEmail: _signInEmailController.text.trim(),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.secondary,
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                ),
-                child: const Text(
-                  'Forgot Password?',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+              // Password input
+              _buildTextField(
+                controller: _signInPasswordController,
+                label: 'Password',
+                hint: '••••••••',
+                icon: Icons.lock_outline_rounded,
+                obscureText: _signInObscurePassword,
+                autofillHints: const [AutofillHints.password],
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _signInObscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textMuted,
+                    size: 20,
                   ),
+                  onPressed: () {
+                    setState(() {
+                      _signInObscurePassword = !_signInObscurePassword;
+                    });
+                  },
+                ),
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+
+              // Forgot Password button
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    ForgotPasswordSheet.show(context, initialEmail: _signInEmailController.text.trim());
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.secondary,
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  ),
+                  child: const Text('Forgot Password?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Sign In Action Button
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isSignInLoading ? null : _handleSignIn,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryOn,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              // Sign In Action Button
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isSignInLoading ? null : _handleSignIn,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.primaryOn,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: _isSignInLoading
-                    ? SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.primaryOn,
+                  child: _isSignInLoading
+                      ? SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryOn),
                           ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.login_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Text('Sign In', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                          ],
                         ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.login_rounded, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Sign In',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildSignUpCard() {
     return Container(
@@ -417,227 +361,203 @@ class _AuthScreenState extends State<AuthScreen>
       child: AutofillGroup(
         child: Form(
           key: _signUpFormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_signUpError != null) ...[
-              _buildErrorBanner(_signUpError!),
-              const SizedBox(height: 18),
-            ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_signUpError != null) ...[_buildErrorBanner(_signUpError!), const SizedBox(height: 18)],
 
-            // Gym Brand Logo Selector
-            Center(
-              child: Column(
-                children: [
-                  GymLogoSelector(
-                    initialLogoPath: _signUpSelectedImagePath,
-                    gymName: _signUpGymNameController.text.trim().isNotEmpty
-                        ? _signUpGymNameController.text.trim()
-                        : (_signUpNameController.text.trim().isNotEmpty
-                            ? _signUpNameController.text.trim()
-                            : 'Gym'),
-                    title: 'Upload Gym Logo',
-                    radius: 44,
-                    allowRemove: true,
-                    onLogoSelected: (path) {
-                      setState(() {
-                        _signUpSelectedImagePath = path;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _signUpSelectedImagePath != null
-                        ? 'Gym logo selected (Tap to change)'
-                        : 'Upload Gym Logo (Optional)',
-                    style: TextStyle(
-                      color: _signUpSelectedImagePath != null
-                          ? AppColors.primary
-                          : AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+              // Gym Brand Logo Selector
+              Center(
+                child: Column(
+                  children: [
+                    GymLogoSelector(
+                      initialLogoPath: _signUpSelectedImagePath,
+                      gymName: _signUpGymNameController.text.trim().isNotEmpty
+                          ? _signUpGymNameController.text.trim()
+                          : (_signUpNameController.text.trim().isNotEmpty ? _signUpNameController.text.trim() : 'Gym'),
+                      title: 'Upload Gym Logo',
+                      radius: 44,
+                      allowRemove: true,
+                      onLogoSelected: (path) {
+                        setState(() {
+                          _signUpSelectedImagePath = path;
+                        });
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Will appear on Member Entry Cards & Receipts',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Display Name
-            _buildTextField(
-              controller: _signUpNameController,
-              label: 'Full Name / Gym Owner',
-              hint: 'John Doe',
-              icon: Icons.person_outline_rounded,
-              autofillHints: const [AutofillHints.name],
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return 'Please enter your name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Gym Name
-            _buildTextField(
-              controller: _signUpGymNameController,
-              label: 'Gym / Fitness Center Name',
-              hint: 'e.g. IronPulse Fitness Club',
-              icon: Icons.fitness_center_rounded,
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return 'Please enter your gym or club name';
-                }
-                if (val.trim().length < 2) {
-                  return 'Gym name must be at least 2 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Email input
-            _buildTextField(
-              controller: _signUpEmailController,
-              label: 'Email Address',
-              hint: 'owner@example.com',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val.trim())) {
-                  return 'Please enter a valid email address';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Password input
-            _buildTextField(
-              controller: _signUpPasswordController,
-              label: 'Password',
-              hint: 'At least 6 characters',
-              icon: Icons.lock_outline_rounded,
-              obscureText: _signUpObscurePassword,
-              autofillHints: const [AutofillHints.newPassword],
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _signUpObscurePassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: AppColors.textMuted,
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _signUpObscurePassword = !_signUpObscurePassword;
-                  });
-                },
-              ),
-              validator: (val) {
-                if (val == null || val.isEmpty) {
-                  return 'Please enter a password';
-                }
-                if (val.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Confirm Password input
-            _buildTextField(
-              controller: _signUpConfirmPasswordController,
-              label: 'Confirm Password',
-              hint: 'Repeat your password',
-              icon: Icons.check_circle_outline_rounded,
-              obscureText: _signUpObscureConfirmPassword,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _signUpObscureConfirmPassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: AppColors.textMuted,
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _signUpObscureConfirmPassword = !_signUpObscureConfirmPassword;
-                  });
-                },
-              ),
-              validator: (val) {
-                if (val == null || val.isEmpty) {
-                  return 'Please confirm your password';
-                }
-                if (val != _signUpPasswordController.text) {
-                  return 'Passwords do not match';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Create Account Action Button
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isSignUpLoading ? null : _handleSignUp,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryOn,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isSignUpLoading
-                    ? SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.primaryOn,
-                          ),
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.person_add_rounded, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Create Account',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 10),
+                    Text(
+                      _signUpSelectedImagePath != null
+                          ? 'Gym logo selected (Tap to change)'
+                          : 'Upload Gym Logo (Optional)',
+                      style: TextStyle(
+                        color: _signUpSelectedImagePath != null ? AppColors.primary : AppColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Will appear on Member Entry Cards & Receipts',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+
+              // Display Name
+              _buildTextField(
+                controller: _signUpNameController,
+                label: 'Full Name / Gym Owner',
+                hint: 'John Doe',
+                icon: Icons.person_outline_rounded,
+                autofillHints: const [AutofillHints.name],
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Please enter your name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Gym Name
+              _buildTextField(
+                controller: _signUpGymNameController,
+                label: 'Gym / Fitness Center Name',
+                hint: 'e.g. IronPulse Fitness Club',
+                icon: Icons.fitness_center_rounded,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Please enter your gym or club name';
+                  }
+                  if (val.trim().length < 2) {
+                    return 'Gym name must be at least 2 characters';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Email input
+              _buildTextField(
+                controller: _signUpEmailController,
+                label: 'Email Address',
+                hint: 'owner@example.com',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val.trim())) {
+                    return 'Please enter a valid email address';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Password input
+              _buildTextField(
+                controller: _signUpPasswordController,
+                label: 'Password',
+                hint: 'At least 6 characters',
+                icon: Icons.lock_outline_rounded,
+                obscureText: _signUpObscurePassword,
+                autofillHints: const [AutofillHints.newPassword],
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _signUpObscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _signUpObscurePassword = !_signUpObscurePassword;
+                    });
+                  },
+                ),
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return 'Please enter a password';
+                  }
+                  if (val.length < 6) {
+                    return 'Password must be at least 6 characters';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Confirm Password input
+              _buildTextField(
+                controller: _signUpConfirmPasswordController,
+                label: 'Confirm Password',
+                hint: 'Repeat your password',
+                icon: Icons.check_circle_outline_rounded,
+                obscureText: _signUpObscureConfirmPassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _signUpObscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _signUpObscureConfirmPassword = !_signUpObscureConfirmPassword;
+                    });
+                  },
+                ),
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return 'Please confirm your password';
+                  }
+                  if (val != _signUpPasswordController.text) {
+                    return 'Passwords do not match';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Create Account Action Button
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isSignUpLoading ? null : _handleSignUp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.primaryOn,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: _isSignUpLoading
+                      ? SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryOn),
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.person_add_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Text('Create Account', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -676,11 +596,11 @@ class _AuthScreenState extends State<AuthScreen>
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.absent),
+          borderSide: BorderSide(color: AppColors.absent),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.absent, width: 1.5),
+          borderSide: BorderSide(color: AppColors.absent, width: 1.5),
         ),
       ),
       validator: validator,
@@ -693,28 +613,17 @@ class _AuthScreenState extends State<AuthScreen>
       decoration: BoxDecoration(
         color: AppColors.absent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.absent.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: AppColors.absent.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: AppColors.absent,
-            size: 20,
-          ),
+          Icon(Icons.error_outline_rounded, color: AppColors.absent, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                color: AppColors.absent,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                height: 1.3,
-              ),
+              style: TextStyle(color: AppColors.absent, fontSize: 13, fontWeight: FontWeight.w500, height: 1.3),
             ),
           ),
         ],

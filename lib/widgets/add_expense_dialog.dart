@@ -501,10 +501,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                           elevation: 0,
                         ),
                         child: _isSaving
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryOn),
                               )
                             : Text(
                                 _isEditing ? 'Update Expense' : 'Save Expense',

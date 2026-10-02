@@ -529,7 +529,12 @@ class GymService extends ChangeNotifier {
 
   List<Customer> get customers => List.unmodifiable(_customers);
   List<ExpenseRecord> get expenses => List.unmodifiable(_expenses);
+  Map<String, AttendanceRecord> get attendanceMap => Map.unmodifiable(_attendanceMap);
+  Map<String, PaymentRecord> get paymentMap => Map.unmodifiable(_paymentMap);
   Map<String, BillRecord> get billsMap => Map.unmodifiable(_billsMap);
+  int get attendanceRecordCount => _attendanceMap.length;
+  int get paymentRecordCount => _paymentMap.length;
+  int get billRecordCount => _billsMap.length;
   GymSettings get settings => _settings;
   String? get currentUserId => _currentUserId;
 
@@ -3141,14 +3146,14 @@ class GymService extends ChangeNotifier {
 
   /// Completely clears all gym members, attendance, payments, bills, and expenses.
   /// Gives the gym owner a clean, fresh start.
-  Future<void> clearAllGymData() async {
-    if (_currentUserId != null) {
-      // Collection deletion spans several server batches and cannot be safely
-      // undone. Keep the local reset action out of live owner accounts.
-      throw StateError(
-        'Clearing a live gym account is unavailable. Archive members to preserve their history.',
-      );
+  ///
+  /// [force] must be true if real customers exist, preventing accidental data erasure.
+  Future<bool> clearAllGymData({bool force = false}) async {
+    if (_customers.isNotEmpty && !force) {
+      debugPrint('Safety check: clearAllGymData rejected because ${_customers.length} members exist and force is false.');
+      return false;
     }
+
     _customers.clear();
     _expenses.clear();
     _attendanceMap.clear();
@@ -3169,6 +3174,7 @@ class GymService extends ChangeNotifier {
     await _savePayments();
     await _saveBills();
     await _saveExpenses();
+    return true;
   }
 
   Future<void> _cloudSaveAttendance(AttendanceRecord r) => _queueChanges([
@@ -3192,11 +3198,14 @@ class GymService extends ChangeNotifier {
       _queueChanges([CloudChange('expenses', e.id, e.toMap())]);
   Future<void> _cloudDeleteExpense(String id) =>
       _queueChanges([CloudChange('expenses', id, null)]);
-  Future<void> resetToDemoData() async {
-    if (_currentUserId != null) {
-      throw StateError(
-        'Demo data is only available in local exploration mode.',
-      );
+
+  /// Resets data and loads default demo members, attendance history, and monthly payments.
+  ///
+  /// [force] must be true if real customers exist, preventing accidental data overwrite.
+  Future<bool> resetToDemoData({bool force = false}) async {
+    if (_customers.isNotEmpty && !force) {
+      debugPrint('Safety check: resetToDemoData rejected because ${_customers.length} members exist and force is false.');
+      return false;
     }
     _customers.clear();
     _expenses.clear();
@@ -3222,6 +3231,7 @@ class GymService extends ChangeNotifier {
       _suppressCloudUpdates = false;
     }
     await _saveAll();
+    return true;
   }
 
   // ==================== DEMO DATA SEEDING ====================
