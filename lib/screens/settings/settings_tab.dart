@@ -7,6 +7,7 @@ import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/user_avatar.dart';
 import '../../widgets/gym_logo_widget.dart';
+import '../../widgets/danger_confirmation_dialog.dart';
 import '../intro/intro_screen.dart';
 import 'edit_profile_screen.dart';
 
@@ -104,17 +105,53 @@ class _SettingsTabState extends State<SettingsTab> {
     }
   }
 
-  void _confirmResetData() {
+  Future<void> _confirmResetData() async {
+    final gym = GymService();
+
+    if (gym.customers.isNotEmpty) {
+      final confirmed = await DangerConfirmationDialog.show(
+        context,
+        title: 'Reset to Demo Data?',
+        description:
+            'This will replace your current gym data with default sample members, attendance history, and monthly payments. All real records will be permanently erased locally and from the cloud.',
+        actionLabel: 'Reset to Demo',
+        confirmationPhrase: 'DELETE ALL DATA',
+        memberCount: gym.customers.length,
+        attendanceCount: gym.attendanceRecordCount,
+        paymentCount: gym.paymentRecordCount,
+        billCount: gym.billRecordCount,
+        expenseCount: gym.expenses.length,
+      );
+
+      if (confirmed == true) {
+        await gym.resetToDemoData(force: true);
+        if (!mounted) return;
+        setState(() {
+          _syncControllersFromSettings();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Demo data reloaded successfully!',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.paid,
+          ),
+        );
+      }
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: Text(
-          'Reset to Demo Data?',
+          'Load Sample / Demo Data?',
           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'This will restore default demo members, attendance history, and monthly payments.',
+          'This will populate default sample members, attendance history, and monthly payments.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         actions: [
@@ -126,23 +163,59 @@ class _SettingsTabState extends State<SettingsTab> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.primaryOn),
             onPressed: () async {
               Navigator.pop(ctx);
-              await GymService().resetToDemoData();
+              await gym.resetToDemoData(force: true);
               if (!mounted) return;
               setState(() {
                 _syncControllersFromSettings();
               });
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Demo data reloaded successfully!'), backgroundColor: AppColors.paid),
+                const SnackBar(
+                  content: Text(
+                    'Demo data loaded successfully!',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                  backgroundColor: AppColors.paid,
+                ),
               );
             },
-            child: const Text('Reset', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Load Demo', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  void _confirmClearAllData() {
+  Future<void> _confirmClearAllData() async {
+    final gym = GymService();
+
+    if (gym.customers.isNotEmpty) {
+      final confirmed = await DangerConfirmationDialog.show(
+        context,
+        title: 'Clear All Gym Data?',
+        description:
+            'This will permanently delete all members, attendance records, payments, bills, and expenses. Your gym will start completely fresh.\n\nThis action CANNOT be undone.',
+        actionLabel: 'Clear All Data',
+        confirmationPhrase: 'DELETE ALL DATA',
+        memberCount: gym.customers.length,
+        attendanceCount: gym.attendanceRecordCount,
+        paymentCount: gym.paymentRecordCount,
+        billCount: gym.billRecordCount,
+        expenseCount: gym.expenses.length,
+      );
+
+      if (confirmed == true) {
+        await gym.clearAllGymData(force: true);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All gym data cleared. Ready for your members!'),
+            backgroundColor: AppColors.paid,
+          ),
+        );
+      }
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -153,7 +226,7 @@ class _SettingsTabState extends State<SettingsTab> {
           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'This will permanently delete all members, attendance records, payments, bills, and expenses. Your gym will start completely fresh.\n\nThis action cannot be undone.',
+          'This will clear any remaining expenses or temporary records.\n\nThis action cannot be undone.',
           style: TextStyle(color: AppColors.textSecondary, height: 1.4),
         ),
         actions: [
@@ -165,7 +238,7 @@ class _SettingsTabState extends State<SettingsTab> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.absent, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(ctx);
-              await GymService().clearAllGymData();
+              await gym.clearAllGymData(force: true);
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -444,8 +517,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                             child: Text(
                               theme.themeModeName.toUpperCase(),
-                              style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -530,22 +602,22 @@ class _SettingsTabState extends State<SettingsTab> {
                       Material(
                         color: Colors.transparent,
                         child: SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        // activeThumbColor: AppColors.primary,
-                        title: Text(
-                          'Payment Due Reminders',
-                          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                          contentPadding: EdgeInsets.zero,
+                          // activeThumbColor: AppColors.primary,
+                          title: Text(
+                            'Payment Due Reminders',
+                            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            'Notify on app launch when members have overdue membership payments.',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                          ),
+                          value: gym.settings.isPaymentDueNotificationEnabled,
+                          onChanged: (bool enabled) async {
+                            final updated = gym.settings.copyWith(isPaymentDueNotificationEnabled: enabled);
+                            await gym.updateSettings(updated);
+                          },
                         ),
-                        subtitle: Text(
-                          'Notify on app launch when members have overdue membership payments.',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                        ),
-                        value: gym.settings.isPaymentDueNotificationEnabled,
-                        onChanged: (bool enabled) async {
-                          final updated = gym.settings.copyWith(isPaymentDueNotificationEnabled: enabled);
-                          await gym.updateSettings(updated);
-                        },
-                      ),
                       ),
                       const Divider(height: 18),
                       Row(
@@ -840,10 +912,12 @@ class _SettingsTabState extends State<SettingsTab> {
                         children: [
                           Icon(Icons.cloud_sync_rounded, color: AppColors.secondary, size: 22),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(
-                            'Cloud & Database',
-                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
-                          )),
+                          Expanded(
+                            child: Text(
+                              'Cloud & Database',
+                              style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                            ),
+                          ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
@@ -882,10 +956,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           children: [
                             Icon(Icons.check_circle_rounded, color: AppColors.paid, size: 16),
                             const SizedBox(width: 6),
-                            Text(
-                              'Cloud account connected',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-                            ),
+                            Text('Cloud account connected', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                           ],
                         ),
                       ],
@@ -894,7 +965,7 @@ class _SettingsTabState extends State<SettingsTab> {
                 ),
                 const SizedBox(height: 16),
 
-                // Data Management Card
+                // App Tour & Resources Card
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
@@ -907,51 +978,15 @@ class _SettingsTabState extends State<SettingsTab> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.storage_rounded, color: AppColors.pending, size: 22),
+                          Icon(Icons.help_outline_rounded, color: AppColors.secondary, size: 22),
                           const SizedBox(width: 8),
                           Text(
-                            'Data Management',
+                            'App Tour & Resources',
                             style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
-                      OutlinedButton.icon(
-                        onPressed: gym.currentUserId == null
-                            ? _confirmClearAllData
-                            : null,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.absent,
-                          side: BorderSide(color: AppColors.absent.withValues(alpha: 0.5)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        icon: const Icon(Icons.delete_sweep_rounded, size: 18, color: AppColors.absent),
-                        label: const Text(
-                          'Clear All Gym Data (Start Fresh)',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        onPressed: gym.currentUserId == null
-                            ? _confirmResetData
-                            : null,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: BorderSide(color: AppColors.surfaceBorder),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        icon: Icon(Icons.restore_rounded, size: 18, color: AppColors.primary),
-                        label: const Text('Reload Sample / Demo Data', style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                      if (gym.currentUserId != null)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text('Live gym accounts preserve member history. Archive a member instead of clearing data.'),
-                        ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: () {
                           Navigator.of(
@@ -969,6 +1004,81 @@ class _SettingsTabState extends State<SettingsTab> {
                           'View App Intro & Feature Tour',
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Danger Zone Card
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.absent.withValues(alpha: 0.35), width: 1.2),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: AppColors.absent, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Danger Zone',
+                            style: TextStyle(color: AppColors.absent, fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.absent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'DESTRUCTIVE',
+                              style: TextStyle(
+                                color: AppColors.absent,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Operations that reset or wipe local and cloud database records. Protected by security confirmation when real data exists.',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: gym.currentUserId == null ? _confirmClearAllData : null,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.absent,
+                          side: BorderSide(color: AppColors.absent.withValues(alpha: 0.5)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        icon: const Icon(Icons.delete_sweep_rounded, size: 18, color: AppColors.absent),
+                        label: const Text(
+                          'Clear All Gym Data (Start Fresh)',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: gym.currentUserId == null ? _confirmResetData : null,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: BorderSide(color: AppColors.surfaceBorder),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        icon: const Icon(Icons.restore_rounded, size: 18, color: AppColors.pending),
+                        label: const Text('Reload Sample / Demo Data', style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),

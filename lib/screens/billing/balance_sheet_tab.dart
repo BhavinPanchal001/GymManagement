@@ -133,16 +133,24 @@ class BalanceSheetTab extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Total Collections',
-                              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                            Expanded(
+                              child: Text(
+                                'Total Collections',
+                                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            Text(
-                              GymDateUtils.formatCurrency(totalIncome, symbol: currency),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.paid,
+                            const SizedBox(width: 8),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                GymDateUtils.formatCurrency(totalIncome, symbol: currency),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.paid,
+                                ),
                               ),
                             ),
                           ],
@@ -234,16 +242,24 @@ class BalanceSheetTab extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Total Operating Expenses',
-                              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                            Expanded(
+                              child: Text(
+                                'Total Operating Expenses',
+                                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            Text(
-                              GymDateUtils.formatCurrency(totalExpense, symbol: currency),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.absent,
+                            const SizedBox(width: 8),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                GymDateUtils.formatCurrency(totalExpense, symbol: currency),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.absent,
+                                ),
                               ),
                             ),
                           ],
@@ -272,31 +288,41 @@ class BalanceSheetTab extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isProfit ? 'NET OPERATING PROFIT' : 'NET OPERATING DEFICIT',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                              color: isProfit ? AppColors.paid : AppColors.absent,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isProfit ? 'NET OPERATING PROFIT' : 'NET OPERATING DEFICIT',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: isProfit ? AppColors.paid : AppColors.absent,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Margin: ${profitMargin.toStringAsFixed(1)}% • ${isProfit ? 'Healthy gym surplus' : 'Expenses exceed income'}',
-                            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              'Margin: ${profitMargin.toStringAsFixed(1)}% • ${isProfit ? 'Healthy gym surplus' : 'Expenses exceed income'}',
+                              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
-                      Text(
-                        GymDateUtils.formatCurrency(netProfit.abs(), symbol: currency),
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: isProfit ? AppColors.paid : AppColors.absent,
+                      const SizedBox(width: 12),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          GymDateUtils.formatCurrency(netProfit.abs(), symbol: currency),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: isProfit ? AppColors.paid : AppColors.absent,
+                          ),
                         ),
                       ),
                     ],
@@ -321,22 +347,28 @@ class BalanceSheetTab extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: color),
         const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-            ),
-          ],
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ],
     );

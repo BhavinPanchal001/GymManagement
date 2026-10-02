@@ -1306,12 +1306,12 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.date_range_rounded, color: AppColors.paid, size: 14),
+                Icon(Icons.date_range_rounded, color: AppColors.paid, size: 14),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Covers ${_getCoveragePeriodPreview()} • Next bill in ${_getNextBillMonthPreview()}',
-                    style: const TextStyle(color: AppColors.paid, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: AppColors.paid, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],

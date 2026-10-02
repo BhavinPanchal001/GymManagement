@@ -116,7 +116,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
                   },
           ),
           DropdownButtonFormField<PaymentMethod>(
-            initialValue: _method,
+            value: _method,
             decoration: const InputDecoration(labelText: 'Payment method'),
             items: PaymentMethod.values
                 .map((m) => DropdownMenuItem(value: m, child: Text(m.label)))

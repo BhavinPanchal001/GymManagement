@@ -235,7 +235,10 @@ class PhoneService {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Phone number copied to clipboard: ${customer.phone}'),
+                        content: Text(
+                          'Phone number copied to clipboard: ${customer.phone}',
+                          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                        ),
                         backgroundColor: AppColors.surfaceElevated,
                       ),
                     );
