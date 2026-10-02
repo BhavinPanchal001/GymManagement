@@ -4,6 +4,7 @@ import '../models/payment.dart';
 import '../services/gym_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/date_utils.dart';
+import '../utils/money_utils.dart';
 
 class AddExpenseDialog extends StatefulWidget {
   final ExpenseRecord? expenseToEdit;
@@ -41,7 +42,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
     super.initState();
     final edit = widget.expenseToEdit;
     _titleController = TextEditingController(text: edit?.title ?? '');
-    _amountController = TextEditingController(text: edit != null ? edit.amount.toStringAsFixed(0) : '');
+    _amountController = TextEditingController(text: edit != null ? MoneyUtils.formatForInput(edit.amount) : '');
     _notesController = TextEditingController(text: edit?.notes ?? '');
 
     _selectedCategory = edit?.category ?? ExpenseCategory.rent;
@@ -85,7 +86,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final amount = double.tryParse(_amountController.text.trim());
+    final amount = MoneyUtils.tryParseAmount(_amountController.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid expense amount')));
       return;
@@ -325,6 +326,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                       child: TextFormField(
                         controller: _amountController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: const [MoneyInputFormatter()],
                         style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
                         decoration: InputDecoration(
                           labelText: 'Amount ($currency)',
@@ -352,7 +354,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                           if (val == null || val.trim().isEmpty) {
                             return 'Enter amount';
                           }
-                          final parsed = double.tryParse(val.trim());
+                          final parsed = MoneyUtils.tryParseAmount(val);
                           if (parsed == null || parsed <= 0) {
                             return 'Valid amount > 0';
                           }

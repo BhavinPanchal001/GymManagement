@@ -5,6 +5,7 @@ import '../../models/plan_package.dart';
 import '../../services/auth_service.dart';
 import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/money_utils.dart';
 import '../../widgets/gym_logo_widget.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -53,7 +54,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _packages = allPackages.map((p) => p.copyWith()).toList();
     for (var p in _packages) {
       _packageControllers[p.id] = TextEditingController(
-        text: p.price.toStringAsFixed(2),
+        text: MoneyUtils.formatForInput(p.price),
       );
     }
   }
@@ -93,7 +94,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Collect updated package prices from controllers
       final updatedPackages = _packages.map((pkg) {
         final ctrl = _packageControllers[pkg.id];
-        final price = ctrl != null ? (double.tryParse(ctrl.text.trim()) ?? pkg.price) : pkg.price;
+        final price = ctrl != null ? MoneyUtils.parseAmount(ctrl.text, defaultValue: pkg.price) : pkg.price;
         return pkg.copyWith(price: price);
       }).toList();
 
@@ -534,7 +535,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ? activePackages.first
           : const PlanDurationPackage(id: '', planType: '', months: 1, price: 600),
     );
-    final oneMonthPrice = double.tryParse(_packageControllers[oneMonthPkg.id]?.text.trim() ?? '') ?? oneMonthPkg.price;
+    final oneMonthPrice = MoneyUtils.parseAmount(_packageControllers[oneMonthPkg.id]?.text, defaultValue: oneMonthPkg.price);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -622,11 +623,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           // Duration Packages for active tier
           ...activePackages.map((pkg) {
             final ctrl = _packageControllers[pkg.id]!;
-            final currentVal = double.tryParse(ctrl.text.trim()) ?? pkg.price;
+            final currentVal = MoneyUtils.parseAmount(ctrl.text, defaultValue: pkg.price);
             final regularFull = oneMonthPrice * pkg.months;
             final savings = (pkg.months > 1 && regularFull > currentVal)
-                ? (regularFull - currentVal).toInt()
-                : 0;
+                ? MoneyUtils.round(regularFull - currentVal)
+                : 0.0;
 
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -666,7 +667,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            'SAVE $currency$savings',
+                            'SAVE ${MoneyUtils.formatDisplay(savings, symbol: currency)}',
                             style: TextStyle(
                               color: AppColors.paid,
                               fontSize: 10,
@@ -696,13 +697,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   TextFormField(
                     controller: ctrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: const [MoneyInputFormatter()],
                     style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                     onChanged: (_) => setState(() {}),
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
                         return 'Please enter package price';
                       }
-                      final num = double.tryParse(val.trim());
+                      final num = MoneyUtils.tryParseAmount(val);
                       if (num == null || num < 0) {
                         return 'Please enter a valid price';
                       }
@@ -722,7 +724,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
                       suffixText: pkg.months > 1
-                          ? 'total (~$currency${(currentVal / pkg.months).toStringAsFixed(0)}/mo)'
+                          ? 'total (~${MoneyUtils.formatDisplay(currentVal / pkg.months, symbol: currency)}/mo)'
                           : '/ month',
                       suffixStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                       filled: true,
@@ -886,6 +888,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   TextField(
                     controller: priceController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: const [MoneyInputFormatter()],
                     style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
                       hintText: 'e.g. 1500',
@@ -909,7 +912,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ElevatedButton(
                   onPressed: () {
                     final months = int.tryParse(monthsController.text.trim()) ?? selectedMonths;
-                    final price = double.tryParse(priceController.text.trim());
+                    final price = MoneyUtils.tryParseAmount(priceController.text);
                     if (months <= 0 || price == null || price < 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Please enter a valid month count and price')),
@@ -927,7 +930,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     setState(() {
                       _packages.removeWhere((p) => p.planType == planType && p.months == months);
                       _packages.add(newPkg);
-                      _packageControllers[newPkg.id] = TextEditingController(text: price.toStringAsFixed(2));
+                      _packageControllers[newPkg.id] = TextEditingController(text: MoneyUtils.formatForInput(price));
                     });
 
                     Navigator.pop(dialogCtx);

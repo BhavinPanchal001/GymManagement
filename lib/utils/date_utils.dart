@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'money_utils.dart';
 
 class GymDateUtils {
   static String toDateKey(DateTime dt) {
@@ -60,9 +61,7 @@ class GymDateUtils {
   }
 
   static String formatCurrency(double amount, {String symbol = '₹'}) {
-    final cents = (amount * 100).round();
-    final formatter = NumberFormat(cents % 100 == 0 ? '#,##,###' : '#,##,###.00');
-    return '$symbol${formatter.format(cents / 100)}';
+    return MoneyUtils.formatDisplay(amount, symbol: symbol);
   }
 
   static int daysInMonth(int year, int month) {

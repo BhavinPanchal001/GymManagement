@@ -6,6 +6,7 @@ import '../../models/plan_package.dart';
 import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
+import '../../utils/money_utils.dart';
 import '../../utils/nav_keys.dart';
 import '../../widgets/avatar_selector.dart';
 import 'customer_detail_screen.dart';
@@ -640,7 +641,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 border: Border.all(color: isSelected ? accentColor.withValues(alpha: 0.6) : AppColors.surfaceBorder),
               ),
               child: Text(
-                '$currency${monthlyFee.toInt()}/mo',
+                '${MoneyUtils.formatDisplay(monthlyFee, symbol: currency)}/mo',
                 style: TextStyle(
                   color: isSelected ? accentColor : AppColors.textSecondary,
                   fontWeight: FontWeight.bold,
@@ -708,7 +709,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         ...packages.map((pkg) {
           final isSelected = effectiveSelected == pkg.months;
           final regularPrice = oneMonthPkg.price * pkg.months;
-          final savings = (pkg.months > 1 && regularPrice > pkg.price) ? (regularPrice - pkg.price).toInt() : 0;
+          final savings = (pkg.months > 1 && regularPrice > pkg.price) ? MoneyUtils.round(regularPrice - pkg.price) : 0.0;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -764,7 +765,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'SAVE $currency$savings',
+                                    'SAVE ${MoneyUtils.formatDisplay(savings, symbol: currency)}',
                                     style: const TextStyle(
                                       color: AppColors.paid,
                                       fontSize: 9,
@@ -778,7 +779,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                           if (pkg.months > 1) ...[
                             const SizedBox(height: 2),
                             Text(
-                              'Effective $currency${pkg.monthlyRate.toStringAsFixed(0)} / month',
+                              'Effective ${MoneyUtils.formatDisplay(pkg.monthlyRate, symbol: currency)} / month',
                               style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                             ),
                           ],
@@ -786,7 +787,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       ),
                     ),
                     Text(
-                      '$currency${pkg.price.toInt()}',
+                      MoneyUtils.formatDisplay(pkg.price, symbol: currency),
                       style: TextStyle(
                         color: isSelected ? accentColor : AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
