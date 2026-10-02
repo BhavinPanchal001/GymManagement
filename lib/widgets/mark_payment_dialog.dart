@@ -6,6 +6,7 @@ import '../services/gym_service.dart';
 import '../services/whatsapp_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/date_utils.dart';
+import '../utils/money_utils.dart';
 import 'bill_history_sheet.dart';
 import 'bill_receipt_dialog.dart';
 import 'collect_balance_dialog.dart';
@@ -111,7 +112,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     if (widget.currentRecord.isPaid &&
         widget.currentRecord.amount > _totalDue + 0.005) {
       _legacyFeeController = TextEditingController(
-        text: _totalDue.toStringAsFixed(2),
+        text: MoneyUtils.formatForInput(_totalDue),
       );
     }
     final initialAmount = widget.currentRecord.isPaid
@@ -119,7 +120,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         : _totalDue;
 
     _amountController = TextEditingController(
-      text: initialAmount.toStringAsFixed(2),
+      text: MoneyUtils.formatForInput(initialAmount),
     );
     _amountController.addListener(() => setState(() {}));
     _refController = TextEditingController(text: widget.currentRecord.transactionRef ?? '');
@@ -248,14 +249,15 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
 
   Future<void> _submitPayment() async {
     if (_isLoading) return;
-    final amount = double.tryParse(_amountController.text.trim());
+    final amount = MoneyUtils.tryParseAmount(_amountController.text);
     final isUpdate = widget.currentRecord.isPaid;
     final unchangedMoney =
         isUpdate &&
         amount == widget.currentRecord.amount &&
         _totalDue == widget.currentRecord.totalDue;
     if (amount == null ||
-        !amount.isFinite ||
+        !_totalDue.isFinite ||
+        _totalDue < 0 ||
         (!unchangedMoney && (amount <= 0 || amount > _totalDue + 0.005))) {
       _showError('Enter a positive amount no greater than the membership fee.');
       return;
@@ -550,13 +552,14 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
+                inputFormatters: const [MoneyInputFormatter()],
                 decoration: const InputDecoration(
                   labelText: 'Correct membership fee (optional)',
                   helperText:
                       'Reference edits keep the existing fee and received amount.',
                 ),
                 onChanged: (value) => setState(() {
-                  _totalDue = double.tryParse(value.trim()) ?? double.nan;
+                  _totalDue = MoneyUtils.tryParseAmount(value) ?? double.nan;
                 }),
               ),
               const SizedBox(height: 10),
@@ -571,6 +574,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: const [MoneyInputFormatter()],
               style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
                 prefixIcon: Padding(
@@ -584,7 +588,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               ),
             ),
             Builder(builder: (context) {
-              final amountNow = double.tryParse(_amountController.text.trim()) ?? 0;
+              final amountNow = MoneyUtils.tryParseAmount(_amountController.text) ?? 0;
               final balance = _totalDue - amountNow;
               if (balance <= 0.005) return const SizedBox.shrink();
               return Padding(
@@ -772,7 +776,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                           Flexible(child: Text(
                             isAlreadyPaid
                                 ? 'Update Payment Record'
-                                : ((double.tryParse(_amountController.text.trim()) ?? 0) + 0.005 < _totalDue
+                                : ((MoneyUtils.tryParseAmount(_amountController.text) ?? 0) + 0.005 < _totalDue
                                     ? 'Record Partial Payment'
                                     : 'Confirm & Mark as Paid'),
                             style: const TextStyle(
@@ -793,7 +797,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    final currentAmount = double.tryParse(_amountController.text.trim()) ?? widget.currentRecord.amount;
+                    final currentAmount = MoneyUtils.tryParseAmount(_amountController.text) ?? widget.currentRecord.amount;
                     WhatsAppService().showReminderSheet(
                       context: context,
                       customer: widget.customer,
@@ -1252,7 +1256,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     setState(() {
                       _selectedDurationMonths = pkg.months;
                       _totalDue = pkg.price;
-                      _amountController.text = pkg.price.toStringAsFixed(2);
+                      _amountController.text = MoneyUtils.formatForInput(pkg.price);
                       _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
                     });
                   },
@@ -1280,7 +1284,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '$currency${pkg.price.toInt()}',
+                          MoneyUtils.formatDisplay(pkg.price, symbol: currency),
                           style: TextStyle(
                             color: isSelected ? accentColor : AppColors.textSecondary,
                             fontWeight: FontWeight.bold,

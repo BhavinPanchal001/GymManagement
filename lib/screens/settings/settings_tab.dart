@@ -5,6 +5,7 @@ import '../../services/gym_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/money_utils.dart';
 import '../../widgets/user_avatar.dart';
 import '../../widgets/gym_logo_widget.dart';
 import '../intro/intro_screen.dart';
@@ -28,18 +29,18 @@ class _SettingsTabState extends State<SettingsTab> {
     super.initState();
     final settings = GymService().settings;
     _gymNameController = TextEditingController(text: settings.gymName);
-    _normalFeeController = TextEditingController(text: settings.normalPlanFee.toInt().toString());
-    _ptFeeController = TextEditingController(text: settings.ptPlanFee.toInt().toString());
-    _ptDietFeeController = TextEditingController(text: settings.ptDietPlanFee.toInt().toString());
+    _normalFeeController = TextEditingController(text: MoneyUtils.formatForInput(settings.normalPlanFee));
+    _ptFeeController = TextEditingController(text: MoneyUtils.formatForInput(settings.ptPlanFee));
+    _ptDietFeeController = TextEditingController(text: MoneyUtils.formatForInput(settings.ptDietPlanFee));
   }
 
   void _syncControllersFromSettings() {
     if (!mounted) return;
     final settings = GymService().settings;
     _gymNameController.text = settings.gymName;
-    _normalFeeController.text = settings.normalPlanFee.toInt().toString();
-    _ptFeeController.text = settings.ptPlanFee.toInt().toString();
-    _ptDietFeeController.text = settings.ptDietPlanFee.toInt().toString();
+    _normalFeeController.text = MoneyUtils.formatForInput(settings.normalPlanFee);
+    _ptFeeController.text = MoneyUtils.formatForInput(settings.ptPlanFee);
+    _ptDietFeeController.text = MoneyUtils.formatForInput(settings.ptDietPlanFee);
   }
 
   Future<void> _openEditProfile() async {
@@ -61,9 +62,18 @@ class _SettingsTabState extends State<SettingsTab> {
 
   Future<void> _saveSettings() async {
     final gym = GymService();
-    final normalFee = double.tryParse(_normalFeeController.text.trim()) ?? gym.settings.normalPlanFee;
-    final ptFee = double.tryParse(_ptFeeController.text.trim()) ?? gym.settings.ptPlanFee;
-    final ptDietFee = double.tryParse(_ptDietFeeController.text.trim()) ?? gym.settings.ptDietPlanFee;
+    final normalFee = MoneyUtils.tryParseAmount(_normalFeeController.text);
+    final ptFee = MoneyUtils.tryParseAmount(_ptFeeController.text);
+    final ptDietFee = MoneyUtils.tryParseAmount(_ptDietFeeController.text);
+    if (normalFee == null || ptFee == null || ptDietFee == null ||
+        normalFee < 0 || ptFee < 0 || ptDietFee < 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter valid plan fees')),
+        );
+      }
+      return;
+    }
     final name = _gymNameController.text.trim().isNotEmpty ? _gymNameController.text.trim() : gym.settings.gymName;
 
     final existingPackages = List.of(gym.settings.durationPackages);
@@ -720,7 +730,8 @@ class _SettingsTabState extends State<SettingsTab> {
                       const SizedBox(height: 6),
                       TextField(
                         controller: _normalFeeController,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: const [MoneyInputFormatter()],
                         style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
                           prefixIcon: Padding(
@@ -743,7 +754,8 @@ class _SettingsTabState extends State<SettingsTab> {
                       const SizedBox(height: 6),
                       TextField(
                         controller: _ptFeeController,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: const [MoneyInputFormatter()],
                         style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
                           prefixIcon: Padding(
@@ -766,7 +778,8 @@ class _SettingsTabState extends State<SettingsTab> {
                       const SizedBox(height: 6),
                       TextField(
                         controller: _ptDietFeeController,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: const [MoneyInputFormatter()],
                         style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
                           prefixIcon: Padding(

@@ -3,6 +3,7 @@ import '../models/bill.dart';
 import '../models/payment.dart';
 import '../services/gym_service.dart';
 import '../utils/date_utils.dart';
+import '../utils/money_utils.dart';
 
 /// A new collection is separate from correcting the original receipt.
 class CollectBalanceDialog extends StatefulWidget {
@@ -31,7 +32,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
   void initState() {
     super.initState();
     _amount = TextEditingController(
-      text: widget.payment.balanceDue.toStringAsFixed(2),
+      text: MoneyUtils.formatForInput(widget.payment.balanceDue),
     );
   }
 
@@ -43,7 +44,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
   }
 
   Future<void> _save() async {
-    final value = double.tryParse(_amount.text.trim());
+    final value = MoneyUtils.tryParseAmount(_amount.text);
     if (value == null ||
         !value.isFinite ||
         value <= 0 ||
@@ -89,13 +90,14 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Remaining balance: ${GymService().settings.currencySymbol}${widget.payment.balanceDue.toStringAsFixed(2)}',
+            'Remaining balance: ${GymDateUtils.formatCurrency(widget.payment.balanceDue, symbol: GymService().settings.currencySymbol)}',
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _amount,
             enabled: !_saving,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: const [MoneyInputFormatter()],
             decoration: const InputDecoration(labelText: 'Amount received'),
           ),
           TextButton.icon(

@@ -9,6 +9,7 @@ import '../models/bill.dart';
 import '../models/expense.dart';
 import '../models/gym_settings.dart';
 import '../utils/date_utils.dart';
+import '../utils/money_utils.dart';
 import 'firestore_service.dart';
 import 'auth_service.dart';
 import 'cloud_sync_queue.dart';
@@ -2324,9 +2325,12 @@ class GymService extends ChangeNotifier {
       }
     }
 
+    totalCollected = MoneyUtils.round(totalCollected);
+    totalPending = MoneyUtils.round(totalPending);
+
     return {
       'totalMembers': _customers.where((c) => c.isActive).length,
-      'totalExpected': totalCollected + totalPending,
+      'totalExpected': MoneyUtils.round(totalCollected + totalPending),
       'totalCollected': totalCollected,
       'totalPending': totalPending,
       'paidCount': paidCount,
@@ -2345,7 +2349,9 @@ class GymService extends ChangeNotifier {
   bool _hasLegacyPaymentShapes() {
     for (final p in _paymentMap.values) {
       if (p.isCoveredInPackage) return true;
-      if (p.status != PaymentStatus.paid && !p.isMembershipAgreement) return true;
+      if (p.status != PaymentStatus.paid && !p.isMembershipAgreement) {
+        return true;
+      }
       if (p.startDate == null ||
           p.monthYear != GymDateUtils.toMonthKey(p.effectiveStartDate)) {
         return true;
@@ -2529,7 +2535,7 @@ class GymService extends ChangeNotifier {
       }
 
       if (pendingRecords.isNotEmpty) {
-        final total = pendingRecords.fold<double>(0.0, (sum, r) => sum + pendingAmountOf(r));
+        final total = MoneyUtils.round(pendingRecords.fold<double>(0.0, (sum, r) => sum + pendingAmountOf(r)));
         results.add(MemberPendingSummary(
           customer: customer,
           pendingRecords: List.unmodifiable(pendingRecords),
@@ -2558,10 +2564,10 @@ class GymService extends ChangeNotifier {
         MonthPendingGroup(
           monthKey: month,
           items: List.unmodifiable(byMonth[month]!),
-          totalAmount: byMonth[month]!.fold<double>(
+          totalAmount: MoneyUtils.round(byMonth[month]!.fold<double>(
             0,
             (sum, item) => sum + pendingAmountOf(item.payment),
-          ),
+          )),
         ),
     ];
   }
@@ -2647,15 +2653,16 @@ class GymService extends ChangeNotifier {
   }
 
   double getTotalExpenseAmount(String monthYear) {
-    return getMonthlyExpenses(monthYear)
-        .fold<double>(0.0, (sum, e) => sum + e.amount);
+    return MoneyUtils.round(
+      getMonthlyExpenses(monthYear).fold<double>(0.0, (sum, e) => sum + e.amount),
+    );
   }
 
   Map<ExpenseCategory, double> getExpenseCategoryBreakdown(String monthYear) {
     final monthly = getMonthlyExpenses(monthYear);
     final breakdown = <ExpenseCategory, double>{};
     for (final exp in monthly) {
-      breakdown[exp.category] = (breakdown[exp.category] ?? 0.0) + exp.amount;
+      breakdown[exp.category] = MoneyUtils.round((breakdown[exp.category] ?? 0.0) + exp.amount);
     }
     return breakdown;
   }
@@ -2664,7 +2671,7 @@ class GymService extends ChangeNotifier {
     final finSummary = getMonthlyFinancialSummary(monthYear);
     final totalCollected = (finSummary['totalCollected'] as num?)?.toDouble() ?? 0.0;
     final totalExpense = getTotalExpenseAmount(monthYear);
-    final netProfit = totalCollected - totalExpense;
+    final netProfit = MoneyUtils.round(totalCollected - totalExpense);
     final profitMargin = totalCollected > 0 ? (netProfit / totalCollected) * 100 : 0.0;
 
     return {
@@ -2916,6 +2923,9 @@ class GymService extends ChangeNotifier {
     for (final s in pendingSummaries) {
       totalDues += s.totalPendingAmount;
     }
+    todayCollection = MoneyUtils.round(todayCollection);
+    todayExpense = MoneyUtils.round(todayExpense);
+    totalDues = MoneyUtils.round(totalDues);
 
     final balanceSheet = getBalanceSheetSummary(currentMonthKey);
 
