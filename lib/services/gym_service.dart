@@ -896,18 +896,60 @@ class GymService extends ChangeNotifier {
 
   // ==================== CUSTOMER OPERATIONS ====================
 
-  String getNextCardNumber() {
-    int maxNum = 100;
-    for (final c in _customers) {
-      final n = int.tryParse(c.cardNumber.replaceAll(RegExp(r'\D'), ''));
-      if (n != null && n > maxNum) {
-        maxNum = n;
+  Customer? getCustomerByCardNumber(
+    String cardNumber, {
+    String? excludeCustomerId,
+  }) {
+    final normalized = cardNumber.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+    for (final customer in _customers) {
+      if (customer.id == excludeCustomerId) continue;
+      if (customer.cardNumber.trim().toLowerCase() == normalized) {
+        return customer;
       }
     }
-    if (maxNum == 100 && _customers.isNotEmpty) {
-      return '${100 + _customers.length}';
+    return null;
+  }
+
+  List<Customer> getCustomersByPhone(
+    String phone, {
+    String? excludeCustomerId,
+  }) {
+    final normalized = _normalizePhone(phone);
+    if (normalized.isEmpty) return [];
+    return _customers.where((customer) {
+      return customer.id != excludeCustomerId &&
+          _normalizePhone(customer.phone) == normalized;
+    }).toList();
+  }
+
+  String _normalizePhone(String phone) {
+    var digits = phone.replaceAll(RegExp(r'\D'), '');
+    while (digits.length > 10) {
+      if (digits.startsWith('0')) {
+        digits = digits.substring(1);
+      } else if (digits.startsWith('91')) {
+        digits = digits.substring(2);
+      } else {
+        break;
+      }
     }
-    return '${maxNum + 1}';
+    return digits;
+  }
+
+  String getNextCardNumber() {
+    var maxNumber = 100;
+    for (final customer in _customers) {
+      final number = int.tryParse(customer.cardNumber.trim());
+      if (number != null && number > maxNumber) {
+        maxNumber = number;
+      }
+    }
+    var candidate = maxNumber + 1;
+    while (getCustomerByCardNumber('$candidate') != null) {
+      candidate++;
+    }
+    return '$candidate';
   }
 
   List<MonthCardData> getYearlyCardData(String customerId, int year) {
@@ -994,6 +1036,12 @@ class GymService extends ChangeNotifier {
     final assignedCardNumber = cardNumber.trim().isNotEmpty
         ? cardNumber.trim()
         : getNextCardNumber();
+    final cardOwner = getCustomerByCardNumber(assignedCardNumber);
+    if (cardOwner != null) {
+      throw StateError(
+        'Card #$assignedCardNumber is already assigned to ${cardOwner.name}',
+      );
+    }
     var newId = operationCustomerId ?? 'cust_${DateTime.now().millisecondsSinceEpoch}';
     while (_customers.any((c) => c.id == newId)) {
       newId += 'x';
@@ -1218,7 +1266,30 @@ class GymService extends ChangeNotifier {
     final index = _customers.indexWhere((c) => c.id == updated.id);
     if (index != -1) {
       await _freezeUnagreedAttendance();
-      await _serializeFinancialSave(() => _commitFinancialRecords(customers: [updated]));
+      await _serializeFinancialSave(() async {
+        final existingCustomer = getCustomerById(updated.id);
+        if (existingCustomer == null) return;
+        final assignedCardNumber = updated.cardNumber.trim().isNotEmpty
+            ? updated.cardNumber.trim()
+            : getNextCardNumber();
+        final keepsExistingCard =
+            existingCustomer.cardNumber.trim().toLowerCase() ==
+            assignedCardNumber.toLowerCase();
+        if (!keepsExistingCard) {
+          final cardOwner = getCustomerByCardNumber(
+            assignedCardNumber,
+            excludeCustomerId: updated.id,
+          );
+          if (cardOwner != null) {
+            throw StateError(
+              'Card #$assignedCardNumber is already assigned to ${cardOwner.name}',
+            );
+          }
+        }
+        await _commitFinancialRecords(
+          customers: [updated.copyWith(cardNumber: assignedCardNumber)],
+        );
+      });
     }
   }
 

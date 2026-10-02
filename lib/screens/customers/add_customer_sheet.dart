@@ -181,58 +181,89 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   Future<void> _saveCustomer() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
-    Customer? createdCustomer;
-
-    if (isEditing) {
-      final updated = widget.customerToEdit!.copyWith(
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        imagePath: _selectedImagePath,
-        joinDate: _joinDate,
-        notes: _notesController.text.trim(),
-        planType: _selectedPlan,
-        planDurationMonths: _selectedDurationMonths,
-        cardNumber: _cardNumberController.text.trim(),
-        address: _addressController.text.trim(),
-        weight: _weightController.text.trim(),
-        chest: _chestController.text.trim(),
-        bicep: _bicepController.text.trim(),
-        waist: _waistController.text.trim(),
-        leg: _legController.text.trim(),
-      );
-      await GymService().updateCustomer(updated);
-    } else {
-      createdCustomer = await GymService().addCustomer(
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        imagePath: _selectedImagePath,
-        joinDate: _joinDate,
-        notes: _notesController.text.trim(),
-        planType: _selectedPlan,
-        planDurationMonths: _selectedDurationMonths,
-        cardNumber: _cardNumberController.text.trim(),
-        address: _addressController.text.trim(),
-        weight: _weightController.text.trim(),
-        chest: _chestController.text.trim(),
-        bicep: _bicepController.text.trim(),
-        waist: _waistController.text.trim(),
-        leg: _legController.text.trim(),
-        markAsPaidNow: _collectPaymentNow,
-        initialPaymentMethod: _collectPaymentNow ? _selectedPaymentMethod : null,
-        membershipStartDate: _membershipStartDate,
-        membershipEndDate: _membershipEndDate,
-        membershipFee: GymService().settings.getPriceForDuration(
-          _selectedPlan, _selectedDurationMonths,
+    final gymService = GymService();
+    final phoneMatches = gymService.getCustomersByPhone(
+      _phoneController.text,
+      excludeCustomerId: widget.customerToEdit?.id,
+    );
+    if (phoneMatches.isNotEmpty) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Duplicate Phone Number'),
+          content: Text(
+            phoneMatches.map((customer) {
+              return 'A member named ${customer.name} '
+                  '(Card #${customer.cardNumber}) is already registered with '
+                  'this phone number. Is this a family member sharing the number?';
+            }).join('\n\n'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel & Review'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Yes, Add Member'),
+            ),
+          ],
         ),
-        operationId: _registrationOperationId,
       );
+      if (shouldContinue != true || !mounted) return;
     }
 
-    setState(() => _isLoading = false);
+    setState(() => _isLoading = true);
 
-    if (mounted) {
+    try {
+      Customer? createdCustomer;
+      if (isEditing) {
+        final updated = widget.customerToEdit!.copyWith(
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          imagePath: _selectedImagePath,
+          joinDate: _joinDate,
+          notes: _notesController.text.trim(),
+          planType: _selectedPlan,
+          planDurationMonths: _selectedDurationMonths,
+          cardNumber: _cardNumberController.text.trim(),
+          address: _addressController.text.trim(),
+          weight: _weightController.text.trim(),
+          chest: _chestController.text.trim(),
+          bicep: _bicepController.text.trim(),
+          waist: _waistController.text.trim(),
+          leg: _legController.text.trim(),
+        );
+        await gymService.updateCustomer(updated);
+      } else {
+        createdCustomer = await gymService.addCustomer(
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          imagePath: _selectedImagePath,
+          joinDate: _joinDate,
+          notes: _notesController.text.trim(),
+          planType: _selectedPlan,
+          planDurationMonths: _selectedDurationMonths,
+          cardNumber: _cardNumberController.text.trim(),
+          address: _addressController.text.trim(),
+          weight: _weightController.text.trim(),
+          chest: _chestController.text.trim(),
+          bicep: _bicepController.text.trim(),
+          waist: _waistController.text.trim(),
+          leg: _legController.text.trim(),
+          markAsPaidNow: _collectPaymentNow,
+          initialPaymentMethod: _collectPaymentNow ? _selectedPaymentMethod : null,
+          membershipStartDate: _membershipStartDate,
+          membershipEndDate: _membershipEndDate,
+          membershipFee: gymService.settings.getPriceForDuration(
+            _selectedPlan, _selectedDurationMonths,
+          ),
+          operationId: _registrationOperationId,
+        );
+      }
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context, true);
 
@@ -258,12 +289,22 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           ),
         );
       }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      final message = error is StateError
+          ? error.message.toString()
+          : 'Could not save member. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currency = GymService().settings.currencySymbol;
+    final gymService = GymService();
+    final currency = gymService.settings.currencySymbol;
     return Container(
       padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
       decoration: BoxDecoration(
@@ -403,7 +444,30 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                           decoration: const InputDecoration(
                             hintText: 'e.g. 778',
                             prefixIcon: Icon(Icons.badge_rounded, color: Color(0xFFB71C1C), size: 20),
+                            errorMaxLines: 3,
                           ),
+                          validator: (value) {
+                            final trimmed = value?.trim() ?? '';
+                            if (trimmed.isEmpty) {
+                              return 'Card number is required';
+                            }
+                            final currentCard = widget
+                                .customerToEdit
+                                ?.cardNumber
+                                .trim()
+                                .toLowerCase();
+                            if (currentCard == trimmed.toLowerCase()) {
+                              return null;
+                            }
+                            final existing = gymService.getCustomerByCardNumber(
+                              trimmed,
+                              excludeCustomerId: widget.customerToEdit?.id,
+                            );
+                            if (existing != null) {
+                              return 'Card #$trimmed is already assigned to ${existing.name}';
+                            }
+                            return null;
+                          },
                         ),
                       ],
                     ),
