@@ -156,10 +156,10 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
         '${widget.customer.joinDate.day}, ${widget.customer.joinDate.month}, ${widget.customer.joinDate.year}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1E222D),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Member Entry Card'),
-        backgroundColor: const Color(0xFF1E222D),
+        backgroundColor: AppColors.background,
         elevation: 0,
         actions: [
           // Year Selector
@@ -167,17 +167,17 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: AppColors.surfaceElevated,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              border: Border.all(color: AppColors.surfaceBorder),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _selectedYear,
-                dropdownColor: const Color(0xFF2A2E3D),
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                style: const TextStyle(
-                  color: Colors.white,
+                dropdownColor: AppColors.surfaceElevated,
+                icon: Icon(Icons.arrow_drop_down, color: AppColors.textPrimary),
+                style: TextStyle(
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -186,7 +186,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                   DateTime.now().year - 1,
                   DateTime.now().year,
                   DateTime.now().year + 1,
-                ].map((y) => DropdownMenuItem(value: y, child: Text('$y'))).toList(),
+                ].map((y) => DropdownMenuItem(value: y, child: Text('$y', style: TextStyle(color: AppColors.textPrimary)))).toList(),
                 onChanged: (y) {
                   if (y != null) setState(() => _selectedYear = y);
                 },
@@ -194,12 +194,12 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.print_rounded, color: Colors.white),
+            icon: Icon(Icons.print_rounded, color: AppColors.textPrimary),
             tooltip: 'Print Card',
             onPressed: _isGeneratingPdf ? null : _handlePrint,
           ),
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
+            icon: Icon(Icons.picture_as_pdf_rounded, color: AppColors.textPrimary),
             tooltip: 'Download / Share PDF',
             onPressed: _isGeneratingPdf ? null : _handleSharePdf,
           ),

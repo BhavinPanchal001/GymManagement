@@ -1290,13 +1290,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: AppColors.surfaceElevated,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.surfaceBorder),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.verified_rounded, color: AppColors.paid, size: 14),
+                  Icon(Icons.verified_rounded, color: AppColors.paid, size: 14),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -1357,7 +1358,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   color: const Color(0xFFD50000).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF5252), size: 18),
+                child: Icon(Icons.warning_amber_rounded, color: AppColors.absent, size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1366,8 +1367,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   children: [
                     Text(
                       'Unpaid Attended Dues Detected',
-                      style: const TextStyle(
-                        color: Color(0xFFFF5252),
+                      style: TextStyle(
+                        color: AppColors.absent,
                         fontWeight: FontWeight.w900,
                         fontSize: 13.5,
                       ),
@@ -1381,8 +1382,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               ),
               Text(
                 GymDateUtils.formatCurrency(totalDueAmount, symbol: currency),
-                style: const TextStyle(
-                  color: Color(0xFFFF5252),
+                style: TextStyle(
+                  color: AppColors.absent,
                   fontWeight: FontWeight.w900,
                   fontSize: 16,
                 ),
@@ -2236,7 +2237,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
               Color bgColor = isFuture ? AppColors.surfaceElevated.withValues(alpha: 0.35) : AppColors.surfaceElevated;
               Color borderColor = Colors.transparent;
-              Color textColor = isFuture ? AppColors.textMuted.withValues(alpha: 0.35) : (status != null ? Colors.white : AppColors.textPrimary);
+              Color textColor = isFuture
+                  ? AppColors.textMuted.withValues(alpha: 0.35)
+                  : (status != null
+                      ? (AppColors.isDark ? Colors.white : AppColors.textPrimary)
+                      : AppColors.textPrimary);
               IconData? statusIcon;
 
               if (!isFuture) {

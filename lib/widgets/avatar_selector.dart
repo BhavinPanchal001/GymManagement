@@ -134,10 +134,10 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                 ],
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Or choose a fitness avatar:',
                 style: TextStyle(
-                  color: Color(0xFF8B949E),
+                  color: AppColors.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -166,7 +166,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: isSelected
-                              ? Border.all(color: const Color(0xFFCCFF00), width: 3)
+                              ? Border.all(color: AppColors.primary, width: 3)
                               : null,
                         ),
                         child: CustomerAvatar(
@@ -266,12 +266,12 @@ class _AvatarSelectorState extends State<AvatarSelector> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFFCCFF00),
+                  color: AppColors.primary,
                   width: 2.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFCCFF00).withValues(alpha: 0.2),
+                    color: AppColors.primary.withValues(alpha: 0.2),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -293,19 +293,19 @@ class _AvatarSelectorState extends State<AvatarSelector> {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFCCFF00),
+                  color: AppColors.primary,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
+                      color: Colors.black.withValues(alpha: 0.25),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.camera_alt_rounded,
-                  color: Color(0xFF0F141C),
+                  color: AppColors.primaryOn,
                   size: 18,
                 ),
               ),

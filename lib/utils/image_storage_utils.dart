@@ -71,12 +71,8 @@ class ImageStorageUtils {
     String? filePath,
     String? base64Value,
   ) async {
-    if (filePath != null &&
-        filePath.isNotEmpty &&
-        !filePath.startsWith('avatar:') &&
-        !filePath.startsWith('http://') &&
-        !filePath.startsWith('https://')) {
-      final file = File(normalizeFilePath(filePath));
+    if (isLocalFilePath(filePath)) {
+      final file = File(normalizeFilePath(filePath!));
       if (await file.exists()) {
         final bytes = await file.readAsBytes();
         if (bytes.isNotEmpty) return bytes;
@@ -86,19 +82,21 @@ class ImageStorageUtils {
   }
 
   static Future<void> deleteManagedImage(String? filePath) async {
-    if (filePath == null ||
-        filePath.isEmpty ||
-        filePath.startsWith('avatar:') ||
-        filePath.startsWith('http://') ||
-        filePath.startsWith('https://')) {
-      return;
-    }
+    if (!isLocalFilePath(filePath)) return;
 
     final root = await getApplicationDocumentsDirectory();
     final mediaPrefix = '${Directory('${root.path}/media').absolute.path}/';
-    final file = File(normalizeFilePath(filePath)).absolute;
+    final file = File(normalizeFilePath(filePath!)).absolute;
     if (!file.path.startsWith(mediaPrefix) || !await file.exists()) return;
     await file.delete();
+  }
+
+  static bool isLocalFilePath(String? filePath) {
+    return filePath != null &&
+        filePath.isNotEmpty &&
+        !filePath.startsWith('avatar:') &&
+        !filePath.startsWith('http://') &&
+        !filePath.startsWith('https://');
   }
 
   static String normalizeFilePath(String rawPath) {

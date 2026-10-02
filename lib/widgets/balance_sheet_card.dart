@@ -71,14 +71,19 @@ class BalanceSheetCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'P&L Statement for ${GymDateUtils.formatMonthHeader(monthYear)}',
                       style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               // Net Profit / Loss Badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -120,7 +125,7 @@ class BalanceSheetCard extends StatelessWidget {
               // Total Income
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceElevated,
                     borderRadius: BorderRadius.circular(12),
@@ -133,19 +138,27 @@ class BalanceSheetCard extends StatelessWidget {
                         children: [
                           Icon(Icons.arrow_downward, size: 12, color: AppColors.paid),
                           const SizedBox(width: 4),
-                          Text(
-                            'Fee Income',
-                            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          Expanded(
+                            child: Text(
+                              'Fee Income',
+                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        GymDateUtils.formatCurrency(totalIncome, symbol: currency),
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          GymDateUtils.formatCurrency(totalIncome, symbol: currency),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
                     ],
@@ -157,7 +170,7 @@ class BalanceSheetCard extends StatelessWidget {
               // Total Expense
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceElevated,
                     borderRadius: BorderRadius.circular(12),
@@ -170,19 +183,27 @@ class BalanceSheetCard extends StatelessWidget {
                         children: [
                           Icon(Icons.arrow_upward, size: 12, color: AppColors.absent),
                           const SizedBox(width: 4),
-                          Text(
-                            'Expenses ($expensesCount)',
-                            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          Expanded(
+                            child: Text(
+                              expensesCount > 0 ? 'Expenses ($expensesCount)' : 'Expenses',
+                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        GymDateUtils.formatCurrency(totalExpense, symbol: currency),
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          GymDateUtils.formatCurrency(totalExpense, symbol: currency),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
                     ],
@@ -194,7 +215,7 @@ class BalanceSheetCard extends StatelessWidget {
               // Net Profit
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                   decoration: BoxDecoration(
                     color: profitColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
@@ -207,23 +228,31 @@ class BalanceSheetCard extends StatelessWidget {
                         children: [
                           Icon(Icons.wallet, size: 12, color: profitColor),
                           const SizedBox(width: 4),
-                          Text(
-                            isProfit ? 'Net Profit' : 'Net Loss',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: profitColor,
+                          Expanded(
+                            child: Text(
+                              isProfit ? 'Net Profit' : 'Net Loss',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: profitColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        GymDateUtils.formatCurrency(netProfit.abs(), symbol: currency),
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: profitColor,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          GymDateUtils.formatCurrency(netProfit.abs(), symbol: currency),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: profitColor,
+                          ),
                         ),
                       ),
                     ],
@@ -269,38 +298,47 @@ class BalanceSheetCard extends StatelessWidget {
             const SizedBox(height: 10),
 
             // Top categories tags
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: breakdown.entries.take(4).map((entry) {
-                final pct = (entry.value / totalExpense * 100).toStringAsFixed(0);
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: entry.key.color,
-                          shape: BoxShape.circle,
-                        ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: breakdown.entries.take(4).map((entry) {
+                    final pct = (entry.value / totalExpense * 100).toStringAsFixed(0);
+                    return Container(
+                      constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.surfaceBorder),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${entry.key.label}: ${GymDateUtils.formatCurrency(entry.value, symbol: currency)} ($pct%)',
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: entry.key.color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '${entry.key.label}: ${GymDateUtils.formatCurrency(entry.value, symbol: currency)} ($pct%)',
+                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  }).toList(),
                 );
-              }).toList(),
+              },
             ),
           ] else ...[
             Center(

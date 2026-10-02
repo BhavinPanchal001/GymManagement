@@ -1013,7 +1013,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   ),
                   Text(
                     GymDateUtils.formatCurrency(fee, symbol: currency),
-                    style: const TextStyle(color: AppColors.paid, fontSize: 18, fontWeight: FontWeight.w900),
+                    style: TextStyle(color: AppColors.paid, fontSize: 18, fontWeight: FontWeight.w900),
                   ),
                 ],
               ),
