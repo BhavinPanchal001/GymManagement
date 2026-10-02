@@ -190,6 +190,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
         imagePath: _selectedImagePath,
+        clearImagePath: _selectedImagePath == null,
         joinDate: _joinDate,
         notes: _notesController.text.trim(),
         planType: _selectedPlan,
@@ -302,7 +303,13 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               // Avatar / Photo Selector
               AvatarSelector(
                 initialImagePath: _selectedImagePath,
+                initialImageBase64:
+                    _selectedImagePath == widget.customerToEdit?.imagePath
+                        ? widget.customerToEdit?.imageBase64
+                        : null,
                 customerName: _nameController.text,
+                storageKey:
+                    'avatar_${widget.customerToEdit?.id ?? _registrationOperationId}',
                 onImageSelected: (newPath) {
                   setState(() => _selectedImagePath = newPath);
                 },

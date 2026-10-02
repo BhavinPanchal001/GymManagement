@@ -6,6 +6,7 @@ import '../../services/member_card_pdf_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
+import '../../utils/image_storage_utils.dart';
 import '../../widgets/gym_logo_widget.dart';
 
 class MemberCardScreen extends StatefulWidget {
@@ -40,6 +41,40 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   void initState() {
     super.initState();
     _selectedYear = DateTime.now().year;
+  }
+
+  Widget _buildCustomerPhoto() {
+    final imagePath = widget.customer.imagePath;
+    if (imagePath != null && imagePath.isNotEmpty) {
+      final file = File(ImageStorageUtils.normalizeFilePath(imagePath));
+      if (file.existsSync()) {
+        return Image.file(file, fit: BoxFit.cover);
+      }
+    }
+
+    final bytes =
+        ImageStorageUtils.decodeBase64Image(widget.customer.imageBase64);
+    if (bytes != null) {
+      return Image.memory(bytes, fit: BoxFit.cover);
+    }
+
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.person, color: cardRed, size: 28),
+          SizedBox(height: 2),
+          Text(
+            'PHOTO',
+            style: TextStyle(
+              color: cardRed,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handlePrint() async {
@@ -225,29 +260,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                     border: Border.all(color: cardRed, width: 1.2),
                                     color: Colors.grey.shade50,
                                   ),
-                                  child: widget.customer.imagePath != null &&
-                                          File(widget.customer.imagePath!).existsSync()
-                                      ? Image.file(
-                                          File(widget.customer.imagePath!),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : const Center(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.person, color: cardRed, size: 28),
-                                              SizedBox(height: 2),
-                                              Text(
-                                                'PHOTO',
-                                                style: TextStyle(
-                                                  color: cardRed,
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                  child: _buildCustomerPhoto(),
                                 ),
                                 const SizedBox(width: 10),
 
@@ -281,6 +294,8 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                       // Circular Gym Logo
                                       GymLogoWidget(
                                         logoPath: gymLogoPath,
+                                        logoBase64:
+                                            gymSettings.gymLogoBase64,
                                         gymName: gymName,
                                         size: 40,
                                         shape: BoxShape.circle,

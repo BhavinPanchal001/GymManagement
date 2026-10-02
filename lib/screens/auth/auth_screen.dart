@@ -3,6 +3,7 @@ import '../../models/gym_settings.dart';
 import '../../services/auth_service.dart';
 import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/image_storage_utils.dart';
 import '../../widgets/gym_logo_widget.dart';
 import 'forgot_password_sheet.dart';
 
@@ -116,9 +117,15 @@ class _AuthScreenState extends State<AuthScreen>
 
       final newUserId = cred.user?.uid;
       final gymName = _signUpGymNameController.text.trim();
+      final gymLogoBase64 = _signUpSelectedImagePath == null
+          ? null
+          : await ImageStorageUtils.createThumbnailBase64(
+              _signUpSelectedImagePath!,
+            );
       final freshSettings = GymSettings(
         gymName: gymName.isNotEmpty ? gymName : 'My Gym',
         gymLogoPath: _signUpSelectedImagePath,
+        gymLogoBase64: gymLogoBase64,
       );
 
       // Step 3: Attach with isNewUser: true to guarantee completely empty, clean state
@@ -439,6 +446,7 @@ class _AuthScreenState extends State<AuthScreen>
                     title: 'Upload Gym Logo',
                     radius: 44,
                     allowRemove: true,
+                    storageKey: 'gym_logo_signup',
                     onLogoSelected: (path) {
                       setState(() {
                         _signUpSelectedImagePath = path;

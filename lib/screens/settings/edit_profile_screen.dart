@@ -192,7 +192,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = GymService().settings.currencySymbol;
+    final gym = GymService();
+    final currency = gym.settings.currencySymbol;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -248,11 +249,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   GymLogoSelector(
                     initialLogoPath: _selectedImagePath,
+                    initialLogoBase64:
+                        _selectedImagePath == gym.settings.gymLogoPath
+                            ? gym.settings.gymLogoBase64
+                            : null,
                     gymName: _gymNameController.text.isNotEmpty
                         ? _gymNameController.text
                         : (_nameController.text.isNotEmpty ? _nameController.text : 'Gym'),
                     radius: 48,
                     title: 'Gym Brand Logo',
+                    storageKey:
+                        'gym_logo_${AuthService().currentUser?.uid ?? 'local'}',
                     onLogoSelected: (path) {
                       setState(() {
                         _selectedImagePath = path;

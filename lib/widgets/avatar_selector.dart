@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_storage_utils.dart';
 import 'customer_avatar.dart';
 
 class AvatarSelector extends StatefulWidget {
   final String? initialImagePath;
+  final String? initialImageBase64;
   final String customerName;
   final ValueChanged<String?> onImageSelected;
   final String title;
   final bool allowRemove;
   final double radius;
+  final String storageKey;
 
   const AvatarSelector({
     super.key,
     this.initialImagePath,
+    this.initialImageBase64,
     required this.customerName,
     required this.onImageSelected,
     this.title = 'Choose Photo',
     this.allowRemove = true,
     this.radius = 46,
+    this.storageKey = 'avatar',
   });
 
   @override
@@ -27,19 +32,23 @@ class AvatarSelector extends StatefulWidget {
 
 class _AvatarSelectorState extends State<AvatarSelector> {
   String? _currentSelection;
+  String? _currentImageBase64;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     _currentSelection = widget.initialImagePath;
+    _currentImageBase64 = widget.initialImageBase64;
   }
 
   @override
   void didUpdateWidget(covariant AvatarSelector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialImagePath != widget.initialImagePath) {
+    if (oldWidget.initialImagePath != widget.initialImagePath ||
+        oldWidget.initialImageBase64 != widget.initialImageBase64) {
       _currentSelection = widget.initialImagePath;
+      _currentImageBase64 = widget.initialImageBase64;
     }
   }
 
@@ -52,8 +61,13 @@ class _AvatarSelectorState extends State<AvatarSelector> {
         maxHeight: 800,
       );
       if (pickedFile != null) {
+        final persistentPath = await ImageStorageUtils.persistImage(
+          pickedFile.path,
+          '${widget.storageKey}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
         setState(() {
-          _currentSelection = pickedFile.path;
+          _currentSelection = persistentPath;
+          _currentImageBase64 = null;
         });
         widget.onImageSelected(_currentSelection);
       }
@@ -142,6 +156,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                       onTap: () {
                         setState(() {
                           _currentSelection = avatarKey;
+                          _currentImageBase64 = null;
                         });
                         widget.onImageSelected(avatarKey);
                         Navigator.pop(ctx);
@@ -181,6 +196,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                     onPressed: () {
                       setState(() {
                         _currentSelection = null;
+                        _currentImageBase64 = null;
                       });
                       widget.onImageSelected(null);
                       Navigator.pop(ctx);
@@ -263,6 +279,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
               ),
               child: CustomerAvatar(
                 imagePath: _currentSelection,
+                imageBase64: _currentImageBase64,
                 name: widget.customerName.isNotEmpty ? widget.customerName : 'New User',
                 radius: widget.radius,
               ),

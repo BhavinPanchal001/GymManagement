@@ -211,6 +211,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                 children: [
                   CustomerAvatar(
                     imagePath: widget.customer.imagePath,
+                    imageBase64: widget.customer.imageBase64,
                     name: widget.customer.name,
                     radius: 20,
                   ),

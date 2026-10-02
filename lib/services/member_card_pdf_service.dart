@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/customer.dart';
 import '../utils/date_utils.dart';
+import '../utils/image_storage_utils.dart';
 import 'gym_service.dart';
 
 class MemberCardPdfService {
@@ -29,52 +29,30 @@ class MemberCardPdfService {
     // Load Gym Logo Image
     pw.MemoryImage? gymLogoImage;
     final logoPath = gymSettings.gymLogoPath ?? gym.gymLogoPath;
-    if (logoPath != null && logoPath.isNotEmpty && !logoPath.startsWith('avatar:')) {
-      try {
-        String cleanPath = logoPath;
-        if (cleanPath.startsWith('file://')) {
-          try {
-            cleanPath = Uri.parse(cleanPath).toFilePath();
-          } catch (_) {
-            cleanPath = cleanPath.replaceFirst('file://', '');
-          }
-        }
-        final file = File(cleanPath);
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          if (bytes.isNotEmpty) {
-            gymLogoImage = pw.MemoryImage(bytes);
-          }
-        }
-      } catch (e) {
-        debugPrint('Error loading gym logo image for PDF: $e');
+    try {
+      final bytes = await ImageStorageUtils.loadImageBytes(
+        logoPath,
+        gymSettings.gymLogoBase64,
+      );
+      if (bytes != null && bytes.isNotEmpty) {
+        gymLogoImage = pw.MemoryImage(bytes);
       }
+    } catch (e) {
+      debugPrint('Error loading gym logo image for PDF: $e');
     }
 
     // Load Customer Photo Image
     pw.MemoryImage? customerPhotoImage;
-    if (customer.imagePath != null &&
-        customer.imagePath!.isNotEmpty &&
-        !customer.imagePath!.startsWith('avatar:')) {
-      try {
-        String cleanPath = customer.imagePath!;
-        if (cleanPath.startsWith('file://')) {
-          try {
-            cleanPath = Uri.parse(cleanPath).toFilePath();
-          } catch (_) {
-            cleanPath = cleanPath.replaceFirst('file://', '');
-          }
-        }
-        final file = File(cleanPath);
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          if (bytes.isNotEmpty) {
-            customerPhotoImage = pw.MemoryImage(bytes);
-          }
-        }
-      } catch (e) {
-        debugPrint('Error loading customer photo image for PDF: $e');
+    try {
+      final bytes = await ImageStorageUtils.loadImageBytes(
+        customer.imagePath,
+        customer.imageBase64,
+      );
+      if (bytes != null && bytes.isNotEmpty) {
+        customerPhotoImage = pw.MemoryImage(bytes);
       }
+    } catch (e) {
+      debugPrint('Error loading customer photo image for PDF: $e');
     }
 
     // Try to load Gujarati font for authentic footer notes

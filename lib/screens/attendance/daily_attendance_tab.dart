@@ -339,6 +339,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                               children: [
                                 CustomerAvatar(
                                   imagePath: customer.imagePath,
+                                  imageBase64: customer.imageBase64,
                                   name: customer.name,
                                   radius: 22,
                                   onTap: () {

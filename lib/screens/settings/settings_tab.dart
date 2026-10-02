@@ -622,6 +622,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           children: [
                             GymLogoWidget(
                               logoPath: gym.gymLogoPath,
+                              logoBase64: gym.settings.gymLogoBase64,
                               gymName: gym.settings.gymName,
                               size: 48,
                               borderColor: AppColors.primary,

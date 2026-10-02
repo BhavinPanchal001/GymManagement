@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -7,6 +6,7 @@ import '../models/bill.dart';
 import '../models/customer.dart';
 import '../models/gym_settings.dart';
 import '../utils/date_utils.dart';
+import '../utils/image_storage_utils.dart';
 import 'gym_service.dart';
 
 class PaymentReceiptPdfService {
@@ -140,26 +140,16 @@ class PaymentReceiptPdfService {
     // Load Gym Logo Image
     pw.MemoryImage? gymLogoImage;
     final logoPath = gymSettings.gymLogoPath ?? GymService().gymLogoPath;
-    if (logoPath != null && logoPath.isNotEmpty && !logoPath.startsWith('avatar:')) {
-      try {
-        String cleanPath = logoPath;
-        if (cleanPath.startsWith('file://')) {
-          try {
-            cleanPath = Uri.parse(cleanPath).toFilePath();
-          } catch (_) {
-            cleanPath = cleanPath.replaceFirst('file://', '');
-          }
-        }
-        final file = File(cleanPath);
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          if (bytes.isNotEmpty) {
-            gymLogoImage = pw.MemoryImage(bytes);
-          }
-        }
-      } catch (e) {
-        debugPrint('Error loading gym logo for receipt PDF: $e');
+    try {
+      final bytes = await ImageStorageUtils.loadImageBytes(
+        logoPath,
+        gymSettings.gymLogoBase64,
+      );
+      if (bytes != null && bytes.isNotEmpty) {
+        gymLogoImage = pw.MemoryImage(bytes);
       }
+    } catch (e) {
+      debugPrint('Error loading gym logo for receipt PDF: $e');
     }
 
     // Font resolution with safe fallbacks
