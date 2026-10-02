@@ -1648,6 +1648,7 @@ class GymService extends ChangeNotifier {
   }
 
   Future<void> _freezeUnagreedAttendance() async {
+    await _migrateLegacyPayments();
     final agreements = _duesIndex.inferredAgreements.values
         .expand((records) => records)
         .where((record) => !_paymentMap.containsKey(record.id)).toList();
@@ -2421,9 +2422,47 @@ class GymService extends ChangeNotifier {
     return updates;
   }
 
+  Set<String> _unsupportedInferredAgreementIds() {
+    final unsupportedIds = <String>{};
+    for (final agreement in _paymentMap.values) {
+      if (!agreement.isMembershipAgreement ||
+          !agreement.isInferredAgreement ||
+          agreement.isPaid) {
+        continue;
+      }
+      final startKey = GymDateUtils.toDateKey(agreement.effectiveStartDate);
+      final endKey = GymDateUtils.toDateKey(agreement.effectiveEndDate);
+      final hasExclusiveAttendance = _attendanceMap.values.any((attendance) {
+        if (attendance.customerId != agreement.customerId ||
+            attendance.status != AttendanceStatus.present ||
+            attendance.dateKey.compareTo(startKey) < 0 ||
+            attendance.dateKey.compareTo(endKey) > 0) {
+          return false;
+        }
+        return !_paymentMap.values.any((other) {
+          if (other.id == agreement.id ||
+              other.customerId != agreement.customerId ||
+              (!other.isPaid &&
+                  (!other.isMembershipAgreement ||
+                      other.isInferredAgreement))) {
+            return false;
+          }
+          final otherStart =
+              GymDateUtils.toDateKey(other.effectiveStartDate);
+          final otherEnd = GymDateUtils.toDateKey(other.effectiveEndDate);
+          return attendance.dateKey.compareTo(otherStart) >= 0 &&
+              attendance.dateKey.compareTo(otherEnd) <= 0;
+        });
+      });
+      if (!hasExclusiveAttendance) unsupportedIds.add(agreement.id);
+    }
+    return unsupportedIds;
+  }
+
   /// Cheap detection of legacy payment/bill shapes needing migration.
   bool _hasLegacyPaymentShapes() {
     if (_duplicateMembershipAgreementIds().isNotEmpty) return true;
+    if (_unsupportedInferredAgreementIds().isNotEmpty) return true;
     for (final p in _paymentMap.values) {
       if (p.isCoveredInPackage) return true;
       if (p.status != PaymentStatus.paid && !p.isMembershipAgreement) {
@@ -2442,7 +2481,7 @@ class GymService extends ChangeNotifier {
 
   /// Idempotent migration to schema v2:
   /// 1. Drop ₹0 coveredByMonthYear placeholder records.
-  /// 2. Drop obsolete pending records and duplicate membership agreements.
+  /// 2. Drop obsolete pending, duplicate, and unsupported inferred agreements.
   /// 3. Freeze start/end dates and fix the monthYear label on paid records.
   /// 4. Link legacy bills (empty paymentId) to their payment.
   /// 5. Re-key Firestore docs to record.id / bill.id; delete legacy doc ids.
@@ -2457,6 +2496,7 @@ class GymService extends ChangeNotifier {
       final paymentDocsToDelete = <String>{};
       final billDocsToDelete = <String>{};
       final duplicateAgreementIds = _duplicateMembershipAgreementIds();
+      final unsupportedAgreementIds = _unsupportedInferredAgreementIds();
       final reconciledAgreements = _reconciledMembershipAgreements();
       if (reconciledAgreements.isNotEmpty) {
         _paymentMap.addAll(reconciledAgreements);
@@ -2467,7 +2507,8 @@ class GymService extends ChangeNotifier {
       for (final p in _paymentMap.values.toList()) {
         if (p.isCoveredInPackage ||
             (p.status != PaymentStatus.paid && !p.isMembershipAgreement) ||
-            duplicateAgreementIds.contains(p.id)) {
+            duplicateAgreementIds.contains(p.id) ||
+            unsupportedAgreementIds.contains(p.id)) {
           _paymentMap.remove(p.id);
           paymentDocsToDelete.add('${p.customerId}_${p.monthYear}');
           if (p.id != '${p.customerId}_${p.monthYear}') {
@@ -2544,6 +2585,7 @@ class GymService extends ChangeNotifier {
       if (modified) {
         await _savePayments();
         await _saveBills();
+        notifyListeners();
       }
 
       // Legacy re-keying uses the same durable upload queue.
