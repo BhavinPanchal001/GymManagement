@@ -707,8 +707,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         const SizedBox(height: 8),
         ...packages.map((pkg) {
           final isSelected = effectiveSelected == pkg.months;
-          final regularPrice = oneMonthPkg.price * pkg.months;
-          final savings = (pkg.months > 1 && regularPrice > pkg.price) ? (regularPrice - pkg.price).toInt() : 0;
+          final payablePrice = settings.totalForConfiguredPrice(pkg.price);
+          final regularPrice = settings.totalForConfiguredPrice(oneMonthPkg.price * pkg.months);
+          final savings = (pkg.months > 1 && regularPrice > payablePrice) ? (regularPrice - payablePrice).toInt() : 0;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -786,7 +787,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       ),
                     ),
                     Text(
-                      '$currency${pkg.price.toInt()}',
+                      GymDateUtils.formatCurrency(payablePrice, symbol: currency),
                       style: TextStyle(
                         color: isSelected ? accentColor : AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
@@ -805,7 +806,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
   Widget _buildUpfrontPaymentCard(String currency) {
     final settings = GymService().settings;
-    final fee = settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths);
+    final fee = settings.totalForConfiguredPrice(
+      settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths),
+    );
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),

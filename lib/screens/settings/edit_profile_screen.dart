@@ -147,6 +147,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         orElse: () => const PlanDurationPackage(id: 'pkg_pt_diet_1', planType: CustomerPlan.personalTrainingDiet, months: 1, price: 3500.0),
       );
 
+      final parsedTaxRate = double.tryParse(_taxRateController.text.trim());
+      final taxRate = parsedTaxRate != null &&
+              parsedTaxRate.isFinite &&
+              parsedTaxRate >= 0 &&
+              parsedTaxRate <= 100
+          ? parsedTaxRate
+          : gym.settings.taxRatePercent;
       final updatedSettings = gym.settings.copyWith(
         gymName: newGymName.isNotEmpty ? newGymName : gym.settings.gymName,
         gymTagline: _gymTaglineController.text.trim(),
@@ -165,9 +172,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         taxLabel: _taxLabelController.text.trim().isEmpty
             ? gym.settings.taxLabel
             : _taxLabelController.text.trim(),
-        taxRatePercent:
-            double.tryParse(_taxRateController.text.trim()) ??
-            gym.settings.taxRatePercent,
+        taxRatePercent: taxRate,
         isTaxInclusive: _isTaxInclusive,
         receiptTerms: _receiptTermsController.text.trim().isEmpty
             ? GymSettings.defaultReceiptTerms
@@ -567,7 +572,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         validator: (value) {
                           if (!_isTaxEnabled) return null;
                           final rate = double.tryParse(value?.trim() ?? '');
-                          if (rate == null || rate < 0 || rate > 100) {
+                          if (rate == null ||
+                              !rate.isFinite ||
+                              rate < 0 ||
+                              rate > 100) {
                             return 'Enter a tax rate from 0 to 100';
                           }
                           return null;

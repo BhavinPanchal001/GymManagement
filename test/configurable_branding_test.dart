@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gym/models/bill.dart';
 import 'package:gym/models/customer.dart';
 import 'package:gym/models/gym_settings.dart';
+import 'package:gym/models/payment.dart';
 import 'package:gym/screens/splash/splash_screen.dart';
 import 'package:gym/services/gym_service.dart';
 import 'package:gym/services/payment_receipt_pdf_service.dart';
@@ -79,6 +81,112 @@ void main() {
       ),
       closeTo(180, 0.001),
     );
+  });
+
+  test('exclusive tax is added to configured prices and reconciles from total',
+      () {
+    const settings = GymSettings(
+      isTaxEnabled: true,
+      taxRatePercent: 18,
+      isTaxInclusive: false,
+    );
+
+    final total = settings.totalForConfiguredPrice(1000);
+
+    expect(total, closeTo(1180, 0.001));
+    expect(settings.taxAmountFromTotal(total), closeTo(180, 0.001));
+  });
+
+  test('invalid stored tax rates fall back to a finite default', () {
+    final settings = GymSettings.fromMap({'taxRatePercent': double.nan});
+
+    expect(settings.taxRatePercent, 18);
+    expect(settings.taxRatePercent.isFinite, isTrue);
+  });
+
+  test('payment and bill tax snapshots survive serialization', () {
+    final payment = PaymentRecord(
+      id: 'payment-1',
+      customerId: 'member-1',
+      monthYear: '2026-10',
+      amount: 590,
+      totalDue: 1180,
+      status: PaymentStatus.paid,
+      isTaxEnabled: true,
+      taxLabel: 'GST',
+      taxRatePercent: 18,
+      isTaxInclusive: false,
+      taxableAmount: 1000,
+      taxAmount: 180,
+    );
+    final bill = BillRecord(
+      id: 'bill-1',
+      billNumber: 'BILL-202610-0001',
+      customerId: 'member-1',
+      customerName: 'Aarav',
+      customerPhone: '9876543210',
+      monthYear: '2026-10',
+      amount: 590,
+      paymentId: payment.id,
+      method: PaymentMethod.cash,
+      paidAt: DateTime(2026, 10, 2),
+      gymName: 'Titan Fitness',
+      issuedAt: DateTime(2026, 10, 2),
+      isTaxEnabled: true,
+      taxLabel: 'GST',
+      taxRatePercent: 18,
+      isTaxInclusive: false,
+      taxableAmount: 500,
+      taxAmount: 90,
+    );
+
+    final restoredPayment = PaymentRecord.fromMap(payment.toMap());
+    final restoredBill = BillRecord.fromMap(bill.toMap());
+
+    expect(restoredPayment.totalDue, 1180);
+    expect(restoredPayment.taxableAmount, 1000);
+    expect(restoredPayment.taxAmount, 180);
+    expect(restoredBill.isTaxEnabled, isTrue);
+    expect(restoredBill.taxableAmount, 500);
+    expect(restoredBill.taxAmount, 90);
+  });
+
+  test('exclusive-tax payments snapshot reconciled receipt values', () async {
+    final gym = GymService();
+    await gym.updateSettings(
+      const GymSettings(
+        gymName: 'Titan Fitness',
+        isTaxEnabled: true,
+        taxLabel: 'GST',
+        taxRatePercent: 18,
+        isTaxInclusive: false,
+      ),
+    );
+    final customer = await gym.addCustomer(
+      name: 'Tax Snapshot Member',
+      phone: '9000000001',
+      planDurationMonths: 1,
+      membershipFee: 1000,
+      markAsPaidNow: true,
+      initialPaymentMethod: PaymentMethod.cash,
+      operationId: 'tax-snapshot-member',
+    );
+
+    final payment = gym.getPaidPaymentsForCustomer(customer.id).single;
+    final bill = gym.getBillForPayment(payment.id)!;
+
+    expect(payment.totalDue, closeTo(1180, 0.001));
+    expect(payment.taxableAmount, closeTo(1000, 0.001));
+    expect(payment.taxAmount, closeTo(180, 0.001));
+    expect(bill.amount, closeTo(1180, 0.001));
+    expect(bill.taxableAmount, closeTo(1000, 0.001));
+    expect(bill.taxAmount, closeTo(180, 0.001));
+
+    await gym.updateSettings(
+      const GymSettings(gymName: 'Titan Fitness', isTaxEnabled: false),
+    );
+    expect(bill.isTaxEnabled, isTrue);
+    expect(bill.taxRatePercent, 18);
   });
 
   test(

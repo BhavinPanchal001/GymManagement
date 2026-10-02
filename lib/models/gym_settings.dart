@@ -105,6 +105,27 @@ class GymSettings {
     return singleFee * (months > 0 ? months : 1);
   }
 
+  double totalForConfiguredPrice(double configuredPrice) {
+    if (!isTaxEnabled ||
+        isTaxInclusive ||
+        !taxRatePercent.isFinite ||
+        taxRatePercent <= 0) {
+      return configuredPrice;
+    }
+    return configuredPrice * (1 + taxRatePercent / 100);
+  }
+
+  double taxAmountFromTotal(double total) {
+    if (!isTaxEnabled ||
+        !taxRatePercent.isFinite ||
+        taxRatePercent <= 0 ||
+        total <= 0) {
+      return 0;
+    }
+    final rate = taxRatePercent / 100;
+    return total - (total / (1 + rate));
+  }
+
   /// Resolves the monthly price for a given plan type key (1-month baseline)
   double getFeeForPlan(String? planType) {
     switch (planType) {
@@ -220,6 +241,13 @@ class GymSettings {
     final normalFee = (map['normalPlanFee'] as num?)?.toDouble() ?? standardFee;
     final ptFee = (map['ptPlanFee'] as num?)?.toDouble() ?? 2500.0;
     final ptDietFee = (map['ptDietPlanFee'] as num?)?.toDouble() ?? 3500.0;
+    final storedTaxRate =
+        (map['taxRatePercent'] as num?)?.toDouble() ?? 18.0;
+    final taxRate = storedTaxRate.isFinite &&
+            storedTaxRate >= 0 &&
+            storedTaxRate <= 100
+        ? storedTaxRate
+        : 18.0;
 
     List<PlanDurationPackage> packages = [];
     if (map['durationPackages'] is List) {
@@ -246,7 +274,7 @@ class GymSettings {
       currencySymbol: map['currencySymbol'] as String? ?? '₹',
       isTaxEnabled: map['isTaxEnabled'] as bool? ?? false,
       taxLabel: map['taxLabel'] as String? ?? 'GST',
-      taxRatePercent: (map['taxRatePercent'] as num?)?.toDouble() ?? 18.0,
+      taxRatePercent: taxRate,
       isTaxInclusive: map['isTaxInclusive'] as bool? ?? true,
       receiptTerms: map['receiptTerms'] as String? ?? defaultReceiptTerms,
       isFirestoreConnected: map['isFirestoreConnected'] as bool? ?? false,

@@ -221,19 +221,21 @@ class PaymentReceiptPdfService {
     final receiptTerms = sanitize(gymSettings.receiptTerms.trim().isEmpty
         ? GymSettings.defaultReceiptTerms
         : gymSettings.receiptTerms.trim());
-    final taxLabel = sanitize(
-      gymSettings.taxLabel.trim().isEmpty ? 'Tax' : gymSettings.taxLabel.trim(),
-    );
+    final taxLabel = sanitize(effectiveBill.taxLabel.trim().isEmpty
+        ? 'Tax'
+        : effectiveBill.taxLabel.trim());
     final taxRateText =
-        gymSettings.taxRatePercent.truncateToDouble() ==
-                gymSettings.taxRatePercent
-            ? gymSettings.taxRatePercent.toStringAsFixed(0)
-            : gymSettings.taxRatePercent.toStringAsFixed(2);
-    final taxAmount = calculateTaxAmount(
-      amount: effectiveBill.amount,
-      ratePercent: gymSettings.taxRatePercent,
-      isInclusive: gymSettings.isTaxInclusive,
-    );
+        effectiveBill.taxRatePercent.truncateToDouble() ==
+                effectiveBill.taxRatePercent
+            ? effectiveBill.taxRatePercent.toStringAsFixed(0)
+            : effectiveBill.taxRatePercent.toStringAsFixed(2);
+    final taxAmount =
+        effectiveBill.isTaxEnabled ? effectiveBill.taxAmount : 0.0;
+    final receiptSubtotal = effectiveBill.isTaxEnabled
+        ? (effectiveBill.taxableAmount > 0
+            ? effectiveBill.taxableAmount
+            : effectiveBill.amount - taxAmount)
+        : effectiveBill.amount;
 
     final memberId = effectiveCustomer?.cardNumber.trim().isNotEmpty == true
         ? effectiveCustomer!.cardNumber.trim()
@@ -328,7 +330,7 @@ class PaymentReceiptPdfService {
                               ),
                               pw.SizedBox(height: 3),
                               pw.Text(
-                                gymSettings.isTaxEnabled
+                                effectiveBill.isTaxEnabled
                                     ? 'Official Payment Receipt & Tax Invoice'
                                     : 'Official Payment Receipt',
                                 style: pw.TextStyle(
@@ -409,7 +411,9 @@ class PaymentReceiptPdfService {
                         ),
                         pw.SizedBox(height: 8),
                         pw.Text(
-                          'RECEIPT / TAX INVOICE',
+                          effectiveBill.isTaxEnabled
+                              ? 'RECEIPT / TAX INVOICE'
+                              : 'PAYMENT RECEIPT',
                           style: pw.TextStyle(
                             font: effectiveBold,
                             fontSize: 14,
@@ -785,12 +789,12 @@ class PaymentReceiptPdfService {
                       ),
                       child: pw.Column(
                         children: [
-                          _buildSummaryRow('Subtotal:', formatMoney(planTotal), effectiveRegular, effectiveMedium),
-                          if (gymSettings.isTaxEnabled) ...[
+                          _buildSummaryRow('Subtotal:', formatMoney(receiptSubtotal), effectiveRegular, effectiveMedium),
+                          if (effectiveBill.isTaxEnabled) ...[
                             pw.SizedBox(height: 4),
                             _buildSummaryRow(
                               '$taxLabel ($taxRateText%):',
-                              '${formatMoney(taxAmount)} ${gymSettings.isTaxInclusive ? "(Included)" : "(Exclusive)"}',
+                              '${formatMoney(taxAmount)} ${effectiveBill.isTaxInclusive ? "(Included)" : "(Exclusive)"}',
                               effectiveRegular,
                               effectiveMedium,
                             ),
