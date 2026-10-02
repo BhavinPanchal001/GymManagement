@@ -41,7 +41,7 @@ class MoneyUtils {
 
 class MoneyInputFormatter extends TextInputFormatter {
   static final RegExp _validInput = RegExp(
-    r'^(?:\d*(?:\.\d{0,2})?|\.\d{0,2})$',
+    r'^-?(?:\d*(?:\.\d{0,2})?|\.\d{0,2})$',
   );
 
   const MoneyInputFormatter();
@@ -52,7 +52,7 @@ class MoneyInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final normalized = newValue.text.replaceAll(',', '.');
-    if (!_validInput.hasMatch(normalized)) return oldValue;
+    if (!_validInput.hasMatch(normalized)) return TextEditingValue.empty;
     return newValue.copyWith(text: normalized);
   }
 }

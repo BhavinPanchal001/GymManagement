@@ -28,7 +28,7 @@ void main() {
       expect(MoneyUtils.parseAmount('invalid', defaultValue: 42), 42);
     });
 
-    test('input formatter normalizes comma and rejects invalid precision', () {
+    test('input formatter normalizes comma and clears invalid input', () {
       const formatter = MoneyInputFormatter();
       const oldValue = TextEditingValue(
         text: '12.34',
@@ -45,25 +45,31 @@ void main() {
       expect(commaValue.text, '12.34');
 
       expect(
-        formatter.formatEditUpdate(
-          oldValue,
-          const TextEditingValue(text: '12.345'),
-        ),
-        oldValue,
+        formatter
+            .formatEditUpdate(
+              oldValue,
+              const TextEditingValue(text: '12.345'),
+            )
+            .text,
+        isEmpty,
       );
       expect(
-        formatter.formatEditUpdate(
-          oldValue,
-          const TextEditingValue(text: '12.34.56'),
-        ),
-        oldValue,
+        formatter
+            .formatEditUpdate(
+              oldValue,
+              const TextEditingValue(text: '12.34.56'),
+            )
+            .text,
+        isEmpty,
       );
       expect(
-        formatter.formatEditUpdate(
-          oldValue,
-          const TextEditingValue(text: '-50'),
-        ),
-        oldValue,
+        formatter
+            .formatEditUpdate(
+              oldValue,
+              const TextEditingValue(text: '-50'),
+            )
+            .text,
+        '-50',
       );
     });
   });
