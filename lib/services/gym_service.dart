@@ -1202,8 +1202,13 @@ class GymService extends ChangeNotifier {
         }
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
+        final agreementStartDay = DateTime(
+          agreement.effectiveStartDate.year,
+          agreement.effectiveStartDate.month,
+          agreement.effectiveStartDate.day,
+        );
         if (monthYear == GymDateUtils.toMonthKey(today) &&
-            agreement.effectiveStartDate.isAfter(today)) {
+            agreementStartDay.isAfter(today)) {
           return MemberLifecycleStage.notEnrolled;
         }
         hasCurrentUnpaidAgreement = true;

@@ -78,7 +78,7 @@ void main() {
       name: 'New member',
       phone: '9876543212',
       joinDate: today,
-      membershipStartDate: today,
+      membershipStartDate: now,
       membershipFee: 600.75,
       operationId: 'new-member-registration',
     );
