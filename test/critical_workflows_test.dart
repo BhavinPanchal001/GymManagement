@@ -74,7 +74,17 @@ void main() {
       await gym.attachUser('different-owner');
       expect(gym.customers, isEmpty);
       expect(gym.billsMap, isEmpty);
-      expect(gym.pendingUploadCount, 0);
+      // The only pending upload for a new owner is the subscription
+      // trial-stamp settings write — no member data may leak across owners.
+      final newOwnerOutbox = json.decode(
+            prefs.getString('gym_different-owner_cloud_outbox_v1') ?? '[]',
+          ) as List;
+      expect(
+        newOwnerOutbox
+            .expand((b) => b['changes'] as List)
+            .map((c) => c['collection']),
+        everyElement('settings'),
+      );
     },
   );
 

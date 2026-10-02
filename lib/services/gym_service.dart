@@ -365,6 +365,9 @@ class GymService extends ChangeNotifier {
     }
     await _syncQueue?.flush();
     _notifySyncStatus();
+    // A reconnected client may be able to verify remote state now — retry
+    // trial stamping if it's still missing.
+    await _ensureSubscriptionTrialStarted();
   }
 
   Future<void> _queueChanges(List<CloudChange> changes, {
@@ -651,6 +654,11 @@ class GymService extends ChangeNotifier {
       _isInitialized = true;
       notifyListeners();
     }
+    try {
+      await _ensureSubscriptionTrialStarted();
+    } catch (e) {
+      debugPrint('Could not stamp subscription trial start: $e');
+    }
   }
 
   Future<void> _loadUserLocalData(String userId) async {
@@ -766,6 +774,7 @@ class GymService extends ChangeNotifier {
       await _connectCloud(userId);
 
       notifyListeners();
+      await _ensureSubscriptionTrialStarted();
       return;
     }
 
@@ -778,6 +787,7 @@ class GymService extends ChangeNotifier {
     await _connectCloud(userId);
 
     notifyListeners();
+    await _ensureSubscriptionTrialStarted();
   }
 
   /// Detach Firestore sync. Call this on logout.
@@ -873,11 +883,23 @@ class GymService extends ChangeNotifier {
       changed = true;
     }
     if (settings != null) {
+      final localTrialStart = _settings.trialStartedAt;
       _settings = GymSettings.fromMap(
         _overlay('settings', {'config': settings.toMap()})['config']!,
       );
+      if (_settings.trialStartedAt == null && localTrialStart != null) {
+        // Keep an earlier local/provisional start — the remote doc simply
+        // hasn't been stamped yet, and the earlier clock is the stricter one.
+        _settings = _settings.copyWith(trialStartedAt: localTrialStart);
+      }
       _saveSettingsLocallyOnly();
       changed = true;
+      // The remote doc exists but carries no trial stamp and neither do we —
+      // stamp it now that remote state is known (this also retries stamping
+      // after a failed verification once connectivity returns).
+      if (_settings.trialStartedAt == null && _currentUserId != null) {
+        unawaited(_ensureSubscriptionTrialStarted());
+      }
     }
     if (paymentMap != null || billsMap != null) {
       unawaited(_refreshFinancialCache());
@@ -2752,6 +2774,112 @@ class GymService extends ChangeNotifier {
           ),
         ),
     ];
+  }
+
+  // ==================== APP SUBSCRIPTION ====================
+
+  /// Whether the owner's free trial has ended without a paid subscription.
+  bool get subscriptionRequired => _settings.subscriptionRequired;
+
+  /// Stamps the free-trial start once, on first launch of an account/device.
+  /// The timestamp lives on the synced settings doc, so reinstalls and other
+  /// devices share the same trial start instead of restarting it.
+  Future<void> _ensureSubscriptionTrialStarted() async {
+    if (_settings.trialStartedAt != null) return;
+    // A returning owner on a new device may already have a stamped trial or a
+    // paid plan in the cloud doc. That doc is the source of truth — adopt it
+    // before stamping so the queued settings write can't wipe the original
+    // trial start or paid expiry recorded on another device.
+    var remoteVerified = !FirestoreService().isAttached;
+    if (!remoteVerified) {
+      try {
+        final remote = await FirestoreService().fetchSettings();
+        remoteVerified = true;
+        if (remote != null) {
+          _settings = remote;
+          if (remote.trialStartedAt != null) {
+            notifyListeners();
+            await _saveSettingsLocallyOnly();
+            return;
+          }
+        }
+      } catch (_) {
+        // Remote state can't be verified — fall through to a provisional
+        // local-only stamp below so the trial still expires.
+      }
+    }
+    // No remote trial anywhere — stamp one. When the remote doc couldn't be
+    // verified, the stamp is kept local-only so it can't clobber a paid plan
+    // on upload; a later cloud snapshot either replaces it with the real
+    // remote start or (remote still missing a stamp) re-runs this to sync it.
+    _settings = _settings.copyWith(trialStartedAt: DateTime.now());
+    notifyListeners();
+    if (remoteVerified) {
+      await _saveSettings();
+    } else {
+      await _saveSettingsLocallyOnly();
+    }
+  }
+
+  /// Records a completed Razorpay payment before activation so it can be
+  /// retried later — or on another device — without charging again.
+  Future<void> recordPendingSubscription({
+    required int months,
+    required String paymentId,
+  }) async {
+    if (months <= 0) {
+      throw ArgumentError('Subscription length must be at least 1 month.');
+    }
+    _settings = _settings.copyWith(
+      pendingSubscriptionMonths: months,
+      pendingSubscriptionPaymentId: paymentId.trim(),
+    );
+    notifyListeners();
+    await _saveSettings();
+  }
+
+  /// Finishes a previously recorded pending purchase, if one exists.
+  Future<void> resumePendingSubscription() async {
+    if (!_settings.hasPendingSubscription) return;
+    await activateSubscription(
+      months: _settings.pendingSubscriptionMonths!,
+      paymentId: _settings.pendingSubscriptionPaymentId ?? '',
+    );
+  }
+
+  /// Extends the paid subscription by [months] after a successful payment.
+  /// Stacks on top of any remaining paid time and clears any pending purchase.
+  /// Idempotent on [paymentId]: retrying the same payment never grants a
+  /// second billing period.
+  Future<void> activateSubscription({
+    required int months,
+    required String paymentId,
+  }) async {
+    if (months <= 0) {
+      throw ArgumentError('Subscription length must be at least 1 month.');
+    }
+    final pid = paymentId.trim();
+    if (pid.isNotEmpty && pid == _settings.subscriptionPaymentId) {
+      // This payment already activated the plan. A previous attempt may have
+      // mutated in-memory state before its save failed — only clear the
+      // leftover pending record instead of extending again.
+      if (_settings.hasPendingSubscription) {
+        _settings = _settings.copyWith(clearPendingSubscription: true);
+        notifyListeners();
+        await _saveSettings();
+      }
+      return;
+    }
+    final now = DateTime.now();
+    final current = _settings.subscriptionPaidUntil;
+    final base = current != null && current.isAfter(now) ? current : now;
+    _settings = _settings.copyWith(
+      subscriptionPaidUntil: GymDateUtils.addMonthsClamped(base, months),
+      subscriptionPaymentId: pid.isNotEmpty ? pid : null,
+      clearPendingSubscription: true,
+    );
+    notifyListeners();
+    await _saveSettings();
   }
 
   // ==================== SETTINGS OPERATIONS ====================

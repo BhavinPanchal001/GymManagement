@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'app_subscription.dart';
 import 'customer.dart';
 import 'plan_package.dart';
 
@@ -13,6 +14,22 @@ class GymSettings {
   final bool isFirestoreConnected;
   final bool isPaymentDueNotificationEnabled;
   final List<PlanDurationPackage> durationPackages;
+  /// Razorpay publishable Key ID (rzp_test_... / rzp_live_...) used to open
+  /// Razorpay Checkout for online membership fee collection.
+  final String razorpayKeyId;
+
+  /// When this owner's free trial started (first app launch after signup).
+  /// Set once; null means the trial hasn't been stamped yet (grace window).
+  final DateTime? trialStartedAt;
+  /// Owner's app subscription is paid through this instant.
+  final DateTime? subscriptionPaidUntil;
+  /// Razorpay payment id of the most recent subscription purchase.
+  final String? subscriptionPaymentId;
+
+  /// A paid plan that reached checkout success but hasn't finished activating
+  /// yet. Retried without charging again; cleared on activation.
+  final int? pendingSubscriptionMonths;
+  final String? pendingSubscriptionPaymentId;
 
   static const List<PlanDurationPackage> defaultPackages = [
     // Normal Plan Packages
@@ -45,7 +62,50 @@ class GymSettings {
     this.isFirestoreConnected = false,
     this.isPaymentDueNotificationEnabled = true,
     this.durationPackages = defaultPackages,
+    this.razorpayKeyId = '',
+    this.trialStartedAt,
+    this.subscriptionPaidUntil,
+    this.subscriptionPaymentId,
+    this.pendingSubscriptionMonths,
+    this.pendingSubscriptionPaymentId,
   });
+
+  /// Whether a Razorpay Key ID has been configured for online collections.
+  bool get hasRazorpayKey => razorpayKeyId.trim().isNotEmpty;
+
+  /// End of the owner's free trial window.
+  DateTime get trialEndsAt =>
+      (trialStartedAt ?? DateTime.now()).add(const Duration(days: kTrialDays));
+
+  /// Whole days left in the free trial (0 once it ends).
+  int get trialDaysRemaining {
+    final remaining = trialEndsAt.difference(DateTime.now());
+    if (remaining.isNegative) return 0;
+    return (remaining.inMinutes / (24 * 60)).ceil();
+  }
+
+  /// Still inside the free trial (or the trial hasn't been stamped yet).
+  bool get isInTrialPeriod => DateTime.now().isBefore(trialEndsAt);
+
+  /// Owner's app subscription is currently paid up.
+  bool get hasActiveSubscription =>
+      subscriptionPaidUntil != null &&
+      subscriptionPaidUntil!.isAfter(DateTime.now());
+
+  /// Trial ended and no paid subscription — the app should show the paywall.
+  bool get subscriptionRequired =>
+      !isInTrialPeriod && !hasActiveSubscription;
+
+  /// A completed payment is still waiting to be activated.
+  bool get hasPendingSubscription =>
+      pendingSubscriptionMonths != null && pendingSubscriptionMonths! > 0;
+
+  /// The next moment the trial or paid plan ends — null when already expired.
+  DateTime? get subscriptionExpiryBoundary {
+    if (hasActiveSubscription) return subscriptionPaidUntil;
+    if (isInTrialPeriod) return trialEndsAt;
+    return null;
+  }
 
   /// Returns all packages available for a given plan tier sorted by month count
   List<PlanDurationPackage> getPackagesForPlan(String? planType) {
@@ -105,6 +165,13 @@ class GymSettings {
     bool? isFirestoreConnected,
     bool? isPaymentDueNotificationEnabled,
     List<PlanDurationPackage>? durationPackages,
+    String? razorpayKeyId,
+    DateTime? trialStartedAt,
+    DateTime? subscriptionPaidUntil,
+    String? subscriptionPaymentId,
+    int? pendingSubscriptionMonths,
+    String? pendingSubscriptionPaymentId,
+    bool clearPendingSubscription = false,
   }) {
     final effectiveNormalFee = normalPlanFee ?? this.normalPlanFee;
     final effectivePtFee = ptPlanFee ?? this.ptPlanFee;
@@ -139,6 +206,16 @@ class GymSettings {
       isFirestoreConnected: isFirestoreConnected ?? this.isFirestoreConnected,
       isPaymentDueNotificationEnabled: isPaymentDueNotificationEnabled ?? this.isPaymentDueNotificationEnabled,
       durationPackages: updatedPackages,
+      razorpayKeyId: razorpayKeyId ?? this.razorpayKeyId,
+      trialStartedAt: trialStartedAt ?? this.trialStartedAt,
+      subscriptionPaidUntil: subscriptionPaidUntil ?? this.subscriptionPaidUntil,
+      subscriptionPaymentId: subscriptionPaymentId ?? this.subscriptionPaymentId,
+      pendingSubscriptionMonths: clearPendingSubscription
+          ? null
+          : (pendingSubscriptionMonths ?? this.pendingSubscriptionMonths),
+      pendingSubscriptionPaymentId: clearPendingSubscription
+          ? null
+          : (pendingSubscriptionPaymentId ?? this.pendingSubscriptionPaymentId),
     );
   }
 
@@ -155,6 +232,12 @@ class GymSettings {
       'isFirestoreConnected': isFirestoreConnected,
       'isPaymentDueNotificationEnabled': isPaymentDueNotificationEnabled,
       'durationPackages': effectivePackages.map((p) => p.toMap()).toList(),
+      'razorpayKeyId': razorpayKeyId,
+      'trialStartedAt': trialStartedAt?.toIso8601String(),
+      'subscriptionPaidUntil': subscriptionPaidUntil?.toIso8601String(),
+      'subscriptionPaymentId': subscriptionPaymentId,
+      'pendingSubscriptionMonths': pendingSubscriptionMonths,
+      'pendingSubscriptionPaymentId': pendingSubscriptionPaymentId,
     };
   }
 
@@ -185,6 +268,16 @@ class GymSettings {
       isFirestoreConnected: map['isFirestoreConnected'] as bool? ?? false,
       isPaymentDueNotificationEnabled: map['isPaymentDueNotificationEnabled'] as bool? ?? true,
       durationPackages: packages,
+      razorpayKeyId: map['razorpayKeyId'] as String? ?? '',
+      trialStartedAt: map['trialStartedAt'] != null
+          ? DateTime.tryParse(map['trialStartedAt'] as String)
+          : null,
+      subscriptionPaidUntil: map['subscriptionPaidUntil'] != null
+          ? DateTime.tryParse(map['subscriptionPaidUntil'] as String)
+          : null,
+      subscriptionPaymentId: map['subscriptionPaymentId'] as String?,
+      pendingSubscriptionMonths: (map['pendingSubscriptionMonths'] as num?)?.toInt(),
+      pendingSubscriptionPaymentId: map['pendingSubscriptionPaymentId'] as String?,
     );
   }
 

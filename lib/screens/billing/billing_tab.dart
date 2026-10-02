@@ -328,8 +328,9 @@ class _BillingTabState extends State<BillingTab> {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 4,
                                     children: [
                                       Text(
                                         'Collection Rate: ${(progress * 100).toStringAsFixed(1)}%',

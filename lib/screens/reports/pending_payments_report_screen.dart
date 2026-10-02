@@ -411,13 +411,17 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      'TOTAL PENDING',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                    Flexible(
+                      child: Text(
+                        'TOTAL PENDING',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -926,10 +930,12 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                   border: Border(bottom: BorderSide(color: AppColors.surfaceBorder)),
                 ),
-                child: Row(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 18),
-                    const SizedBox(width: 8),
                     Text(
                       formattedMonth,
                       style: TextStyle(
@@ -938,7 +944,6 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -1002,12 +1007,17 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        GymDateUtils.formatCurrency(GymService().pendingAmountOf(payment), symbol: currency),
-                        style: const TextStyle(
-                          color: AppColors.pending,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            GymDateUtils.formatCurrency(GymService().pendingAmountOf(payment), symbol: currency),
+                            style: const TextStyle(
+                              color: AppColors.pending,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),

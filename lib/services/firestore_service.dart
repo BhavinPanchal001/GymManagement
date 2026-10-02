@@ -421,6 +421,16 @@ class FirestoreService {
     }
   }
 
+  /// One-shot read of the cloud settings doc (null when detached or missing).
+  Future<GymSettings?> fetchSettings() async {
+    if (!_isAttached || _firestore == null) return null;
+    final snap = await _settingsDoc?.get();
+    if (snap == null || !snap.exists || snap.data() == null) return null;
+    return GymSettings.fromMap(
+      Map<String, dynamic>.from(snap.data() as Map),
+    );
+  }
+
   /// Save gym settings document.
   Future<void> upsertSettings(GymSettings settings) async {
     try {

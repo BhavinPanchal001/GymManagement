@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../models/app_subscription.dart';
 import '../services/gym_service.dart';
 import '../services/notification_service.dart';
 import '../services/theme_service.dart';
@@ -7,6 +10,7 @@ import 'customers/customers_tab.dart';
 import 'attendance/daily_attendance_tab.dart';
 import 'billing/billing_tab.dart';
 import 'settings/settings_tab.dart';
+import 'subscription/subscription_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   int _billingSection = 0;
+  Timer? _entitlementTimer;
   final List<({int tabIndex, int billingSection})> _navigationHistory = [];
 
   void _selectDestination(int index) {
@@ -57,6 +62,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    GymService().addListener(_scheduleEntitlementCheck);
+    _scheduleEntitlementCheck();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService().checkAndNotifyPendingPayments();
     });
@@ -66,13 +73,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       NotificationService().checkAndNotifyPendingPayments();
+      // Re-evaluate the paywall — the trial/plan may have expired in background.
+      setState(() {});
+      _scheduleEntitlementCheck();
     }
   }
 
   @override
   void dispose() {
+    _entitlementTimer?.cancel();
+    GymService().removeListener(_scheduleEntitlementCheck);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Rebuilds when the current trial or paid plan actually expires so the
+  /// paywall engages even while the app stays open. Called on every
+  /// GymService notification to keep the timer aligned with new settings.
+  void _scheduleEntitlementCheck() {
+    _entitlementTimer?.cancel();
+    _entitlementTimer = null;
+    if (!mounted || kAppRazorpayKeyId.trim().isEmpty) return;
+    final boundary = GymService().settings.subscriptionExpiryBoundary;
+    if (boundary == null) return;
+    final delay = boundary.difference(DateTime.now());
+    _entitlementTimer = Timer(
+      delay.isNegative ? Duration.zero : delay,
+      () {
+        if (!mounted) return;
+        setState(() {});
+        _scheduleEntitlementCheck();
+      },
+    );
   }
 
   List<Widget> get _tabs => [
@@ -95,6 +127,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         builder: (context, _) {
           final gym = GymService();
           final pendingDuesCount = gym.getAllPendingDues().length;
+
+          // Paywall: trial ended without a paid subscription. Only enforced
+          // once publisher billing is configured — an empty key would lock
+          // owners out with no way to pay.
+          if (kAppRazorpayKeyId.trim().isNotEmpty && gym.subscriptionRequired) {
+            return const SubscriptionScreen();
+          }
 
           return Scaffold(
             body: Column(
@@ -127,6 +166,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               child: const Text('Retry'),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+                  ),
+                if (gym.settings.isInTrialPeriod &&
+                    !gym.settings.hasActiveSubscription)
+                  SafeArea(
+                    bottom: false,
+                    child: Material(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      child: InkWell(
+                        onTap: () => SubscriptionScreen.navigate(context),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.timer_outlined,
+                                  size: 20, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Free trial · ${gym.settings.trialDaysRemaining} day${gym.settings.trialDaysRemaining == 1 ? '' : 's'} left — tap to subscribe',
+                                ),
+                              ),
+                              Icon(Icons.chevron_right_rounded,
+                                  size: 20, color: AppColors.primary),
+                            ],
+                          ),
                         ),
                       ),
                     ),

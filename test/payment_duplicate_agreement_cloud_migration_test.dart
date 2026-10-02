@@ -93,9 +93,13 @@ void main() {
     await gym.attachUser(ownerId);
     final preferences = await SharedPreferences.getInstance();
     String? savedOutbox;
-    for (var attempt = 0; attempt < 50; attempt++) {
+    for (var attempt = 0; attempt < 200; attempt++) {
       savedOutbox = preferences.getString('gym_${ownerId}_cloud_outbox_v1');
-      if (savedOutbox != null && savedOutbox != '[]') break;
+      // Other writes (e.g. the trial-start settings stamp) can land in the
+      // outbox first — wait until the migration's deletions are queued.
+      if (savedOutbox != null && savedOutbox.contains(explicitAgreement.id)) {
+        break;
+      }
       await Future<void>.delayed(const Duration(milliseconds: 10));
     }
 

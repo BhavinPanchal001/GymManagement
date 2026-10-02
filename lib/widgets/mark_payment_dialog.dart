@@ -3,6 +3,7 @@ import '../models/customer.dart';
 import '../models/payment.dart';
 import '../models/bill.dart';
 import '../services/gym_service.dart';
+import '../services/razorpay_service.dart';
 import '../services/whatsapp_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/date_utils.dart';
@@ -95,6 +96,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     PaymentMethod.upi,
     PaymentMethod.card,
     PaymentMethod.netBanking,
+    PaymentMethod.razorpay,
   ];
 
   @override
@@ -330,6 +332,92 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _collectViaRazorpay() async {
+    if (_isLoading) return;
+    final service = RazorpayService();
+    if (!service.isSupported) {
+      _showError('Online collection is only available on Android and iOS.');
+      return;
+    }
+    if (!service.isConfigured) {
+      _showError('Add your Razorpay Key ID in Settings to collect online.');
+      return;
+    }
+    final amount = double.tryParse(_amountController.text.trim());
+    if (amount == null ||
+        !amount.isFinite ||
+        amount <= 0 ||
+        amount > _totalDue + 0.005) {
+      _showError('Enter a positive amount no greater than the membership fee.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final result = await service.collectPayment(
+        amountInr: amount,
+        description:
+            '${widget.customer.name} • ${GymDateUtils.formatMonthYearKey(widget.monthYear)} membership',
+        memberName: widget.customer.name,
+        contact: widget.customer.phone,
+      );
+      if (!mounted) return;
+      if (result.cancelled) {
+        _showError('Payment was cancelled.');
+        return;
+      }
+      if (!result.success) {
+        _showError(result.errorMessage ?? 'The online payment failed.');
+        return;
+      }
+
+      final bill = await GymService().markPaymentAsPaid(
+        customerId: widget.customer.id,
+        monthYear: widget.monthYear,
+        method: PaymentMethod.razorpay,
+        amount: amount,
+        totalDue: _totalDue,
+        durationMonths: _selectedDurationMonths,
+        startDate: _startDate,
+        endDate: _endDate,
+        notes: _notesController.text.trim().isNotEmpty
+            ? _notesController.text.trim()
+            : null,
+        transactionRef: result.paymentId,
+        paidAt: DateTime.now(),
+        operationId: _operationId,
+        agreementId: widget.currentRecord.isMembershipAgreement
+            ? widget.currentRecord.id
+            : null,
+        updateFutureRenewalDefault: _updateFutureRenewalDefault,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Online payment collected & bill created for ${widget.customer.name}!',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: AppColors.paid,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pop(context, bill);
+      }
+    } catch (error) {
+      if (mounted) {
+        _showError(
+          error is ArgumentError
+              ? error.message.toString()
+              : 'Could not save the payment. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _collectBalance() async {
     if (_isLoading) return;
     final current = GymService().getPaymentById(widget.currentRecord.id);
@@ -389,6 +477,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         return Icons.credit_card_rounded;
       case PaymentMethod.netBanking:
         return Icons.account_balance_rounded;
+      case PaymentMethod.razorpay:
+        return Icons.bolt_rounded;
     }
   }
 
@@ -408,6 +498,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         return const Color(0xFFFF4081);
       case PaymentMethod.netBanking:
         return const Color(0xFF26A69A);
+      case PaymentMethod.razorpay:
+        return const Color(0xFF528FF0);
     }
   }
 
@@ -785,6 +877,31 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       ),
               ),
             ),
+
+            if (!isAlreadyPaid && RazorpayService().isSupported) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _collectViaRazorpay,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF528FF0),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.bolt_rounded, size: 20),
+                  label: Text(
+                    'Collect Online via Razorpay',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
             if (!isAlreadyPaid) ...[
               const SizedBox(height: 12),

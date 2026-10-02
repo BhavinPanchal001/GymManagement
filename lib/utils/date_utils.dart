@@ -9,6 +9,25 @@ class GymDateUtils {
     return DateFormat('yyyy-MM').format(dt);
   }
 
+  /// Adds calendar [months] to [base], clamping the day to the target month's
+  /// last day (Jan 31 + 1 month = Feb 28/29, not Mar 3).
+  static DateTime addMonthsClamped(DateTime base, int months) {
+    final total = base.year * 12 + (base.month - 1) + months;
+    final year = total ~/ 12;
+    final month = total % 12 + 1;
+    final lastDay = DateTime(year, month + 1, 0).day;
+    return DateTime(
+      year,
+      month,
+      base.day > lastDay ? lastDay : base.day,
+      base.hour,
+      base.minute,
+      base.second,
+      base.millisecond,
+      base.microsecond,
+    );
+  }
+
   static String formatMonthYearKey(String monthKey) {
     try {
       final parts = monthKey.split('-');

@@ -5,10 +5,12 @@ import '../../services/gym_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/date_utils.dart';
 import '../../widgets/user_avatar.dart';
 import '../../widgets/gym_logo_widget.dart';
 import '../../widgets/danger_confirmation_dialog.dart';
 import '../intro/intro_screen.dart';
+import '../subscription/subscription_screen.dart';
 import 'edit_profile_screen.dart';
 
 class SettingsTab extends StatefulWidget {
@@ -23,6 +25,7 @@ class _SettingsTabState extends State<SettingsTab> {
   late TextEditingController _normalFeeController;
   late TextEditingController _ptFeeController;
   late TextEditingController _ptDietFeeController;
+  late TextEditingController _razorpayKeyController;
 
   @override
   void initState() {
@@ -32,6 +35,7 @@ class _SettingsTabState extends State<SettingsTab> {
     _normalFeeController = TextEditingController(text: settings.normalPlanFee.toInt().toString());
     _ptFeeController = TextEditingController(text: settings.ptPlanFee.toInt().toString());
     _ptDietFeeController = TextEditingController(text: settings.ptDietPlanFee.toInt().toString());
+    _razorpayKeyController = TextEditingController(text: settings.razorpayKeyId);
   }
 
   void _syncControllersFromSettings() {
@@ -41,6 +45,7 @@ class _SettingsTabState extends State<SettingsTab> {
     _normalFeeController.text = settings.normalPlanFee.toInt().toString();
     _ptFeeController.text = settings.ptPlanFee.toInt().toString();
     _ptDietFeeController.text = settings.ptDietPlanFee.toInt().toString();
+    _razorpayKeyController.text = settings.razorpayKeyId;
   }
 
   Future<void> _openEditProfile() async {
@@ -57,6 +62,7 @@ class _SettingsTabState extends State<SettingsTab> {
     _normalFeeController.dispose();
     _ptFeeController.dispose();
     _ptDietFeeController.dispose();
+    _razorpayKeyController.dispose();
     super.dispose();
   }
 
@@ -98,6 +104,28 @@ class _SettingsTabState extends State<SettingsTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Gym settings & plan pricing updated successfully!'),
+          backgroundColor: AppColors.paid,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveRazorpaySettings() async {
+    final gym = GymService();
+    final updated = gym.settings.copyWith(
+      razorpayKeyId: _razorpayKeyController.text.trim(),
+    );
+    await gym.updateSettings(updated);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            updated.hasRazorpayKey
+                ? 'Razorpay online payments enabled!'
+                : 'Razorpay Key ID cleared.',
+          ),
           backgroundColor: AppColors.paid,
           behavior: SnackBarBehavior.floating,
         ),
@@ -892,6 +920,156 @@ class _SettingsTabState extends State<SettingsTab> {
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Online Payments (Razorpay) Card
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.bolt_rounded, color: Color(0xFF528FF0), size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Member Fee Collection (Razorpay)',
+                              style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: gym.settings.hasRazorpayKey
+                                  ? AppColors.paid.withValues(alpha: 0.15)
+                                  : AppColors.textMuted.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              gym.settings.hasRazorpayKey ? 'CONFIGURED' : 'NOT SET',
+                              style: TextStyle(
+                                color: gym.settings.hasRazorpayKey
+                                    ? AppColors.paid
+                                    : AppColors.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Let members pay their fees online via UPI, cards & net banking through your own Razorpay account.',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Razorpay Key ID',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _razorpayKeyController,
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                        decoration: const InputDecoration(
+                          hintText: 'rzp_test_... or rzp_live_...',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Find your Key ID in Razorpay Dashboard → Settings → API Keys. Use a test key while trying it out. Only the Key ID goes in the app — never the Key Secret.',
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.4),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton.icon(
+                          onPressed: _saveRazorpaySettings,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF528FF0),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          icon: const Icon(Icons.save_rounded, size: 18),
+                          label: const Text(
+                            'Save Payment Gateway',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Divider(color: AppColors.surfaceBorder, height: 20),
+                      // App subscription status (trial / paid plan for the owner)
+                      Builder(builder: (context) {
+                        final settings = gym.settings;
+                        final status = settings.hasActiveSubscription
+                            ? 'Active until ${GymDateUtils.formatDate(settings.subscriptionPaidUntil!)}'
+                            : settings.isInTrialPeriod
+                                ? 'Free trial · ${settings.trialDaysRemaining} day${settings.trialDaysRemaining == 1 ? '' : 's'} left'
+                                : 'Expired — subscribe to continue';
+                        return InkWell(
+                          onTap: () => SubscriptionScreen.navigate(context),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.workspace_premium_rounded,
+                                  size: 18,
+                                  color: settings.subscriptionRequired
+                                      ? AppColors.absent
+                                      : AppColors.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'App Subscription',
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        status,
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  'Manage',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
