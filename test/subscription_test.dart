@@ -169,6 +169,33 @@ void main() {
       expect(gym.settings.subscriptionPaymentId, 'pay_pending_1');
     });
 
+    test('activating the same payment twice does not double-extend', () async {
+      await gym.detachUser();
+      SharedPreferences.setMockInitialValues({});
+      await gym.init();
+      await gym.attachUser('idempotent-owner', isNewUser: true);
+
+      await gym.activateSubscription(months: 1, paymentId: 'pay_dup');
+      final until = gym.settings.subscriptionPaidUntil!;
+
+      // Same paymentId retry (e.g. first save failed after mutating memory):
+      // must not grant a second billing period.
+      await gym.activateSubscription(months: 1, paymentId: 'pay_dup');
+      expect(gym.settings.subscriptionPaidUntil, until);
+
+      // Resuming a stale pending record for the same payment clears it
+      // without extending again.
+      await gym.recordPendingSubscription(months: 1, paymentId: 'pay_dup');
+      expect(gym.settings.hasPendingSubscription, isTrue);
+      await gym.resumePendingSubscription();
+      expect(gym.settings.subscriptionPaidUntil, until);
+      expect(gym.settings.hasPendingSubscription, isFalse);
+
+      // A genuinely new payment still extends.
+      await gym.activateSubscription(months: 1, paymentId: 'pay_new');
+      expect(gym.settings.subscriptionPaidUntil!.isAfter(until), isTrue);
+    });
+
     test('pending fields default safely in old settings json', () {
       final map = const GymSettings().toMap()
         ..remove('pendingSubscriptionMonths')
