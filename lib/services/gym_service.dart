@@ -635,7 +635,8 @@ class GymService extends ChangeNotifier {
         _settings = const GymSettings();
       }
 
-      if (prefs.getBool(_keyPaymentsSchemaV2) != true) {
+      if (prefs.getBool(_keyPaymentsSchemaV2) != true ||
+          _hasLegacyPaymentShapes()) {
         await _migrateLegacyPayments();
         await prefs.setBool(_keyPaymentsSchemaV2, true);
       }
@@ -2346,11 +2347,51 @@ class GymService extends ChangeNotifier {
   @visibleForTesting
   bool get hasLegacyPaymentShapes => _hasLegacyPaymentShapes();
 
+  Set<String> _duplicateMembershipAgreementIds() {
+    final recordsByPeriod = <String, List<PaymentRecord>>{};
+    for (final payment in _paymentMap.values) {
+      if (!payment.isMembershipAgreement) continue;
+      final periodKey = [
+        payment.customerId,
+        GymDateUtils.toDateKey(payment.effectiveStartDate),
+        GymDateUtils.toDateKey(payment.effectiveEndDate),
+      ].join('|');
+      (recordsByPeriod[periodKey] ??= []).add(payment);
+    }
+
+    final duplicateIds = <String>{};
+    for (final records in recordsByPeriod.values) {
+      final paid = records.where((record) => record.isPaid).toList();
+      final unpaid = records.where((record) => !record.isPaid).toList();
+      if (paid.isNotEmpty) {
+        duplicateIds.addAll(unpaid.map((record) => record.id));
+        continue;
+      }
+      if (unpaid.length < 2) continue;
+      unpaid.sort((a, b) {
+        if (a.isInferredAgreement != b.isInferredAgreement) {
+          return a.isInferredAgreement ? 1 : -1;
+        }
+        final aIsRegistration = a.id.startsWith('membership_');
+        final bIsRegistration = b.id.startsWith('membership_');
+        if (aIsRegistration != bIsRegistration) {
+          return aIsRegistration ? -1 : 1;
+        }
+        return a.id.compareTo(b.id);
+      });
+      duplicateIds.addAll(unpaid.skip(1).map((record) => record.id));
+    }
+    return duplicateIds;
+  }
+
   /// Cheap detection of legacy payment/bill shapes needing migration.
   bool _hasLegacyPaymentShapes() {
+    if (_duplicateMembershipAgreementIds().isNotEmpty) return true;
     for (final p in _paymentMap.values) {
       if (p.isCoveredInPackage) return true;
-      if (p.status != PaymentStatus.paid && !p.isMembershipAgreement) return true;
+      if (p.status != PaymentStatus.paid && !p.isMembershipAgreement) {
+        return true;
+      }
       if (p.startDate == null ||
           p.monthYear != GymDateUtils.toMonthKey(p.effectiveStartDate)) {
         return true;
@@ -2364,7 +2405,7 @@ class GymService extends ChangeNotifier {
 
   /// Idempotent migration to schema v2:
   /// 1. Drop ₹0 coveredByMonthYear placeholder records.
-  /// 2. Drop stored pending/overdue records (pending is now derived).
+  /// 2. Drop obsolete pending records and duplicate membership agreements.
   /// 3. Freeze start/end dates and fix the monthYear label on paid records.
   /// 4. Link legacy bills (empty paymentId) to their payment.
   /// 5. Re-key Firestore docs to record.id / bill.id; delete legacy doc ids.
@@ -2378,11 +2419,13 @@ class GymService extends ChangeNotifier {
       final billsToUpsert = <BillRecord>[];
       final paymentDocsToDelete = <String>{};
       final billDocsToDelete = <String>{};
+      final duplicateAgreementIds = _duplicateMembershipAgreementIds();
 
       // Steps 1 & 2: remove placeholders and stored pending/overdue records.
       for (final p in _paymentMap.values.toList()) {
         if (p.isCoveredInPackage ||
-            (p.status != PaymentStatus.paid && !p.isMembershipAgreement)) {
+            (p.status != PaymentStatus.paid && !p.isMembershipAgreement) ||
+            duplicateAgreementIds.contains(p.id)) {
           _paymentMap.remove(p.id);
           paymentDocsToDelete.add('${p.customerId}_${p.monthYear}');
           if (p.id != '${p.customerId}_${p.monthYear}') {
