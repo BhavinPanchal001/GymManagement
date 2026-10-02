@@ -258,6 +258,8 @@ class GymService extends ChangeNotifier {
   bool _isCloudAttached = false;
   bool _isMigratedToCloud = false;
   bool _suppressCloudUpdates = false; // Prevents re-entrant updates during local writes
+  bool _cloudAttendanceLoaded = false;
+  bool _cloudPaymentsLoaded = false;
   CloudSyncQueue? _syncQueue;
   String? _cloudReadError;
   String? _financialCacheError;
@@ -326,10 +328,13 @@ class GymService extends ChangeNotifier {
       billsMap: _billsMap,
       expenses: _expenses,
       settings: _settings,
+      fromCloud: false,
     );
   }
 
   Future<void> _connectCloud(String userId) async {
+    _cloudAttendanceLoaded = false;
+    _cloudPaymentsLoaded = false;
     try {
       await FirestoreService().attachUser(
         userId,
@@ -785,6 +790,8 @@ class GymService extends ChangeNotifier {
     await FirestoreService().detachUser();
     _isCloudAttached = false;
     _isMigratedToCloud = false;
+    _cloudAttendanceLoaded = false;
+    _cloudPaymentsLoaded = false;
     _currentUserId = null;
 
     if (clearMemory) {
@@ -821,10 +828,16 @@ class GymService extends ChangeNotifier {
     Map<String, BillRecord>? billsMap,
     List<ExpenseRecord>? expenses,
     GymSettings? settings,
+    bool fromCloud = true,
   }) {
     if (_suppressCloudUpdates) return;
 
     bool changed = false;
+
+    if (fromCloud) {
+      if (attendanceMap != null) _cloudAttendanceLoaded = true;
+      if (paymentMap != null) _cloudPaymentsLoaded = true;
+    }
 
     if (customers != null) {
       _customers = _overlay('customers', {
@@ -870,12 +883,27 @@ class GymService extends ChangeNotifier {
       unawaited(_refreshFinancialCache());
     }
 
-    if ((paymentMap != null || billsMap != null) && _hasLegacyPaymentShapes()) {
-      _migrateLegacyPayments();
+    if ((attendanceMap != null || paymentMap != null || billsMap != null) &&
+        _hasLegacyPaymentShapes()) {
+      unawaited(_migrateLegacyPayments());
     }
 
     if (changed) {
       notifyListeners();
+    }
+  }
+
+  @visibleForTesting
+  Future<void> applyCloudSnapshotForTesting({
+    Map<String, AttendanceRecord>? attendanceMap,
+    Map<String, PaymentRecord>? paymentMap,
+  }) async {
+    _onFirestoreData(
+      attendanceMap: attendanceMap,
+      paymentMap: paymentMap,
+    );
+    while (_migrating) {
+      await Future<void>.delayed(Duration.zero);
     }
   }
 
@@ -1334,7 +1362,7 @@ class GymService extends ChangeNotifier {
     await _cloudSaveAttendance(_attendanceMap[key]!);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance();
+    await _freezeUnagreedAttendance(attendanceChanged: true);
   }
 
   Future<void> markAllPresentForDate(String dateKey) async {
@@ -1357,7 +1385,7 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(records);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance();
+    await _freezeUnagreedAttendance(attendanceChanged: true);
   }
 
   Future<void> markTodayQuickAttendance(String customerId, bool present) async {
@@ -1434,7 +1462,7 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(modifiedRecords);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance();
+    await _freezeUnagreedAttendance(attendanceChanged: true);
   }
 
   Future<void> setMonthAttendanceForMultiple({
@@ -1504,7 +1532,7 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(modifiedRecords);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance();
+    await _freezeUnagreedAttendance(attendanceChanged: true);
   }
 
   Map<String, int> getMonthlyAttendanceSummary(String customerId, String monthYear) {
@@ -1647,8 +1675,12 @@ class GymService extends ChangeNotifier {
     );
   }
 
-  Future<void> _freezeUnagreedAttendance() async {
-    await _migrateLegacyPayments();
+  Future<void> _freezeUnagreedAttendance({
+    bool attendanceChanged = false,
+  }) async {
+    await _migrateLegacyPayments(
+      reconcileInferredAttendance: attendanceChanged,
+    );
     final agreements = _duesIndex.inferredAgreements.values
         .expand((records) => records)
         .where((record) => !_paymentMap.containsKey(record.id)).toList();
@@ -2422,7 +2454,14 @@ class GymService extends ChangeNotifier {
     return updates;
   }
 
-  Set<String> _unsupportedInferredAgreementIds() {
+  Set<String> _unsupportedInferredAgreementIds({
+    bool allowBeforeCloudLoad = false,
+  }) {
+    if (!allowBeforeCloudLoad &&
+        _currentUserId != null &&
+        (!_cloudAttendanceLoaded || !_cloudPaymentsLoaded)) {
+      return {};
+    }
     final unsupportedIds = <String>{};
     for (final agreement in _paymentMap.values) {
       if (!agreement.isMembershipAgreement ||
@@ -2460,9 +2499,15 @@ class GymService extends ChangeNotifier {
   }
 
   /// Cheap detection of legacy payment/bill shapes needing migration.
-  bool _hasLegacyPaymentShapes() {
+  bool _hasLegacyPaymentShapes({
+    bool reconcileInferredAttendance = false,
+  }) {
     if (_duplicateMembershipAgreementIds().isNotEmpty) return true;
-    if (_unsupportedInferredAgreementIds().isNotEmpty) return true;
+    if (_unsupportedInferredAgreementIds(
+      allowBeforeCloudLoad: reconcileInferredAttendance,
+    ).isNotEmpty) {
+      return true;
+    }
     for (final p in _paymentMap.values) {
       if (p.isCoveredInPackage) return true;
       if (p.status != PaymentStatus.paid && !p.isMembershipAgreement) {
@@ -2485,9 +2530,15 @@ class GymService extends ChangeNotifier {
   /// 3. Freeze start/end dates and fix the monthYear label on paid records.
   /// 4. Link legacy bills (empty paymentId) to their payment.
   /// 5. Re-key Firestore docs to record.id / bill.id; delete legacy doc ids.
-  Future<void> _migrateLegacyPayments() async {
+  Future<void> _migrateLegacyPayments({
+    bool reconcileInferredAttendance = false,
+  }) async {
     if (_migrating) return;
-    if (!_hasLegacyPaymentShapes()) return;
+    if (!_hasLegacyPaymentShapes(
+      reconcileInferredAttendance: reconcileInferredAttendance,
+    )) {
+      return;
+    }
     _migrating = true;
     try {
       bool modified = false;
@@ -2496,7 +2547,9 @@ class GymService extends ChangeNotifier {
       final paymentDocsToDelete = <String>{};
       final billDocsToDelete = <String>{};
       final duplicateAgreementIds = _duplicateMembershipAgreementIds();
-      final unsupportedAgreementIds = _unsupportedInferredAgreementIds();
+      final unsupportedAgreementIds = _unsupportedInferredAgreementIds(
+        allowBeforeCloudLoad: reconcileInferredAttendance,
+      );
       final reconciledAgreements = _reconciledMembershipAgreements();
       if (reconciledAgreements.isNotEmpty) {
         _paymentMap.addAll(reconciledAgreements);
