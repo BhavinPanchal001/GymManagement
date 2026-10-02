@@ -2347,7 +2347,7 @@ class GymService extends ChangeNotifier {
   @visibleForTesting
   bool get hasLegacyPaymentShapes => _hasLegacyPaymentShapes();
 
-  Set<String> _duplicateMembershipAgreementIds() {
+  Map<String, List<PaymentRecord>> _membershipAgreementsByPeriod() {
     final recordsByPeriod = <String, List<PaymentRecord>>{};
     for (final payment in _paymentMap.values) {
       if (!payment.isMembershipAgreement) continue;
@@ -2358,9 +2358,12 @@ class GymService extends ChangeNotifier {
       ].join('|');
       (recordsByPeriod[periodKey] ??= []).add(payment);
     }
+    return recordsByPeriod;
+  }
 
+  Set<String> _duplicateMembershipAgreementIds() {
     final duplicateIds = <String>{};
-    for (final records in recordsByPeriod.values) {
+    for (final records in _membershipAgreementsByPeriod().values) {
       final paid = records.where((record) => record.isPaid).toList();
       final unpaid = records.where((record) => !record.isPaid).toList();
       if (paid.isNotEmpty) {
@@ -2382,6 +2385,40 @@ class GymService extends ChangeNotifier {
       duplicateIds.addAll(unpaid.skip(1).map((record) => record.id));
     }
     return duplicateIds;
+  }
+
+  Map<String, PaymentRecord> _reconciledMembershipAgreements() {
+    final updates = <String, PaymentRecord>{};
+    for (final records in _membershipAgreementsByPeriod().values) {
+      final paid = records.where((record) => record.isPaid).toList();
+      final explicitUnpaid = records
+          .where((record) => !record.isPaid && !record.isInferredAgreement)
+          .toList();
+      if (paid.length != 1 ||
+          explicitUnpaid.isEmpty ||
+          !paid.single.isInferredAgreement) {
+        continue;
+      }
+      explicitUnpaid.sort((a, b) {
+        final aIsRegistration = a.id.startsWith('membership_');
+        final bIsRegistration = b.id.startsWith('membership_');
+        if (aIsRegistration != bIsRegistration) {
+          return aIsRegistration ? -1 : 1;
+        }
+        return a.id.compareTo(b.id);
+      });
+      final payment = paid.single;
+      final agreement = explicitUnpaid.first;
+      updates[payment.id] = payment.copyWith(
+        totalDue: agreement.totalDue,
+        durationMonths: agreement.durationMonths,
+        startDate: agreement.effectiveStartDate,
+        endDate: agreement.effectiveEndDate,
+        isInferredAgreement: false,
+        planType: agreement.planType,
+      );
+    }
+    return updates;
   }
 
   /// Cheap detection of legacy payment/bill shapes needing migration.
@@ -2420,6 +2457,11 @@ class GymService extends ChangeNotifier {
       final paymentDocsToDelete = <String>{};
       final billDocsToDelete = <String>{};
       final duplicateAgreementIds = _duplicateMembershipAgreementIds();
+      final reconciledAgreements = _reconciledMembershipAgreements();
+      if (reconciledAgreements.isNotEmpty) {
+        _paymentMap.addAll(reconciledAgreements);
+        modified = true;
+      }
 
       // Steps 1 & 2: remove placeholders and stored pending/overdue records.
       for (final p in _paymentMap.values.toList()) {
@@ -2495,6 +2537,9 @@ class GymService extends ChangeNotifier {
         final legacyDocId = '${b.customerId}_${b.monthYear}';
         if (legacyDocId != b.id) billDocsToDelete.add(legacyDocId);
       }
+
+      paymentDocsToDelete.removeAll(_paymentMap.keys);
+      billDocsToDelete.removeAll(_billsMap.keys);
 
       if (modified) {
         await _savePayments();
