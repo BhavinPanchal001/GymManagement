@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
+import '../utils/image_storage_utils.dart';
 import 'customer_avatar.dart';
 
 /// Reusable display widget for Gym Logo with support for local file paths,
 /// network URLs, avatar presets, and stylized fallbacks.
 class GymLogoWidget extends StatelessWidget {
   final String? logoPath;
+  final String? logoBase64;
   final String gymName;
   final double size;
   final BoxShape shape;
@@ -21,6 +23,7 @@ class GymLogoWidget extends StatelessWidget {
   const GymLogoWidget({
     super.key,
     required this.logoPath,
+    this.logoBase64,
     this.gymName = 'Gym',
     this.size = 40.0,
     this.shape = BoxShape.circle,
@@ -66,11 +69,13 @@ class GymLogoWidget extends StatelessWidget {
             errorBuilder: (ctx, err, stack) => _buildFallback(effectiveIconColor, effectiveBg),
           );
         } else {
-          content = _buildFallback(effectiveIconColor, effectiveBg);
+          content =
+              _buildSyncedLogo() ?? _buildFallback(effectiveIconColor, effectiveBg);
         }
       }
     } else {
-      content = _buildFallback(effectiveIconColor, effectiveBg);
+      content =
+          _buildSyncedLogo() ?? _buildFallback(effectiveIconColor, effectiveBg);
     }
 
     Widget framedWidget;
@@ -112,6 +117,13 @@ class GymLogoWidget extends StatelessWidget {
     return framedWidget;
   }
 
+  Widget? _buildSyncedLogo() {
+    final bytes = ImageStorageUtils.decodeBase64Image(logoBase64);
+    return bytes == null
+        ? null
+        : Image.memory(bytes, width: size, height: size, fit: BoxFit.cover);
+  }
+
   Widget _buildFallback(Color iconColor, Color bg) {
     return Container(
       width: size,
@@ -142,20 +154,24 @@ class GymLogoWidget extends StatelessWidget {
 /// Interactive selector widget for uploading and updating the Gym Logo
 class GymLogoSelector extends StatefulWidget {
   final String? initialLogoPath;
+  final String? initialLogoBase64;
   final String gymName;
   final ValueChanged<String?> onLogoSelected;
   final String title;
   final bool allowRemove;
   final double radius;
+  final String storageKey;
 
   const GymLogoSelector({
     super.key,
     this.initialLogoPath,
+    this.initialLogoBase64,
     required this.gymName,
     required this.onLogoSelected,
     this.title = 'Gym Brand Logo',
     this.allowRemove = true,
     this.radius = 46,
+    this.storageKey = 'gym_logo',
   });
 
   @override
@@ -164,19 +180,23 @@ class GymLogoSelector extends StatefulWidget {
 
 class _GymLogoSelectorState extends State<GymLogoSelector> {
   String? _currentLogoPath;
+  String? _currentLogoBase64;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     _currentLogoPath = widget.initialLogoPath;
+    _currentLogoBase64 = widget.initialLogoBase64;
   }
 
   @override
   void didUpdateWidget(covariant GymLogoSelector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialLogoPath != widget.initialLogoPath) {
+    if (oldWidget.initialLogoPath != widget.initialLogoPath ||
+        oldWidget.initialLogoBase64 != widget.initialLogoBase64) {
       _currentLogoPath = widget.initialLogoPath;
+      _currentLogoBase64 = widget.initialLogoBase64;
     }
   }
 
@@ -189,8 +209,13 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
         maxHeight: 1024,
       );
       if (pickedFile != null) {
+        final persistentPath = await ImageStorageUtils.persistImage(
+          pickedFile.path,
+          '${widget.storageKey}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
         setState(() {
-          _currentLogoPath = pickedFile.path;
+          _currentLogoPath = persistentPath;
+          _currentLogoBase64 = null;
         });
         widget.onLogoSelected(_currentLogoPath);
       }
@@ -307,6 +332,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                         onTap: () {
                           setState(() {
                             _currentLogoPath = avatarKey;
+                            _currentLogoBase64 = null;
                           });
                           widget.onLogoSelected(avatarKey);
                           Navigator.pop(ctx);
@@ -346,6 +372,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                       onPressed: () {
                         setState(() {
                           _currentLogoPath = null;
+                          _currentLogoBase64 = null;
                         });
                         widget.onLogoSelected(null);
                         Navigator.pop(ctx);
@@ -430,6 +457,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
               ),
               child: GymLogoWidget(
                 logoPath: _currentLogoPath,
+                logoBase64: _currentLogoBase64,
                 gymName: widget.gymName.isNotEmpty ? widget.gymName : 'Gym Logo',
                 size: size,
                 borderColor: Colors.transparent,

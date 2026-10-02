@@ -624,6 +624,7 @@ class _BillingTabState extends State<BillingTab> {
               children: [
                 CustomerAvatar(
                   imagePath: customer.imagePath,
+                  imageBase64: customer.imageBase64,
                   name: customer.name,
                   radius: 24,
                 ),

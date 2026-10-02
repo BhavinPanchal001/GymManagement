@@ -5,6 +5,7 @@ import 'plan_package.dart';
 class GymSettings {
   final String gymName;
   final String? gymLogoPath;
+  final String? gymLogoBase64;
   final double standardMonthlyFee;
   final double normalPlanFee;
   final double ptPlanFee;
@@ -37,6 +38,7 @@ class GymSettings {
   const GymSettings({
     this.gymName = 'IronPulse Fitness Club',
     this.gymLogoPath,
+    this.gymLogoBase64,
     this.standardMonthlyFee = 600.0,
     this.normalPlanFee = 600.0,
     this.ptPlanFee = 2500.0,
@@ -96,7 +98,9 @@ class GymSettings {
   GymSettings copyWith({
     String? gymName,
     String? gymLogoPath,
+    String? gymLogoBase64,
     bool clearGymLogo = false,
+    bool clearGymLogoBase64 = false,
     double? standardMonthlyFee,
     double? normalPlanFee,
     double? ptPlanFee,
@@ -131,6 +135,9 @@ class GymSettings {
     return GymSettings(
       gymName: gymName ?? this.gymName,
       gymLogoPath: clearGymLogo ? null : (gymLogoPath ?? this.gymLogoPath),
+      gymLogoBase64: clearGymLogoBase64
+          ? null
+          : (gymLogoBase64 ?? this.gymLogoBase64),
       standardMonthlyFee: standardMonthlyFee ?? effectiveNormalFee,
       normalPlanFee: effectiveNormalFee,
       ptPlanFee: effectivePtFee,
@@ -147,6 +154,7 @@ class GymSettings {
     return {
       'gymName': gymName,
       'gymLogoPath': gymLogoPath,
+      'gymLogoBase64': gymLogoBase64,
       'standardMonthlyFee': normalPlanFee,
       'normalPlanFee': normalPlanFee,
       'ptPlanFee': ptPlanFee,
@@ -177,6 +185,7 @@ class GymSettings {
     return GymSettings(
       gymName: map['gymName'] as String? ?? 'IronPulse Fitness Club',
       gymLogoPath: map['gymLogoPath'] as String?,
+      gymLogoBase64: map['gymLogoBase64'] as String?,
       standardMonthlyFee: normalFee,
       normalPlanFee: normalFee,
       ptPlanFee: ptFee,

@@ -406,6 +406,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             children: [
               CustomerAvatar(
             imagePath: customer.imagePath,
+            imageBase64: customer.imageBase64,
             name: customer.name,
             radius: 34,
           ),
