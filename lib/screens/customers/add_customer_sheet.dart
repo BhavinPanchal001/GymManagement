@@ -450,6 +450,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             if (trimmed.isEmpty) {
                               return 'Card number is required';
                             }
+                            final currentCard = widget
+                                .customerToEdit
+                                ?.cardNumber
+                                .trim()
+                                .toLowerCase();
+                            if (currentCard == trimmed.toLowerCase()) {
+                              return null;
+                            }
                             final existing = gymService.getCustomerByCardNumber(
                               trimmed,
                               excludeCustomerId: widget.customerToEdit?.id,

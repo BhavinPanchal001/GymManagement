@@ -925,11 +925,14 @@ class GymService extends ChangeNotifier {
 
   String _normalizePhone(String phone) {
     var digits = phone.replaceAll(RegExp(r'\D'), '');
-    if (digits.length > 10 && digits.startsWith('91')) {
-      digits = digits.substring(2);
-    }
-    if (digits.length > 10 && digits.startsWith('0')) {
-      digits = digits.substring(1);
+    while (digits.length > 10) {
+      if (digits.startsWith('0')) {
+        digits = digits.substring(1);
+      } else if (digits.startsWith('91')) {
+        digits = digits.substring(2);
+      } else {
+        break;
+      }
     }
     return digits;
   }
@@ -1264,17 +1267,24 @@ class GymService extends ChangeNotifier {
     if (index != -1) {
       await _freezeUnagreedAttendance();
       await _serializeFinancialSave(() async {
+        final existingCustomer = getCustomerById(updated.id);
+        if (existingCustomer == null) return;
         final assignedCardNumber = updated.cardNumber.trim().isNotEmpty
             ? updated.cardNumber.trim()
             : getNextCardNumber();
-        final cardOwner = getCustomerByCardNumber(
-          assignedCardNumber,
-          excludeCustomerId: updated.id,
-        );
-        if (cardOwner != null) {
-          throw StateError(
-            'Card #$assignedCardNumber is already assigned to ${cardOwner.name}',
+        final keepsExistingCard =
+            existingCustomer.cardNumber.trim().toLowerCase() ==
+            assignedCardNumber.toLowerCase();
+        if (!keepsExistingCard) {
+          final cardOwner = getCustomerByCardNumber(
+            assignedCardNumber,
+            excludeCustomerId: updated.id,
           );
+          if (cardOwner != null) {
+            throw StateError(
+              'Card #$assignedCardNumber is already assigned to ${cardOwner.name}',
+            );
+          }
         }
         await _commitFinancialRecords(
           customers: [updated.copyWith(cardNumber: assignedCardNumber)],

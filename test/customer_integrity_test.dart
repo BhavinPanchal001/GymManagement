@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gym/models/customer.dart';
 import 'package:gym/screens/customers/add_customer_sheet.dart';
 import 'package:gym/services/gym_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +35,7 @@ void main() {
         isNull,
       );
       expect(gym.getCustomersByPhone('09876543210').single.id, member.id);
+      expect(gym.getCustomersByPhone('0919876543210').single.id, member.id);
       expect(gym.getCustomersByPhone('98765 43210').single.id, member.id);
       expect(
         gym.getCustomersByPhone(member.phone, excludeCustomerId: member.id),
@@ -81,6 +85,51 @@ void main() {
       ),
     );
     expect(gym.getCustomerById(second.id)?.cardNumber, 'CARD-8');
+  });
+
+  test('unchanged legacy duplicate cards do not block member updates', () async {
+    final first = Customer(
+      id: 'legacy-1',
+      name: 'Legacy First',
+      phone: '9000000001',
+      joinDate: DateTime(2024, 1, 1),
+      cardNumber: '101',
+    );
+    final second = Customer(
+      id: 'legacy-2',
+      name: 'Legacy Second',
+      phone: '9000000002',
+      joinDate: DateTime(2024, 1, 2),
+      cardNumber: '101',
+    );
+    final third = Customer(
+      id: 'legacy-3',
+      name: 'Legacy Third',
+      phone: '9000000003',
+      joinDate: DateTime(2024, 1, 3),
+      cardNumber: '102',
+    );
+
+    await gym.detachUser();
+    SharedPreferences.setMockInitialValues({
+      'gym_legacy-owner_customers_v1': json.encode([
+        first.toMap(),
+        second.toMap(),
+        third.toMap(),
+      ]),
+    });
+    await gym.attachUser('legacy-owner');
+
+    await gym.updateCustomer(first.copyWith(name: 'Updated Legacy First'));
+    await gym.archiveCustomer(first.id);
+
+    expect(gym.getCustomerById(first.id)?.name, 'Updated Legacy First');
+    expect(gym.getCustomerById(first.id)?.isActive, isFalse);
+    expect(gym.getCustomerById(first.id)?.cardNumber, '101');
+    await expectLater(
+      gym.updateCustomer(first.copyWith(cardNumber: '102')),
+      throwsA(isA<StateError>()),
+    );
   });
 
   test('next card number follows the highest numeric allocation', () async {
