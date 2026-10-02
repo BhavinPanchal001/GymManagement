@@ -155,6 +155,9 @@ class _BillingTabState extends State<BillingTab> {
           ),
           body: Column(
             children: [
+              // Month Selector Bar and section tabs are hidden while the keyboard
+              // is open so the search field and results fit on small screens.
+              if (MediaQuery.viewInsetsOf(context).bottom == 0) ...[
               // Month Selector Bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -227,6 +230,7 @@ class _BillingTabState extends State<BillingTab> {
                   ),
                 ),
               ),
+              ],
 
               if (_billingSection == 1)
                 Expanded(

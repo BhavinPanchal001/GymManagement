@@ -193,9 +193,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
           ),
           body: Column(
             children: [
-              // Date Banner & Switcher
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              // Date Banner & Switcher (hidden while the keyboard is open so the
+              // search field and results fit on small screens)
+              if (MediaQuery.viewInsetsOf(context).bottom == 0)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated,
