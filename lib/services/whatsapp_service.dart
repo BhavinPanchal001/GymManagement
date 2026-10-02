@@ -92,7 +92,7 @@ class WhatsAppService {
     } else if (gymSettings.gymName.trim().isNotEmpty) {
       gym = gymSettings.gymName.trim();
     } else {
-      gym = 'IronPulse Fitness Club';
+      gym = 'Gym & Fitness Club';
     }
 
     switch (tone) {
@@ -144,7 +144,9 @@ class WhatsAppService {
     final curr = currency ?? gymSettings.currencySymbol;
     final formattedDate = GymDateUtils.formatDisplayDate(expiryDate);
     final formattedAmount = GymDateUtils.formatCurrency(renewalAmount, symbol: curr);
-    final gym = gymSettings.gymName.isNotEmpty ? gymSettings.gymName : 'IronPulse Fitness Club';
+    final gym = gymSettings.gymName.trim().isNotEmpty
+        ? gymSettings.gymName.trim()
+        : 'Gym & Fitness Club';
     final name = customer.name;
 
     if (daysLeft < 0) {
@@ -287,16 +289,19 @@ class WhatsAppService {
     } else if (gymSettings.gymName.trim().isNotEmpty) {
       gym = gymSettings.gymName.trim();
     } else {
-      gym = 'IronPulse Fitness Club';
+      gym = 'Gym & Fitness Club';
     }
 
     final name = customer.name.trim().isNotEmpty ? customer.name.trim() : 'Fitness Enthusiast';
     final plan = CustomerPlan.getLabel(customer.planType);
     final duration = customer.planDurationMonths > 1 ? '${customer.planDurationMonths} Months' : '1 Month';
     final startDate = GymDateUtils.formatDisplayDate(customer.joinDate);
-    final defaultTimings = timings?.trim().isNotEmpty == true
+    final configuredTimings = timings?.trim().isNotEmpty == true
         ? timings!.trim()
-        : '🌅 Morning: 6:00 AM – 11:00 AM\n🌆 Evening: 5:00 PM – 10:00 PM\n📅 Mon – Sat (Sunday Rest / Maintenance)';
+        : gymSettings.gymTimings.trim();
+    final gymTimingsSection = configuredTimings.isEmpty
+        ? ''
+        : '⏰ *Gym Timings:*\n$configuredTimings\n\n';
 
     switch (tone) {
       case WelcomeTone.energetic:
@@ -305,7 +310,7 @@ class WhatsAppService {
             'Super excited to welcome you to the family! Get ready to crush your fitness goals and transform yourself.\n\n'
             '📋 *Plan:* $plan ($duration)\n'
             '📅 *Start Date:* $startDate\n'
-            '⏰ *Gym Timings:*\n$defaultTimings\n\n'
+            '$gymTimingsSection'
             '⚡ *Quick Pro-Tips:*\n'
             '• Carry your gym towel and clean pair of training shoes.\n'
             '• Hydrate well before, during, and after workouts.\n'
@@ -318,7 +323,7 @@ class WhatsAppService {
             'We are delighted to have you train with us. Here are your onboarding details:\n\n'
             '📋 *Plan:* $plan ($duration)\n'
             '📅 *Joining Date:* $startDate\n'
-            '⏰ *Timings:*\n$defaultTimings\n\n'
+            '$gymTimingsSection'
             '👟 Remember clean workout shoes and a water bottle.\n'
             'See you on the floor! Stay strong! 💪\n\n'
             '— *Team $gym*';
@@ -331,7 +336,7 @@ class WhatsAppService {
             '• *Plan:* $plan\n'
             '• *Duration:* $duration\n'
             '• *Start Date:* $startDate\n\n'
-            '⏰ *Gym Hours:*\n$defaultTimings\n\n'
+            '$gymTimingsSection'
             '💡 *Important Guidelines:*\n'
             '• Please bring separate indoor training shoes & a gym towel.\n'
             '• Wipe down equipment after use & re-rack your weights.\n'
@@ -375,7 +380,12 @@ class WhatsAppService {
     final formattedAmount = GymDateUtils.formatCurrency(bill.amount, symbol: cur);
     final formattedPaidDate = GymDateUtils.formatDateTime(bill.paidAt);
     final planLabel = CustomerPlan.getLabel(bill.planType);
-    final gym = bill.gymName.isNotEmpty ? bill.gymName : GymService().settings.gymName;
+    final configuredGymName = GymService().settings.gymName.trim();
+    final gym = configuredGymName.isNotEmpty
+        ? configuredGymName
+        : (bill.gymName.trim().isNotEmpty
+            ? bill.gymName.trim()
+            : 'Gym & Fitness Club');
     final payment = GymService().getPaymentById(bill.paymentId);
     final paidEarlier = GymService().getBillsForPayment(bill.paymentId)
         .where((receipt) => receipt.id != bill.id &&

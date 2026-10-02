@@ -4,15 +4,32 @@ import 'plan_package.dart';
 
 class GymSettings {
   final String gymName;
+  final String gymTagline;
+  final String gymAddress;
+  final String gymPhone;
+  final String gymEmail;
+  final String gymTimings;
   final String? gymLogoPath;
   final double standardMonthlyFee;
   final double normalPlanFee;
   final double ptPlanFee;
   final double ptDietPlanFee;
   final String currencySymbol;
+  final bool isTaxEnabled;
+  final String taxLabel;
+  final double taxRatePercent;
+  final bool isTaxInclusive;
+  final String receiptTerms;
   final bool isFirestoreConnected;
   final bool isPaymentDueNotificationEnabled;
   final List<PlanDurationPackage> durationPackages;
+
+  static const String defaultTagline = 'Gym Management & Billing Suite';
+  static const String defaultReceiptTerms =
+      '1. All gym membership fees once paid are non-refundable, non-adjustable, and strictly non-transferable under any circumstances.\n'
+      '2. Membership is valid strictly for the specified period. Post expiration, admission requires timely renewal.\n'
+      '3. Members are required to carry this digital receipt or membership card and adhere strictly to gym safety rules and equipment etiquette.\n'
+      '4. Management reserves the right of admission and membership suspension in case of violation of gym guidelines.';
 
   static const List<PlanDurationPackage> defaultPackages = [
     // Normal Plan Packages
@@ -36,12 +53,22 @@ class GymSettings {
 
   const GymSettings({
     this.gymName = 'IronPulse Fitness Club',
+    this.gymTagline = defaultTagline,
+    this.gymAddress = '',
+    this.gymPhone = '',
+    this.gymEmail = '',
+    this.gymTimings = '',
     this.gymLogoPath,
     this.standardMonthlyFee = 600.0,
     this.normalPlanFee = 600.0,
     this.ptPlanFee = 2500.0,
     this.ptDietPlanFee = 3500.0,
     this.currencySymbol = '₹',
+    this.isTaxEnabled = false,
+    this.taxLabel = 'GST',
+    this.taxRatePercent = 18.0,
+    this.isTaxInclusive = true,
+    this.receiptTerms = defaultReceiptTerms,
     this.isFirestoreConnected = false,
     this.isPaymentDueNotificationEnabled = true,
     this.durationPackages = defaultPackages,
@@ -95,6 +122,11 @@ class GymSettings {
 
   GymSettings copyWith({
     String? gymName,
+    String? gymTagline,
+    String? gymAddress,
+    String? gymPhone,
+    String? gymEmail,
+    String? gymTimings,
     String? gymLogoPath,
     bool clearGymLogo = false,
     double? standardMonthlyFee,
@@ -102,6 +134,11 @@ class GymSettings {
     double? ptPlanFee,
     double? ptDietPlanFee,
     String? currencySymbol,
+    bool? isTaxEnabled,
+    String? taxLabel,
+    double? taxRatePercent,
+    bool? isTaxInclusive,
+    String? receiptTerms,
     bool? isFirestoreConnected,
     bool? isPaymentDueNotificationEnabled,
     List<PlanDurationPackage>? durationPackages,
@@ -130,12 +167,22 @@ class GymSettings {
 
     return GymSettings(
       gymName: gymName ?? this.gymName,
+      gymTagline: gymTagline ?? this.gymTagline,
+      gymAddress: gymAddress ?? this.gymAddress,
+      gymPhone: gymPhone ?? this.gymPhone,
+      gymEmail: gymEmail ?? this.gymEmail,
+      gymTimings: gymTimings ?? this.gymTimings,
       gymLogoPath: clearGymLogo ? null : (gymLogoPath ?? this.gymLogoPath),
       standardMonthlyFee: standardMonthlyFee ?? effectiveNormalFee,
       normalPlanFee: effectiveNormalFee,
       ptPlanFee: effectivePtFee,
       ptDietPlanFee: effectivePtDietFee,
       currencySymbol: currencySymbol ?? this.currencySymbol,
+      isTaxEnabled: isTaxEnabled ?? this.isTaxEnabled,
+      taxLabel: taxLabel ?? this.taxLabel,
+      taxRatePercent: taxRatePercent ?? this.taxRatePercent,
+      isTaxInclusive: isTaxInclusive ?? this.isTaxInclusive,
+      receiptTerms: receiptTerms ?? this.receiptTerms,
       isFirestoreConnected: isFirestoreConnected ?? this.isFirestoreConnected,
       isPaymentDueNotificationEnabled: isPaymentDueNotificationEnabled ?? this.isPaymentDueNotificationEnabled,
       durationPackages: updatedPackages,
@@ -146,12 +193,22 @@ class GymSettings {
     final effectivePackages = durationPackages.isNotEmpty ? durationPackages : defaultPackages;
     return {
       'gymName': gymName,
+      'gymTagline': gymTagline,
+      'gymAddress': gymAddress,
+      'gymPhone': gymPhone,
+      'gymEmail': gymEmail,
+      'gymTimings': gymTimings,
       'gymLogoPath': gymLogoPath,
       'standardMonthlyFee': normalPlanFee,
       'normalPlanFee': normalPlanFee,
       'ptPlanFee': ptPlanFee,
       'ptDietPlanFee': ptDietPlanFee,
       'currencySymbol': currencySymbol,
+      'isTaxEnabled': isTaxEnabled,
+      'taxLabel': taxLabel,
+      'taxRatePercent': taxRatePercent,
+      'isTaxInclusive': isTaxInclusive,
+      'receiptTerms': receiptTerms,
       'isFirestoreConnected': isFirestoreConnected,
       'isPaymentDueNotificationEnabled': isPaymentDueNotificationEnabled,
       'durationPackages': effectivePackages.map((p) => p.toMap()).toList(),
@@ -176,12 +233,22 @@ class GymSettings {
 
     return GymSettings(
       gymName: map['gymName'] as String? ?? 'IronPulse Fitness Club',
+      gymTagline: map['gymTagline'] as String? ?? defaultTagline,
+      gymAddress: map['gymAddress'] as String? ?? '',
+      gymPhone: map['gymPhone'] as String? ?? '',
+      gymEmail: map['gymEmail'] as String? ?? '',
+      gymTimings: map['gymTimings'] as String? ?? '',
       gymLogoPath: map['gymLogoPath'] as String?,
       standardMonthlyFee: normalFee,
       normalPlanFee: normalFee,
       ptPlanFee: ptFee,
       ptDietPlanFee: ptDietFee,
       currencySymbol: map['currencySymbol'] as String? ?? '₹',
+      isTaxEnabled: map['isTaxEnabled'] as bool? ?? false,
+      taxLabel: map['taxLabel'] as String? ?? 'GST',
+      taxRatePercent: (map['taxRatePercent'] as num?)?.toDouble() ?? 18.0,
+      isTaxInclusive: map['isTaxInclusive'] as bool? ?? true,
+      receiptTerms: map['receiptTerms'] as String? ?? defaultReceiptTerms,
       isFirestoreConnected: map['isFirestoreConnected'] as bool? ?? false,
       isPaymentDueNotificationEnabled: map['isPaymentDueNotificationEnabled'] as bool? ?? true,
       durationPackages: packages,

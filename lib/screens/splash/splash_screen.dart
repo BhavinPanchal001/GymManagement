@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../models/gym_settings.dart';
+import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
 import '../auth/auth_gate.dart';
 import '../intro/intro_screen.dart';
@@ -88,6 +90,14 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final settings = GymService().settings;
+    final gymName = settings.gymName.trim().isEmpty
+        ? 'Gym & Fitness Club'
+        : settings.gymName.trim();
+    final gymTagline = settings.gymTagline.trim().isEmpty
+        ? GymSettings.defaultTagline
+        : settings.gymTagline.trim();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -168,26 +178,39 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 32),
 
                 // App Title
-                Text(
-                  'IRONPULSE',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 4.0,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      gymName,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
                   ),
                 ),
 
                 const SizedBox(height: 8),
 
                 // Tagline / Subtitle
-                Text(
-                  'GYM MANAGEMENT & BILLING SUITE',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 2.0,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    gymTagline,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
 
