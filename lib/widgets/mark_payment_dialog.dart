@@ -1245,14 +1245,15 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           child: Row(
             children: packages.map((pkg) {
               final isSelected = _selectedDurationMonths == pkg.months;
+              final payablePrice = settings.totalForConfiguredPrice(pkg.price);
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: InkWell(
                   onTap: () {
                     setState(() {
                       _selectedDurationMonths = pkg.months;
-                      _totalDue = pkg.price;
-                      _amountController.text = pkg.price.toStringAsFixed(2);
+                      _totalDue = payablePrice;
+                      _amountController.text = payablePrice.toStringAsFixed(2);
                       _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
                     });
                   },
@@ -1280,7 +1281,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '$currency${pkg.price.toInt()}',
+                          '$currency${payablePrice.toStringAsFixed(payablePrice.truncateToDouble() == payablePrice ? 0 : 2)}',
                           style: TextStyle(
                             color: isSelected ? accentColor : AppColors.textSecondary,
                             fontWeight: FontWeight.bold,

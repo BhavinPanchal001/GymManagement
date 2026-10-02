@@ -184,14 +184,24 @@ class _PendingIndex {
         final end = GymDateUtils.computeAnniversaryEndDate(
           start, customer.planDurationMonths,
         );
+        final totalDue = settings.totalForConfiguredPrice(
+          settings.getPriceForDuration(
+            customer.planType, customer.planDurationMonths,
+          ),
+        );
+        final taxAmount = settings.taxAmountFromTotal(totalDue);
         final agreement = PaymentRecord(
           id: 'pending_${customer.id}_${GymDateUtils.toDateKey(start)}',
           customerId: customer.id,
           monthYear: GymDateUtils.toMonthKey(start),
           amount: 0,
-          totalDue: settings.getPriceForDuration(
-            customer.planType, customer.planDurationMonths,
-          ),
+          totalDue: totalDue,
+          isTaxEnabled: settings.isTaxEnabled,
+          taxLabel: settings.taxLabel,
+          taxRatePercent: settings.taxRatePercent,
+          isTaxInclusive: settings.isTaxInclusive,
+          taxableAmount: totalDue - taxAmount,
+          taxAmount: taxAmount,
           durationMonths: customer.planDurationMonths,
           startDate: start,
           endDate: end,
@@ -1025,7 +1035,10 @@ class GymService extends ChangeNotifier {
     final bills = <BillRecord>[];
     if (markAsPaidNow || membershipStartDate != null ||
         membershipEndDate != null || membershipFee != null) {
-      final fee = membershipFee ?? _settings.getPriceForDuration(planType, planDurationMonths);
+      final fee = _settings.totalForConfiguredPrice(
+        membershipFee ?? _settings.getPriceForDuration(planType, planDurationMonths),
+      );
+      final taxAmount = _settings.taxAmountFromTotal(fee);
       final actualStart = membershipStartDate ?? customer.joinDate;
       final actualEnd = membershipEndDate ??
           GymDateUtils.computeAnniversaryEndDate(actualStart, planDurationMonths);
@@ -1039,6 +1052,12 @@ class GymService extends ChangeNotifier {
         totalDue: fee,
         status: markAsPaidNow ? PaymentStatus.paid : PaymentStatus.pending,
         paidAt: markAsPaidNow ? DateTime.now() : null,
+        isTaxEnabled: _settings.isTaxEnabled,
+        taxLabel: _settings.taxLabel,
+        taxRatePercent: _settings.taxRatePercent,
+        isTaxInclusive: _settings.isTaxInclusive,
+        taxableAmount: fee - taxAmount,
+        taxAmount: taxAmount,
         durationMonths: planDurationMonths,
         startDate: actualStart,
         endDate: actualEnd,
@@ -1174,6 +1193,7 @@ class GymService extends ChangeNotifier {
     if (unpaidAttendedDays > 0) {
       return MemberLifecycleStage.due;
     }
+    var hasCurrentUnpaidAgreement = false;
     if (parts.length == 2) {
       final y = int.tryParse(parts[0]) ?? 2026;
       final m = int.tryParse(parts[1]) ?? 1;
@@ -1187,11 +1207,17 @@ class GymService extends ChangeNotifier {
         }
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
+        final agreementStartDay = DateTime(
+          agreement.effectiveStartDate.year,
+          agreement.effectiveStartDate.month,
+          agreement.effectiveStartDate.day,
+        );
         if (monthYear == GymDateUtils.toMonthKey(today) &&
-            agreement.effectiveStartDate.isAfter(today)) {
+            agreementStartDay.isAfter(today)) {
           return MemberLifecycleStage.notEnrolled;
         }
-        return MemberLifecycleStage.due;
+        hasCurrentUnpaidAgreement = true;
+        break;
       }
     }
 
@@ -1212,8 +1238,15 @@ class GymService extends ChangeNotifier {
       (a) => a.customerId == customer.id && a.status == AttendanceStatus.present,
     );
 
-    if (!hasAttended && daysSinceJoined <= 3 && monthYear == currentMonthKey) {
+    if (!hasAttended &&
+        daysSinceJoined >= 0 &&
+        daysSinceJoined <= 3 &&
+        monthYear == currentMonthKey) {
       return MemberLifecycleStage.newMember;
+    }
+
+    if (hasCurrentUnpaidAgreement) {
+      return MemberLifecycleStage.due;
     }
 
     return MemberLifecycleStage.due;
@@ -1615,9 +1648,35 @@ class GymService extends ChangeNotifier {
 
   /// The plan fee used for derived pending records and as default total due.
   double _feeForCustomer(Customer? customer, {int? durationMonths}) {
-    if (customer == null) return _settings.standardMonthlyFee;
-    return _settings.getPriceForDuration(
-        customer.planType, durationMonths ?? customer.planDurationMonths);
+    final configuredPrice = customer == null
+        ? _settings.standardMonthlyFee
+        : _settings.getPriceForDuration(
+            customer.planType, durationMonths ?? customer.planDurationMonths);
+    return _settings.totalForConfiguredPrice(configuredPrice);
+  }
+
+  double _taxAmountForTotal({
+    required double total,
+    required bool isTaxEnabled,
+    required double taxRatePercent,
+  }) {
+    if (!isTaxEnabled ||
+        !taxRatePercent.isFinite ||
+        taxRatePercent <= 0 ||
+        total <= 0) {
+      return 0;
+    }
+    final rate = taxRatePercent / 100;
+    return total - (total / (1 + rate));
+  }
+
+  double _receiptTaxAmount(PaymentRecord payment, double receiptAmount) {
+    if (!payment.isTaxEnabled ||
+        payment.totalDue <= 0 ||
+        payment.taxAmount <= 0) {
+      return 0;
+    }
+    return payment.taxAmount * (receiptAmount / payment.totalDue);
   }
 
   /// All paid payment records for a customer, latest cycle start first.
@@ -1634,12 +1693,20 @@ class GymService extends ChangeNotifier {
     final start = hasPaidMembership(customer) && !expiry.isBefore(today)
         ? expiry.add(const Duration(days: 1))
         : today;
+    final totalDue = _feeForCustomer(customer);
+    final taxAmount = _settings.taxAmountFromTotal(totalDue);
     return PaymentRecord(
       id: 'pending_renewal_${customer.id}',
       customerId: customer.id,
       monthYear: GymDateUtils.toMonthKey(start),
       amount: 0,
-      totalDue: _feeForCustomer(customer),
+      totalDue: totalDue,
+      isTaxEnabled: _settings.isTaxEnabled,
+      taxLabel: _settings.taxLabel,
+      taxRatePercent: _settings.taxRatePercent,
+      isTaxInclusive: _settings.isTaxInclusive,
+      taxableAmount: totalDue - taxAmount,
+      taxAmount: taxAmount,
       status: PaymentStatus.pending,
       durationMonths: customer.planDurationMonths,
       startDate: start,
@@ -1753,12 +1820,20 @@ class GymService extends ChangeNotifier {
     }
 
     final customer = getCustomerById(customerId);
+    final totalDue = _feeForCustomer(customer);
+    final taxAmount = _settings.taxAmountFromTotal(totalDue);
     return PaymentRecord(
       id: 'pending_${customerId}_$monthYear',
       customerId: customerId,
       monthYear: monthYear,
       amount: 0.0,
-      totalDue: _feeForCustomer(customer),
+      totalDue: totalDue,
+      isTaxEnabled: _settings.isTaxEnabled,
+      taxLabel: _settings.taxLabel,
+      taxRatePercent: _settings.taxRatePercent,
+      isTaxInclusive: _settings.isTaxInclusive,
+      taxableAmount: totalDue - taxAmount,
+      taxAmount: taxAmount,
       status: PaymentStatus.pending,
       durationMonths: customer?.planDurationMonths ?? 1,
       startDate: suggestedStart,
@@ -1831,6 +1906,10 @@ class GymService extends ChangeNotifier {
     return _buildPaidBill(customer, payment).copyWith(
       id: 'bill_${customer.id}_${payment.monthYear}',
       amount: effectiveAmount,
+      taxableAmount: payment.isTaxEnabled
+          ? effectiveAmount - _receiptTaxAmount(payment, effectiveAmount)
+          : effectiveAmount,
+      taxAmount: _receiptTaxAmount(payment, effectiveAmount),
       billType: 'FULL',
       status: payment.isPaid ? 'PAID' : 'PENDING',
     );
@@ -1854,6 +1933,14 @@ class GymService extends ChangeNotifier {
         transactionRef: payment.transactionRef,
         gymName: _settings.gymName,
         issuedAt: payment.paidAt ?? DateTime.now(),
+        isTaxEnabled: payment.isTaxEnabled,
+        taxLabel: payment.taxLabel,
+        taxRatePercent: payment.taxRatePercent,
+        isTaxInclusive: payment.isTaxInclusive,
+        taxableAmount: payment.isTaxEnabled
+            ? payment.amount - _receiptTaxAmount(payment, payment.amount)
+            : payment.amount,
+        taxAmount: _receiptTaxAmount(payment, payment.amount),
         status: 'PAID',
         durationMonths: payment.durationMonths,
         startDate: payment.startDate ?? payment.effectiveStartDate,
@@ -1976,6 +2063,22 @@ class GymService extends ChangeNotifier {
     }
     final effectiveTotalDue = totalDue ?? matchingAgreement?.totalDue ??
         _feeForCustomer(customer, durationMonths: effectiveDuration);
+    final isTaxEnabled =
+        matchingAgreement?.isTaxEnabled ?? _settings.isTaxEnabled;
+    final taxLabel = matchingAgreement?.taxLabel ?? _settings.taxLabel;
+    final taxRatePercent =
+        matchingAgreement?.taxRatePercent ?? _settings.taxRatePercent;
+    final isTaxInclusive =
+        matchingAgreement?.isTaxInclusive ?? _settings.isTaxInclusive;
+    final taxAmount = matchingAgreement?.taxAmount ??
+        _taxAmountForTotal(
+          total: effectiveTotalDue,
+          isTaxEnabled: isTaxEnabled,
+          taxRatePercent: taxRatePercent,
+        );
+    final taxableAmount = isTaxEnabled
+        ? effectiveTotalDue - taxAmount
+        : effectiveTotalDue;
     _validatePayment(
       amount,
       effectiveTotalDue,
@@ -1998,11 +2101,18 @@ class GymService extends ChangeNotifier {
       endDate: computedEndDate,
       notes: notes,
       transactionRef: transactionRef,
+      isTaxEnabled: isTaxEnabled,
+      taxLabel: taxLabel,
+      taxRatePercent: taxRatePercent,
+      isTaxInclusive: isTaxInclusive,
+      taxableAmount: taxableAmount,
+      taxAmount: taxAmount,
       durationMonths: effectiveDuration,
       isMembershipAgreement: matchingAgreement?.isMembershipAgreement ?? false,
       isInferredAgreement: matchingAgreement?.isInferredAgreement ?? false,
       planType: matchingAgreement?.planType ?? customer.planType,
     );
+    final receiptTaxAmount = _receiptTaxAmount(record, amount);
     final bill = BillRecord(
       id: receiptId,
       billNumber: generateBillNumber(startMonthKey),
@@ -2022,6 +2132,13 @@ class GymService extends ChangeNotifier {
       transactionRef: transactionRef,
       gymName: _settings.gymName,
       issuedAt: DateTime.now(),
+      isTaxEnabled: record.isTaxEnabled,
+      taxLabel: record.taxLabel,
+      taxRatePercent: record.taxRatePercent,
+      isTaxInclusive: record.isTaxInclusive,
+      taxableAmount:
+          record.isTaxEnabled ? amount - receiptTaxAmount : amount,
+      taxAmount: receiptTaxAmount,
       status: 'PAID',
       durationMonths: effectiveDuration,
       coveragePeriod: coveragePeriod,
@@ -2075,6 +2192,7 @@ class GymService extends ChangeNotifier {
     final customer = getCustomerById(record.customerId);
 
     final updated = record.copyWith(amount: record.amount + collected);
+    final receiptTaxAmount = _receiptTaxAmount(record, collected);
     final bill = BillRecord(
       id: operationId == null
           ? _newBillId(record.customerId)
@@ -2096,6 +2214,13 @@ class GymService extends ChangeNotifier {
       transactionRef: transactionRef,
       gymName: _settings.gymName,
       issuedAt: DateTime.now(),
+      isTaxEnabled: record.isTaxEnabled,
+      taxLabel: record.taxLabel,
+      taxRatePercent: record.taxRatePercent,
+      isTaxInclusive: record.isTaxInclusive,
+      taxableAmount:
+          record.isTaxEnabled ? collected - receiptTaxAmount : collected,
+      taxAmount: receiptTaxAmount,
       status: 'PAID',
       durationMonths: record.durationMonths,
       coveragePeriod: record.formattedDateRange,
@@ -2154,6 +2279,19 @@ class GymService extends ChangeNotifier {
       transactionRef: transactionRef,
       monthYear: newMonthYear,
     );
+    if (updated.totalDue != record.totalDue) {
+      final updatedTaxAmount = _taxAmountForTotal(
+        total: updated.totalDue,
+        isTaxEnabled: updated.isTaxEnabled,
+        taxRatePercent: updated.taxRatePercent,
+      );
+      updated = updated.copyWith(
+        taxableAmount: updated.isTaxEnabled
+            ? updated.totalDue - updatedTaxAmount
+            : updated.totalDue,
+        taxAmount: updatedTaxAmount,
+      );
+    }
     final financialEdit =
         updated.amount != record.amount ||
         updated.totalDue != record.totalDue ||
@@ -2204,8 +2342,11 @@ class GymService extends ChangeNotifier {
         }
       }
       final primaryAmount = updated.amount - balanceCollected;
+      final primaryReceiptAmount = primaryAmount > 0 ? primaryAmount : 0.0;
+      final primaryTaxAmount =
+          _receiptTaxAmount(updated, primaryReceiptAmount);
       bill = existing.copyWith(
-        amount: primaryAmount > 0 ? primaryAmount : 0.0,
+        amount: primaryReceiptAmount,
         monthYear: updated.monthYear,
         billType: updated.balanceDue > 0 ? 'PARTIAL' : 'FULL',
         method: updated.method ?? existing.method,
@@ -2216,6 +2357,14 @@ class GymService extends ChangeNotifier {
         coveragePeriod: updated.formattedDateRange,
         notes: updated.notes,
         transactionRef: updated.transactionRef,
+        isTaxEnabled: updated.isTaxEnabled,
+        taxLabel: updated.taxLabel,
+        taxRatePercent: updated.taxRatePercent,
+        isTaxInclusive: updated.isTaxInclusive,
+        taxableAmount: updated.isTaxEnabled
+            ? primaryReceiptAmount - primaryTaxAmount
+            : primaryReceiptAmount,
+        taxAmount: primaryTaxAmount,
       );
     } else {
       bill = _buildPaidBill(
@@ -2245,6 +2394,10 @@ class GymService extends ChangeNotifier {
             id: record.id, customerId: record.customerId, monthYear: record.monthYear,
             amount: 0, totalDue: record.totalDue, durationMonths: record.durationMonths,
             startDate: record.startDate, endDate: record.endDate,
+            isTaxEnabled: record.isTaxEnabled, taxLabel: record.taxLabel,
+            taxRatePercent: record.taxRatePercent,
+            isTaxInclusive: record.isTaxInclusive,
+            taxableAmount: record.taxableAmount, taxAmount: record.taxAmount,
             isMembershipAgreement: true, isInferredAgreement: record.isInferredAgreement,
             planType: record.planType,
           ) : null;

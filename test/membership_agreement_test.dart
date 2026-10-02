@@ -70,6 +70,28 @@ void main() {
     },
   );
 
+  test('same-day pay-later registration remains available for welcome onboarding',
+      () async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final customer = await gym.addCustomer(
+      name: 'New member',
+      phone: '9876543212',
+      joinDate: today,
+      membershipStartDate: now,
+      membershipFee: 600.75,
+      operationId: 'new-member-registration',
+    );
+
+    expect(
+      gym.getMemberLifecycleStage(
+        customer,
+        '${today.year}-${today.month.toString().padLeft(2, '0')}',
+      ),
+      MemberLifecycleStage.newMember,
+    );
+  });
+
   test(
     'multi-month credit package is charged once in its start month',
     () async {
