@@ -96,7 +96,7 @@ class _CustomersTabState extends State<CustomersTab> {
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    hintText: 'Search by member name or phone...',
+                    hintText: 'Search by name, phone, or card #...',
                     prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(

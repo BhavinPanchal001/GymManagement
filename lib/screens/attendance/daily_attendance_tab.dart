@@ -17,6 +17,13 @@ class DailyAttendanceTab extends StatefulWidget {
 
 class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
   DateTime _selectedDate = DateTime.now();
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -103,6 +110,14 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                     DateTime(c.joinDate.year, c.joinDate.month, c.joinDate.day),
                   ),
             ).toList();
+        final searchQuery = _searchController.text.trim().toLowerCase();
+        final filteredCustomers = searchQuery.isEmpty
+            ? activeCustomers
+            : activeCustomers.where((c) {
+                return c.name.toLowerCase().contains(searchQuery) ||
+                    c.phone.contains(searchQuery) ||
+                    c.cardNumber.toLowerCase().contains(searchQuery);
+              }).toList();
         final total = overview['total'] ?? 0;
         final present = overview['present'] ?? 0;
         final absent = overview['absent'] ?? 0;
@@ -303,24 +318,59 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                 ),
               ),
 
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TextField(
+                  controller: _searchController,
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Search by name, phone, or card #...',
+                    prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                            tooltip: 'Clear search',
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {});
+                            },
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 8),
 
               // Attendance List
               Expanded(
-                child: activeCustomers.isEmpty
+                child: filteredCustomers.isEmpty
                     ? Center(
-                        child: Text(
-                          'No active members to record attendance.',
-                          style: TextStyle(color: AppColors.textMuted),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (searchQuery.isNotEmpty) ...[
+                              Icon(Icons.person_search_rounded, size: 54, color: AppColors.textMuted),
+                              const SizedBox(height: 12),
+                            ],
+                            Text(
+                              searchQuery.isNotEmpty
+                                  ? 'No members found matching "${_searchController.text.trim()}"'
+                                  : 'No active members to record attendance.',
+                              style: TextStyle(color: AppColors.textMuted),
+                            ),
+                          ],
                         ),
                       )
                     : ListView.separated(
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        itemCount: activeCustomers.length,
+                        itemCount: filteredCustomers.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 10),
                         itemBuilder: (context, i) {
-                          final customer = activeCustomers[i];
+                          final customer = filteredCustomers[i];
                           final status = gym.getAttendanceStatus(customer.id, dateKey);
                           final isPresent = status == AttendanceStatus.present;
 
