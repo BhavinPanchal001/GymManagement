@@ -18,7 +18,12 @@ import 'balance_sheet_tab.dart';
 enum BillingFilter { all, pending, paid }
 
 class BillingTab extends StatefulWidget {
-  const BillingTab({super.key});
+  final int? sectionIndex;
+  final ValueChanged<int>? onSectionSelected;
+
+  const BillingTab({super.key, this.sectionIndex, this.onSectionSelected})
+    : assert((sectionIndex == null) == (onSectionSelected == null)),
+      assert(sectionIndex == null || (sectionIndex >= 0 && sectionIndex <= 2));
 
   @override
   State<BillingTab> createState() => _BillingTabState();
@@ -27,7 +32,19 @@ class BillingTab extends StatefulWidget {
 class _BillingTabState extends State<BillingTab> {
   late DateTime _selectedMonth;
   BillingFilter _filter = BillingFilter.all;
-  int _billingSection = 0; // 0: Collections, 1: Expenses, 2: Balance Sheet
+  int _localBillingSection = 0;
+  // HomeScreen owns this selection when it is tracking phone back navigation.
+  int get _billingSection => widget.sectionIndex ?? _localBillingSection;
+
+  void _selectSection(int section) {
+    if (section == _billingSection) return;
+    final onSectionSelected = widget.onSectionSelected;
+    if (onSectionSelected != null) {
+      onSectionSelected(section);
+    } else {
+      setState(() => _localBillingSection = section);
+    }
+  }
 
   @override
   void initState() {
@@ -225,7 +242,7 @@ class _BillingTabState extends State<BillingTab> {
                 Expanded(
                   child: BalanceSheetTab(
                     selectedMonth: _selectedMonth,
-                    onSwitchToExpenses: () => setState(() => _billingSection = 1),
+                    onSwitchToExpenses: () => _selectSection(1),
                   ),
                 )
               else
@@ -473,7 +490,7 @@ class _BillingTabState extends State<BillingTab> {
     final isSelected = _billingSection == index;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _billingSection = index),
+        onTap: () => _selectSection(index),
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
