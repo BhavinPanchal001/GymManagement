@@ -444,6 +444,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                           decoration: const InputDecoration(
                             hintText: 'e.g. 778',
                             prefixIcon: Icon(Icons.badge_rounded, color: Color(0xFFB71C1C), size: 20),
+                            errorMaxLines: 3,
                           ),
                           validator: (value) {
                             final trimmed = value?.trim() ?? '';
