@@ -82,7 +82,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify empty state appears
-    expect(find.text('All Clear!'), findsOneWidget);
+    expect(find.text('No Matching Members'), findsOneWidget);
   });
 
   testWidgets('ExportReportDialog shows CSV and Text options', (tester) async {

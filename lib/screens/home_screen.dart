@@ -21,7 +21,42 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
+  int _billingSection = 0;
   Timer? _entitlementTimer;
+  final List<({int tabIndex, int billingSection})> _navigationHistory = [];
+
+  void _selectDestination(int index) {
+    if (index == _currentIndex) return;
+    setState(() {
+      _rememberCurrentLocation();
+      _currentIndex = index;
+    });
+  }
+
+  void _selectBillingSection(int section) {
+    if (section == _billingSection) return;
+    setState(() {
+      _rememberCurrentLocation();
+      _billingSection = section;
+    });
+  }
+
+  void _rememberCurrentLocation() {
+    // These views share one route, so Navigator cannot remember them for us.
+    _navigationHistory.add((
+      tabIndex: _currentIndex,
+      billingSection: _billingSection,
+    ));
+  }
+
+  void _onPopInvoked(bool didPop, Object? result) {
+    if (didPop || _navigationHistory.isEmpty) return;
+    setState(() {
+      final previous = _navigationHistory.removeLast();
+      _currentIndex = previous.tabIndex;
+      _billingSection = previous.billingSection;
+    });
+  }
 
   @override
   void initState() {
@@ -72,71 +107,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  final List<Widget> _tabs = const [
-    CustomersTab(),
-    DailyAttendanceTab(),
-    BillingTab(),
-    SettingsTab(),
+  List<Widget> get _tabs => [
+    const CustomersTab(),
+    const DailyAttendanceTab(),
+    BillingTab(
+      sectionIndex: _billingSection,
+      onSectionSelected: _selectBillingSection,
+    ),
+    const SettingsTab(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: Listenable.merge([GymService(), ThemeService()]),
-      builder: (context, _) {
-        final gym = GymService();
-        final pendingDuesCount = gym.getAllPendingDues().length;
+    return PopScope<Object?>(
+      canPop: _navigationHistory.isEmpty,
+      onPopInvokedWithResult: _onPopInvoked,
+      child: ListenableBuilder(
+        listenable: Listenable.merge([GymService(), ThemeService()]),
+        builder: (context, _) {
+          final gym = GymService();
+          final pendingDuesCount = gym.getAllPendingDues().length;
 
-        // Paywall: trial ended without a paid subscription. Only enforced
-        // once publisher billing is configured — an empty key would lock
-        // owners out with no way to pay.
-        if (kAppRazorpayKeyId.trim().isNotEmpty && gym.subscriptionRequired) {
-          return const SubscriptionScreen();
-        }
+          // Paywall: trial ended without a paid subscription. Only enforced
+          // once publisher billing is configured — an empty key would lock
+          // owners out with no way to pay.
+          if (kAppRazorpayKeyId.trim().isNotEmpty && gym.subscriptionRequired) {
+            return const SubscriptionScreen();
+          }
 
-        return Scaffold(
-          body: Column(
-            children: [
-              if (gym.currentUserId != null &&
-                  (gym.pendingUploadCount > 0 ||
-                      gym.syncError != null ||
-                      !gym.isCloudAttached))
-                SafeArea(
-                  bottom: false,
-                  child: Material(
-                    color: AppColors.pending.withValues(alpha: 0.12),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.cloud_upload_outlined, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              gym.syncError ??
-                                  'Saved on this phone. Waiting to upload changes.',
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: gym.retryCloudSync,
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              if (gym.settings.isInTrialPeriod &&
-                  !gym.settings.hasActiveSubscription)
-                SafeArea(
-                  bottom: false,
-                  child: Material(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    child: InkWell(
-                      onTap: () => SubscriptionScreen.navigate(context),
+          return Scaffold(
+            body: Column(
+              children: [
+                if (gym.currentUserId != null &&
+                    (gym.pendingUploadCount > 0 ||
+                        gym.syncError != null ||
+                        !gym.isCloudAttached))
+                  SafeArea(
+                    bottom: false,
+                    child: Material(
+                      color: AppColors.pending.withValues(alpha: 0.12),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -144,83 +153,146 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.timer_outlined,
-                                size: 20, color: AppColors.primary),
+                            const Icon(Icons.cloud_upload_outlined, size: 20),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Free trial · ${gym.settings.trialDaysRemaining} day${gym.settings.trialDaysRemaining == 1 ? '' : 's'} left — tap to subscribe',
+                                gym.syncError ??
+                                    'Saved on this phone. Waiting to upload changes.',
                               ),
                             ),
-                            Icon(Icons.chevron_right_rounded,
-                                size: 20, color: AppColors.primary),
+                            TextButton(
+                              onPressed: gym.retryCloudSync,
+                              child: const Text('Retry'),
+                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                ),
-              Expanded(
-                child: IndexedStack(index: _currentIndex, children: _tabs),
-              ),
-            ],
-          ),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              border: Border(top: BorderSide(color: AppColors.surfaceBorder, width: 1)),
-            ),
-            child: NavigationBar(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: (index) {
-                setState(() => _currentIndex = index);
-              },
-              backgroundColor: AppColors.surface,
-              indicatorColor: AppColors.primary.withValues(alpha: 0.2),
-              elevation: 0,
-              height: 68,
-              destinations: [
-                NavigationDestination(
-                  icon: Icon(Icons.groups_outlined, color: AppColors.textSecondary),
-                  selectedIcon: Icon(Icons.groups_rounded, color: AppColors.primary),
-                  label: 'Members',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.calendar_today_outlined, color: AppColors.textSecondary),
-                  selectedIcon: Icon(Icons.calendar_month_rounded, color: AppColors.primary),
-                  label: 'Attendance',
-                ),
-                NavigationDestination(
-                  icon: Badge(
-                    isLabelVisible: pendingDuesCount > 0,
-                    label: Text(
-                      '$pendingDuesCount',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                if (gym.settings.isInTrialPeriod &&
+                    !gym.settings.hasActiveSubscription)
+                  SafeArea(
+                    bottom: false,
+                    child: Material(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      child: InkWell(
+                        onTap: () => SubscriptionScreen.navigate(context),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.timer_outlined,
+                                  size: 20, color: AppColors.primary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Free trial · ${gym.settings.trialDaysRemaining} day${gym.settings.trialDaysRemaining == 1 ? '' : 's'} left — tap to subscribe',
+                                ),
+                              ),
+                              Icon(Icons.chevron_right_rounded,
+                                  size: 20, color: AppColors.primary),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    backgroundColor: AppColors.pending,
-                    child: Icon(Icons.payments_outlined, color: AppColors.textSecondary),
                   ),
-                  selectedIcon: Badge(
-                    isLabelVisible: pendingDuesCount > 0,
-                    label: Text(
-                      '$pendingDuesCount',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                    backgroundColor: AppColors.pending,
-                    child: Icon(Icons.payments_rounded, color: AppColors.primary),
-                  ),
-                  label: 'Payments',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.settings_outlined, color: AppColors.textSecondary),
-                  selectedIcon: Icon(Icons.settings_rounded, color: AppColors.primary),
-                  label: 'Settings',
+                Expanded(
+                  child: IndexedStack(index: _currentIndex, children: _tabs),
                 ),
               ],
             ),
-          ),
-        );
-      },
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: Border(
+                  top: BorderSide(color: AppColors.surfaceBorder, width: 1),
+                ),
+              ),
+              child: NavigationBar(
+                selectedIndex: _currentIndex,
+                onDestinationSelected: _selectDestination,
+                backgroundColor: AppColors.surface,
+                indicatorColor: AppColors.primary.withValues(alpha: 0.2),
+                elevation: 0,
+                height: 68,
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.groups_outlined,
+                      color: AppColors.textSecondary,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.groups_rounded,
+                      color: AppColors.primary,
+                    ),
+                    label: 'Members',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.calendar_today_outlined,
+                      color: AppColors.textSecondary,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.calendar_month_rounded,
+                      color: AppColors.primary,
+                    ),
+                    label: 'Attendance',
+                  ),
+                  NavigationDestination(
+                    icon: Badge(
+                      isLabelVisible: pendingDuesCount > 0,
+                      label: Text(
+                        '$pendingDuesCount',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      backgroundColor: AppColors.pending,
+                      child: Icon(
+                        Icons.payments_outlined,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    selectedIcon: Badge(
+                      isLabelVisible: pendingDuesCount > 0,
+                      label: Text(
+                        '$pendingDuesCount',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      backgroundColor: AppColors.pending,
+                      child: Icon(
+                        Icons.payments_rounded,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    label: 'Payments',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.settings_outlined,
+                      color: AppColors.textSecondary,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.settings_rounded,
+                      color: AppColors.primary,
+                    ),
+                    label: 'Settings',
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
