@@ -71,11 +71,39 @@ class AppColors {
   static const Color lightPrimary = _lightPrimary;
   static const Color lightPrimaryOn = _lightPrimaryOn;
 
-  // Shared Status Colors (Vibrant and high contrast in both themes)
+  // Shared Status Colors - Mode-specific definitions
+  static const Color _darkPaid = Color(0xFF00E676); // Emerald Green
+  static const Color _darkPending = Color(0xFFFF9100); // Amber Orange
+  static const Color _darkAbsent = Color(0xFFFF5252); // Crimson Coral
+  static const Color _darkRest = Color(0xFF448AFF); // Athletic Blue
+
+  static const Color _lightPaid = Color(0xFF16A34A); // Emerald 600 (High contrast WCAG AA on light mode)
+  static const Color _lightPending = Color(0xFFD97706); // Amber 600 (High contrast WCAG AA on light mode)
+  static const Color _lightAbsent = Color(0xFFDC2626); // Crimson 600 (High contrast WCAG AA on light mode)
+  static const Color _lightRest = Color(0xFF2563EB); // Athletic Blue 600 (High contrast WCAG AA on light mode)
+
+  // Shared Status Colors (Vibrant and high contrast in both themes, usable in const contexts)
   static const Color paid = Color(0xFF00E676); // Emerald Green
   static const Color pending = Color(0xFFFF9100); // Amber Orange
   static const Color absent = Color(0xFFFF5252); // Crimson Coral
   static const Color rest = Color(0xFF448AFF); // Athletic Blue
+
+  // Mode-specific definitions
+  static const Color darkPaid = _darkPaid;
+  static const Color darkPending = _darkPending;
+  static const Color darkAbsent = _darkAbsent;
+  static const Color darkRest = _darkRest;
+
+  static const Color lightPaid = _lightPaid;
+  static const Color lightPending = _lightPending;
+  static const Color lightAbsent = _lightAbsent;
+  static const Color lightRest = _lightRest;
+
+  // Dynamic Theme Status Colors (for adaptive contexts where needed)
+  static Color get dynamicPaid => isDark ? _darkPaid : _lightPaid;
+  static Color get dynamicPending => isDark ? _darkPending : _lightPending;
+  static Color get dynamicAbsent => isDark ? _darkAbsent : _lightAbsent;
+  static Color get dynamicRest => isDark ? _darkRest : _lightRest;
 
   // WhatsApp Branding
   static const Color whatsapp = Color(0xFF25D366);
@@ -94,7 +122,7 @@ class AppTheme {
         onPrimary: AppColors.darkPrimaryOn,
         surface: AppColors.darkSurface,
         onSurface: Color(0xFFFFFFFF),
-        error: AppColors.absent,
+        error: AppColors._darkAbsent,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.darkBackground,
@@ -128,6 +156,19 @@ class AppTheme {
         backgroundColor: AppColors.darkSurface,
         surfaceTintColor: Colors.transparent,
       ),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: AppColors.darkSurfaceElevated,
+        contentTextStyle: TextStyle(
+          color: Color(0xFFFFFFFF),
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          side: BorderSide(color: AppColors.darkSurfaceBorder),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.darkSurfaceElevated,
@@ -160,7 +201,7 @@ class AppTheme {
         onPrimary: AppColors.lightPrimaryOn,
         surface: AppColors.lightSurface,
         onSurface: Color(0xFF0F172A),
-        error: AppColors.absent,
+        error: AppColors._lightAbsent,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.lightBackground,
@@ -193,6 +234,18 @@ class AppTheme {
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.lightSurface,
         surfaceTintColor: Colors.transparent,
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: Color(0xFF1E293B), // Slate 800: dark high-contrast snackbar in light mode
+        contentTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
