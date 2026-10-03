@@ -17,13 +17,17 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  late final Stream<User?> _authStateChanges;
   StreamSubscription<User?>? _authSubscription;
   String? _lastAttachedUserId;
 
   @override
   void initState() {
     super.initState();
-    _authSubscription = AuthService().authStateChanges.listen((user) async {
+    // Reusing this stream prevents rebuilds from replacing HomeScreen with the
+    // loading screen and losing its selected tab and navigation history.
+    _authStateChanges = AuthService().authStateChanges;
+    _authSubscription = _authStateChanges.listen((user) async {
       if (user != null) {
         if (_lastAttachedUserId != user.uid) {
           _lastAttachedUserId = user.uid;
@@ -112,7 +116,7 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     return StreamBuilder<User?>(
-      stream: AuthService().authStateChanges,
+      stream: _authStateChanges,
       builder: (context, snapshot) {
         // While Firebase is checking auth state
         if (snapshot.connectionState == ConnectionState.waiting) {
