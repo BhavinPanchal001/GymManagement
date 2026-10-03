@@ -56,6 +56,11 @@ flutter build apk --release --no-pub
 
 ## Physical-device check
 
+On an Android phone with the older installed build, Payments → Pending Dues
+Report → system back reproduced the reported jump to Members. Back at the
+Attendance root also left the app. The installed build's embedded source did
+not contain the tab-history correction.
+
 On a phone running a build containing both fixes, verify the back button and
 edge gesture with this sequence: Members → Attendance →
 Payments → Expenses → Balance Sheet → Settings. Each back should revisit the
