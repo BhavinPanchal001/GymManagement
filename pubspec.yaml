@@ -58,6 +58,8 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   shared_preferences_platform_interface: 2.4.1
+  firebase_auth_platform_interface: ^7.7.3
+  firebase_core_platform_interface: ^6.0.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
