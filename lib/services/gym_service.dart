@@ -2730,6 +2730,49 @@ class GymService extends ChangeNotifier {
     return List.of(results);
   }
 
+  /// Splits a member's outstanding plan fees by how urgently they must be
+  /// paid: plan running and not attended, plan running and attended, or plan
+  /// period already ended.
+  MemberDueBreakdown getMemberDueBreakdown(String customerId, {DateTime? asOf}) {
+    final index = _duesIndex;
+    final now = asOf ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final seen = <String>{};
+    final buckets = {for (final u in DueUrgency.values) u: <PaymentRecord>[]};
+    for (final record in [
+      ...index.membershipRecords(customerId),
+      ...index.payments[customerId] ?? <PaymentRecord>[],
+    ]) {
+      if (record.balanceDue <= 0 || !seen.add(record.id)) continue;
+      final start = record.effectiveStartDate;
+      final end = record.effectiveEndDate;
+      final planEnd = DateTime(end.year, end.month, end.day);
+      final DueUrgency urgency;
+      if (planEnd.isBefore(today)) {
+        urgency = DueUrgency.overdue;
+      } else if (!DateTime(start.year, start.month, start.day).isAfter(today) &&
+          getDateRangeAttendanceSummary(customerId, start, today)['present']! > 0) {
+        urgency = DueUrgency.attendedInPlan;
+      } else {
+        urgency = DueUrgency.upcoming;
+      }
+      buckets[urgency]!.add(record);
+    }
+    DueBucket bucket(DueUrgency urgency) {
+      final records = buckets[urgency]!
+        ..sort((a, b) => a.effectiveStartDate.compareTo(b.effectiveStartDate));
+      return DueBucket(
+        records: List.unmodifiable(records),
+        amount: records.fold(0.0, (sum, r) => sum + pendingAmountOf(r)),
+      );
+    }
+    return MemberDueBreakdown(
+      upcoming: bucket(DueUrgency.upcoming),
+      attendedInPlan: bucket(DueUrgency.attendedInPlan),
+      overdue: bucket(DueUrgency.overdue),
+    );
+  }
+
   /// Returns pending dues grouped by each month in the date range.
   List<MonthPendingGroup> getPendingDuesByMonth(DateTime start, DateTime end) {
     final byMonth = <String, List<MonthPendingItem>>{};
