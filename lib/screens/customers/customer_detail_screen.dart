@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/customer.dart';
 import '../../models/attendance.dart';
@@ -29,16 +30,19 @@ class CustomerDetailScreen extends StatefulWidget {
 }
 
 class _CustomerDetailScreenState extends State<CustomerDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late DateTime _displayedMonth;
   late TabController _tabController;
   bool _isCustomRangeMode = false;
   DateTime? _customStartDate;
   DateTime? _customEndDate;
+  Timer? _midnightTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleMidnightRefresh();
     final now = DateTime.now();
     final customer = GymService().getCustomerById(widget.customerId);
     if (customer != null && widget.initialTabIndex == 1) {
@@ -61,8 +65,30 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
+  // Due urgency depends on today's date, so rebuild when the day changes.
+  void _scheduleMidnightRefresh() {
+    _midnightTimer?.cancel();
+    final now = DateTime.now();
+    final nextDay = DateTime(now.year, now.month, now.day + 1);
+    _midnightTimer = Timer(nextDay.difference(now) + const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleMidnightRefresh();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() {});
+      _scheduleMidnightRefresh();
+    }
+  }
+
   @override
   void dispose() {
+    _midnightTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
   }
