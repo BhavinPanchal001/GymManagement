@@ -61,6 +61,23 @@ Report → system back reproduced the reported jump to Members. Back at the
 Attendance root also left the app. The installed build's embedded source did
 not contain the tab-history correction.
 
+The corrected release build (version 1.0.1/build 2) was installed alongside the
+existing app as **Gym Back Fix Test**, using a separate application ID because
+the existing installation uses a different signing key. Signed-in testing on
+Android 16 confirmed:
+
+- Pending Dues Report and Analytics return to Payments with system back.
+- Back retraces Settings, Payments, Attendance, and Members in visit order.
+- Back restores Balance Sheet, Expenses, and Collections across tab switches.
+- Profile editing returns to Settings; member entry cards return to member
+  details, then Members.
+- Android's edge-back gesture restores the previous tab.
+- Back dismisses the keyboard before navigating and exits the app only after
+  navigation history is exhausted. Reopening the test app remains signed in.
+
+Testing only viewed screens; no member, payment, expense, or profile edits were
+saved. The original installed app remains unchanged.
+
 On a phone running a build containing both fixes, verify the back button and
 edge gesture with this sequence: Members → Attendance →
 Payments → Expenses → Balance Sheet → Settings. Each back should revisit the
