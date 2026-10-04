@@ -10,6 +10,8 @@ import '../../widgets/gym_logo_widget.dart';
 import '../../widgets/danger_confirmation_dialog.dart';
 import '../intro/intro_screen.dart';
 import 'edit_profile_screen.dart';
+import '../../widgets/animations/animated_fade_slide.dart';
+import '../../widgets/animations/animated_pressable.dart';
 
 class SettingsTab extends StatefulWidget {
   const SettingsTab({super.key});
@@ -293,9 +295,8 @@ class _SettingsTabState extends State<SettingsTab> {
     required bool isSelected,
   }) {
     return Expanded(
-      child: InkWell(
+      child: AnimatedPressable(
         onTap: () => ThemeService().setThemeMode(mode),
-        borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
@@ -357,13 +358,15 @@ class _SettingsTabState extends State<SettingsTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Account & Security Card
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
+                AnimatedFadeSlide.staggered(
+                  index: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.surfaceBorder),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -487,16 +490,19 @@ class _SettingsTabState extends State<SettingsTab> {
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: 16),
 
                 // Appearance & Theme Card
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
+                AnimatedFadeSlide.staggered(
+                  index: 1,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.surfaceBorder),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -555,16 +561,19 @@ class _SettingsTabState extends State<SettingsTab> {
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: 16),
 
                 // Notifications & Alerts Card
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
+                AnimatedFadeSlide.staggered(
+                  index: 2,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.surfaceBorder),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -657,16 +666,19 @@ class _SettingsTabState extends State<SettingsTab> {
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: 16),
 
                 // Gym Profile Card
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
+                AnimatedFadeSlide.staggered(
+                  index: 3,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.surfaceBorder),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -896,16 +908,19 @@ class _SettingsTabState extends State<SettingsTab> {
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: 16),
 
                 // Cloud Sync / Firebase Card
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
+                AnimatedFadeSlide.staggered(
+                  index: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.surfaceBorder),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -964,61 +979,67 @@ class _SettingsTabState extends State<SettingsTab> {
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: 16),
 
                 // App Tour & Resources Card
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.help_outline_rounded, color: AppColors.secondary, size: 22),
-                          const SizedBox(width: 8),
-                          Text(
-                            'App Tour & Resources',
-                            style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                AnimatedFadeSlide.staggered(
+                  index: 5,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.surfaceBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.help_outline_rounded, color: AppColors.secondary, size: 22),
+                            const SizedBox(width: 8),
+                            Text(
+                              'App Tour & Resources',
+                              style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(
+                              context,
+                            ).push(MaterialPageRoute(builder: (_) => const IntroScreen(isReview: true)));
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: BorderSide(color: AppColors.surfaceBorder),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(
-                            context,
-                          ).push(MaterialPageRoute(builder: (_) => const IntroScreen(isReview: true)));
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: BorderSide(color: AppColors.surfaceBorder),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          icon: Icon(Icons.auto_stories_rounded, size: 18, color: AppColors.secondary),
+                          label: const Text(
+                            'View App Intro & Feature Tour',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
-                        icon: Icon(Icons.auto_stories_rounded, size: 18, color: AppColors.secondary),
-                        label: const Text(
-                          'View App Intro & Feature Tour',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
 
                 // Danger Zone Card
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.absent.withValues(alpha: 0.35), width: 1.2),
-                  ),
+                AnimatedFadeSlide.staggered(
+                  index: 5,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.absent.withValues(alpha: 0.35), width: 1.2),
+                    ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1083,6 +1104,7 @@ class _SettingsTabState extends State<SettingsTab> {
                       ),
                     ],
                   ),
+                ),
                 ),
                 const SizedBox(height: 32),
               ],

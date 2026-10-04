@@ -3,10 +3,15 @@ import '../models/customer.dart';
 import '../services/gym_service.dart';
 import '../services/theme_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/animation_utils.dart';
 import '../utils/date_utils.dart';
 import '../screens/customers/expiring_members_sheet.dart';
 import '../screens/reports/gym_statistics_screen.dart';
 import '../screens/reports/pending_payments_report_screen.dart';
+import 'animations/animated_counter.dart';
+import 'animations/animated_fade_slide.dart';
+import 'animations/animated_pressable.dart';
+import 'animations/app_page_route.dart';
 
 class DashboardMetricsGrid extends StatefulWidget {
   final VoidCallback? onNavigateToBilling;
@@ -40,7 +45,9 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
         final int urgentRenewalCount = expiring1to3.length;
         final int dueSoonCount = expiring1to3.length + expiring4to7.length;
 
-        return Container(
+        return AnimatedContainer(
+          duration: AppAnimations.normalDuration,
+          curve: AppAnimations.curveEaseInOut,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -86,16 +93,15 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                     const SizedBox(width: 8),
 
                     // "All Stats" Button to open dedicated statistics page
-                    InkWell(
+                    AnimatedPressable(
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
+                          AppPageRoute(
                             builder: (_) => const GymStatisticsScreen(),
                           ),
                         );
                       },
-                      borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
@@ -123,12 +129,17 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
 
                     const SizedBox(width: 6),
 
-                    // Collapse / Expand toggle button
+                    // Collapse / Expand toggle button with smooth rotation
                     IconButton(
-                      icon: Icon(
-                        _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.textMuted,
-                        size: 20,
+                      icon: AnimatedRotation(
+                        turns: _isExpanded ? 0.0 : 0.5,
+                        duration: AppAnimations.normalDuration,
+                        curve: AppAnimations.curveEaseInOut,
+                        child: Icon(
+                          Icons.keyboard_arrow_up_rounded,
+                          color: AppColors.textMuted,
+                          size: 20,
+                        ),
                       ),
                       onPressed: () => setState(() => _isExpanded = !_isExpanded),
                       visualDensity: VisualDensity.compact,
@@ -139,90 +150,113 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                 ),
               ),
 
-              if (_isExpanded) ...[
-                Divider(color: AppColors.surfaceBorder, height: 1),
-                const SizedBox(height: 12),
+              AnimatedSize(
+                duration: AppAnimations.normalDuration,
+                curve: AppAnimations.curveEaseInOut,
+                alignment: Alignment.topCenter,
+                child: _isExpanded
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Divider(color: AppColors.surfaceBorder, height: 1),
+                          const SizedBox(height: 12),
 
-                // Top 3 Most Important Metrics (No horizontal scroll, zero overflow)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-                  child: Row(
-                    children: [
-                      // 1. Active Members
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Active',
-                          value: '$totalActive',
-                          subtitle: 'Live members',
-                          icon: Icons.groups_rounded,
-                          color: AppColors.paid,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const GymStatisticsScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // 2. Expiring Soon (1-7 Days)
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Due Soon',
-                          value: '$dueSoonCount',
-                          subtitle: urgentRenewalCount > 0 ? '$urgentRenewalCount urgent' : 'Next 7 days',
-                          icon: Icons.alarm_rounded,
-                          color: urgentRenewalCount > 0 ? const Color(0xFFFF5252) : const Color(0xFFFF9100),
-                          isUrgent: urgentRenewalCount > 0,
-                          onTap: () {
-                            final dueMembers = [...expiring1to3, ...expiring4to7];
-                            if (dueMembers.isNotEmpty) {
-                              ExpiringMembersSheet.show(
-                                context,
-                                title: 'Members Due for Renewal',
-                                subtitle: 'Memberships expiring within 7 days',
-                                members: dueMembers,
-                                accentColor: urgentRenewalCount > 0 ? const Color(0xFFFF5252) : const Color(0xFFFF9100),
-                                icon: Icons.alarm_rounded,
-                              );
-                            } else {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const GymStatisticsScreen(),
+                          // Top 3 Most Important Metrics
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+                            child: Row(
+                              children: [
+                                // 1. Active Members
+                                Expanded(
+                                  child: AnimatedFadeSlide.staggered(
+                                    index: 0,
+                                    child: _buildMetricCard(
+                                      title: 'Active',
+                                      numericValue: totalActive,
+                                      value: '$totalActive',
+                                      subtitle: 'Live members',
+                                      icon: Icons.groups_rounded,
+                                      color: AppColors.paid,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          AppPageRoute(
+                                            builder: (_) => const GymStatisticsScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
+                                const SizedBox(width: 8),
 
-                      // 3. Pending Dues
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Pending Dues',
-                          value: GymDateUtils.formatCurrency(totalDues, symbol: currency),
-                          subtitle: 'Tap for report',
-                          icon: Icons.history_rounded,
-                          color: AppColors.pending,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const PendingPaymentsReportScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                                // 2. Expiring Soon (1-7 Days)
+                                Expanded(
+                                  child: AnimatedFadeSlide.staggered(
+                                    index: 1,
+                                    child: _buildMetricCard(
+                                      title: 'Due Soon',
+                                      numericValue: dueSoonCount,
+                                      value: '$dueSoonCount',
+                                      subtitle: urgentRenewalCount > 0 ? '$urgentRenewalCount urgent' : 'Next 7 days',
+                                      icon: Icons.alarm_rounded,
+                                      color: urgentRenewalCount > 0 ? const Color(0xFFFF5252) : const Color(0xFFFF9100),
+                                      isUrgent: urgentRenewalCount > 0,
+                                      onTap: () {
+                                        final dueMembers = [...expiring1to3, ...expiring4to7];
+                                        if (dueMembers.isNotEmpty) {
+                                          ExpiringMembersSheet.show(
+                                            context,
+                                            title: 'Members Due for Renewal',
+                                            subtitle: 'Memberships expiring within 7 days',
+                                            members: dueMembers,
+                                            accentColor: urgentRenewalCount > 0 ? const Color(0xFFFF5252) : const Color(0xFFFF9100),
+                                            icon: Icons.alarm_rounded,
+                                          );
+                                        } else {
+                                          Navigator.push(
+                                            context,
+                                            AppPageRoute(
+                                              builder: (_) => const GymStatisticsScreen(),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+
+                                // 3. Pending Dues
+                                Expanded(
+                                  child: AnimatedFadeSlide.staggered(
+                                    index: 2,
+                                    child: _buildMetricCard(
+                                      title: 'Pending Dues',
+                                      numericValue: totalDues,
+                                      prefix: currency,
+                                      value: GymDateUtils.formatCurrency(totalDues, symbol: currency),
+                                      subtitle: 'Tap for report',
+                                      icon: Icons.history_rounded,
+                                      color: AppColors.pending,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          AppPageRoute(
+                                            builder: (_) => const PendingPaymentsReportScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
             ],
           ),
         );
@@ -233,15 +267,16 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
   Widget _buildMetricCard({
     required String title,
     required String value,
+    num? numericValue,
+    String prefix = '',
     required String subtitle,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
     bool isUrgent = false,
   }) {
-    return InkWell(
+    return AnimatedPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
@@ -277,15 +312,27 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: color,
-                  letterSpacing: -0.3,
-                ),
-              ),
+              child: numericValue != null
+                  ? AnimatedCounter(
+                      value: numericValue,
+                      prefix: prefix,
+                      decimalPlaces: (numericValue is int || numericValue % 1 == 0) ? 0 : 2,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: color,
+                        letterSpacing: -0.3,
+                      ),
+                    )
+                  : Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: color,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -315,3 +362,4 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
     );
   }
 }
+

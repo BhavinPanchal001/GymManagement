@@ -81,11 +81,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyPlaceholderWindowsApiKeyForGymApp',
-    appId: '1:1234567890:web:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'gym-manager-app',
-    authDomain: 'gym-manager-app.firebaseapp.com',
-    storageBucket: 'gym-manager-app.appspot.com',
+    apiKey: 'AIzaSyA31ouvcxJUGwB0mhdWEntfxKAbc7itUVo',
+    appId: '1:646775679663:web:3d99a55fc8868a17e8825a',
+    messagingSenderId: '646775679663',
+    projectId: 'gym-manager-e2002',
+    authDomain: 'gym-manager-e2002.firebaseapp.com',
+    storageBucket: 'gym-manager-e2002.firebasestorage.app',
   );
 }

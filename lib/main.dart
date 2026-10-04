@@ -21,7 +21,11 @@ void main() async {
   await AuthService().init();
   await GymService().init();
   await ThemeService().init();
-  await NotificationService().init();
+  try {
+    await NotificationService().init();
+  } catch (e) {
+    debugPrint('NotificationService init error/warning: $e');
+  }
   runApp(const GymManagerApp());
 }
 

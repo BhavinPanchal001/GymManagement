@@ -7,6 +7,13 @@ import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_month_attendance_dialog.dart';
 import '../customers/customer_detail_screen.dart';
+import '../../widgets/voice_search_suffix.dart';
+import '../../utils/animation_utils.dart';
+import '../../widgets/animations/animated_counter.dart';
+import '../../widgets/animations/animated_empty_state.dart';
+import '../../widgets/animations/animated_fade_slide.dart';
+import '../../widgets/animations/animated_pressable.dart';
+import '../../widgets/animations/app_page_route.dart';
 
 class DailyAttendanceTab extends StatefulWidget {
   const DailyAttendanceTab({super.key});
@@ -291,11 +298,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                     // Metrics Strip
                     Row(
                       children: [
-                        Expanded(child: _buildMetricCol('Present', '$present', AppColors.paid)),
+                        Expanded(child: _buildMetricCol('Present', present, AppColors.paid)),
                         Container(width: 1, height: 28, color: AppColors.surfaceBorder),
-                        Expanded(child: _buildMetricCol('Absent', '$absent', AppColors.absent)),
+                        Expanded(child: _buildMetricCol('Absent', absent, AppColors.absent)),
                         Container(width: 1, height: 28, color: AppColors.surfaceBorder),
-                        Expanded(child: _buildMetricCol('Turnout', '$rate%', AppColors.primary)),
+                        Expanded(child: _buildMetricCol('Turnout', rate, AppColors.primary, suffix: '%')),
                       ],
                     ),
                   ],
@@ -312,16 +319,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                   decoration: InputDecoration(
                     hintText: 'Search by name, phone, or card #...',
                     prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
-                            tooltip: 'Clear search',
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {});
-                            },
-                          )
-                        : null,
+                    suffixIcon: VoiceSearchSuffix(
+                      controller: _searchController,
+                      voiceHint: 'Say member name, phone, or card number...',
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
                 ),
               ),
@@ -331,22 +333,14 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
               // Attendance List
               Expanded(
                 child: filteredCustomers.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (searchQuery.isNotEmpty) ...[
-                              Icon(Icons.person_search_rounded, size: 54, color: AppColors.textMuted),
-                              const SizedBox(height: 12),
-                            ],
-                            Text(
-                              searchQuery.isNotEmpty
-                                  ? 'No members found matching "${_searchController.text.trim()}"'
-                                  : 'No active members to record attendance.',
-                              style: TextStyle(color: AppColors.textMuted),
-                            ),
-                          ],
-                        ),
+                    ? AnimatedEmptyState(
+                        icon: Icons.person_search_rounded,
+                        title: searchQuery.isNotEmpty
+                            ? 'No members found matching "${_searchController.text.trim()}"'
+                            : 'No active members to record attendance.',
+                        subtitle: searchQuery.isNotEmpty
+                            ? 'Check spelling or search by phone/card number'
+                            : 'Register members in the Members tab first to record daily attendance',
                       )
                     : ListView.separated(
                         physics: const BouncingScrollPhysics(),
@@ -358,93 +352,99 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                           final status = gym.getAttendanceStatus(customer.id, dateKey);
                           final isPresent = status == AttendanceStatus.present;
 
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isPresent ? AppColors.paid.withValues(alpha: 0.35) : AppColors.surfaceBorder,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                CustomerAvatar(
-                                  imagePath: customer.imagePath,
-                                  imageBase64: customer.imageBase64,
-                                  name: customer.name,
-                                  radius: 22,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => CustomerDetailScreen(customerId: customer.id)),
-                                    );
-                                  },
+                          return AnimatedFadeSlide.staggered(
+                            index: i,
+                            maxStaggerIndex: 6,
+                            child: AnimatedContainer(
+                              duration: AppAnimations.normalDuration,
+                              curve: AppAnimations.curveEaseInOut,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isPresent ? AppColors.paid.withValues(alpha: 0.35) : AppColors.surfaceBorder,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: GestureDetector(
+                              ),
+                              child: Row(
+                                children: [
+                                  CustomerAvatar(
+                                    imagePath: customer.imagePath,
+                                    imageBase64: customer.imageBase64,
+                                    name: customer.name,
+                                    radius: 22,
                                     onTap: () {
                                       Navigator.push(
                                         context,
-                                        MaterialPageRoute(
-                                          builder: (_) => CustomerDetailScreen(customerId: customer.id),
-                                        ),
+                                        AppPageRoute(builder: (_) => CustomerDetailScreen(customerId: customer.id)),
                                       );
                                     },
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          customer.name,
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          AppPageRoute(
+                                            builder: (_) => CustomerDetailScreen(customerId: customer.id),
                                           ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          customer.phone,
-                                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                        ),
-                                      ],
+                                        );
+                                      },
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            customer.name,
+                                            style: TextStyle(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            customer.phone,
+                                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
+                                  const SizedBox(width: 8),
 
-                                // Quick Status Toggle Buttons
-                                Row(
-                                  children: [
-                                    _buildStatusButton(
-                                      label: 'Present',
-                                      icon: Icons.check_circle_rounded,
-                                      color: AppColors.paid,
-                                      isActive: isPresent,
-                                      isDisabled: isFutureDate,
-                                      onTap: isFutureDate
-                                          ? null
-                                          : () {
-                                              gym.toggleAttendance(customer.id, dateKey, AttendanceStatus.present);
-                                            },
-                                    ),
-                                    const SizedBox(width: 6),
-                                    _buildStatusButton(
-                                      label: 'Absent',
-                                      icon: Icons.cancel_rounded,
-                                      color: AppColors.absent,
-                                      isActive: status == AttendanceStatus.absent,
-                                      isDisabled: isFutureDate,
-                                      onTap: isFutureDate
-                                          ? null
-                                          : () {
-                                              gym.toggleAttendance(customer.id, dateKey, AttendanceStatus.absent);
-                                            },
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                  // Quick Status Toggle Buttons
+                                  Row(
+                                    children: [
+                                      _buildStatusButton(
+                                        label: 'Present',
+                                        icon: Icons.check_circle_rounded,
+                                        color: AppColors.paid,
+                                        isActive: isPresent,
+                                        isDisabled: isFutureDate,
+                                        onTap: isFutureDate
+                                            ? null
+                                            : () {
+                                                gym.toggleAttendance(customer.id, dateKey, AttendanceStatus.present);
+                                              },
+                                      ),
+                                      const SizedBox(width: 6),
+                                      _buildStatusButton(
+                                        label: 'Absent',
+                                        icon: Icons.cancel_rounded,
+                                        color: AppColors.absent,
+                                        isActive: status == AttendanceStatus.absent,
+                                        isDisabled: isFutureDate,
+                                        onTap: isFutureDate
+                                            ? null
+                                            : () {
+                                                gym.toggleAttendance(customer.id, dateKey, AttendanceStatus.absent);
+                                              },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -457,11 +457,12 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
     );
   }
 
-  Widget _buildMetricCol(String label, String val, Color color) {
+  Widget _buildMetricCol(String label, num val, Color color, {String suffix = ''}) {
     return Column(
       children: [
-        Text(
-          val,
+        AnimatedCounter(
+          value: val,
+          suffix: suffix,
           style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 2),
@@ -481,11 +482,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
     bool isDisabled = false,
     VoidCallback? onTap,
   }) {
-    return InkWell(
+    return AnimatedPressable(
       onTap: isDisabled ? null : onTap,
-      borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: AppAnimations.microDuration,
+        curve: AppAnimations.curveEaseInOut,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: isDisabled
@@ -502,12 +503,17 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isDisabled
-                  ? AppColors.textMuted.withValues(alpha: 0.35)
-                  : (isActive ? color : AppColors.textMuted),
+            AnimatedScale(
+              scale: isActive ? 1.15 : 1.0,
+              duration: AppAnimations.microDuration,
+              curve: AppAnimations.curveSpring,
+              child: Icon(
+                icon,
+                size: 16,
+                color: isDisabled
+                    ? AppColors.textMuted.withValues(alpha: 0.35)
+                    : (isActive ? color : AppColors.textMuted),
+              ),
             ),
             const SizedBox(width: 4),
             Text(

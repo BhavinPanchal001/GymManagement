@@ -392,6 +392,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       label: 'Full Name',
                       hint: 'Enter your name',
                       icon: Icons.badge_outlined,
+                      textCapitalization: TextCapitalization.words,
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
                           return 'Please enter your name';
@@ -1182,6 +1183,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required String hint,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    TextCapitalization textCapitalization = TextCapitalization.none,
     bool readOnly = false,
     String? helperText,
     String? Function(String?)? validator,
@@ -1204,6 +1206,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          textCapitalization: textCapitalization,
           readOnly: readOnly,
           minLines: minLines,
           maxLines: maxLines,

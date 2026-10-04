@@ -11,6 +11,9 @@ class AuthService {
   static const String _keyProfilePhoto = 'gym_auth_profile_photo';
   static const String _keyProfileDisplayName = 'gym_auth_profile_display_name';
   static const String _keyProfilePhone = 'gym_auth_profile_phone';
+  static const String _keyRememberMe = 'gym_auth_remember_me';
+  static const String _keySavedEmail = 'gym_auth_saved_email';
+  static const String _keySavedPassword = 'gym_auth_saved_password';
 
   String _photoKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_profile_photo' : _keyProfilePhoto;
   String _nameKey(String? uid) => (uid != null && uid.isNotEmpty) ? 'gym_${uid}_profile_display_name' : _keyProfileDisplayName;
@@ -154,6 +157,72 @@ class AuthService {
     }
   }
 
+  /// Whether "Remember Me" is enabled
+  Future<bool> getRememberMe() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_keyRememberMe) ?? false;
+    } catch (e) {
+      debugPrint('AuthService.getRememberMe error: $e');
+      return false;
+    }
+  }
+
+  /// Retrieve saved credentials if Remember Me is active
+  Future<Map<String, String>> getSavedCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rememberMe = prefs.getBool(_keyRememberMe) ?? false;
+      if (!rememberMe) {
+        return {'email': '', 'password': ''};
+      }
+      return {
+        'email': prefs.getString(_keySavedEmail) ?? '',
+        'password': prefs.getString(_keySavedPassword) ?? '',
+      };
+    } catch (e) {
+      debugPrint('AuthService.getSavedCredentials error: $e');
+      return {'email': '', 'password': ''};
+    }
+  }
+
+  /// Save or clear credentials based on Remember Me preference
+  Future<void> saveCredentials({
+    required bool rememberMe,
+    String? email,
+    String? password,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyRememberMe, rememberMe);
+      if (rememberMe) {
+        if (email != null && email.trim().isNotEmpty) {
+          await prefs.setString(_keySavedEmail, email.trim());
+        }
+        if (password != null && password.isNotEmpty) {
+          await prefs.setString(_keySavedPassword, password);
+        }
+      } else {
+        await prefs.remove(_keySavedEmail);
+        await prefs.remove(_keySavedPassword);
+      }
+    } catch (e) {
+      debugPrint('AuthService.saveCredentials error: $e');
+    }
+  }
+
+  /// Clear saved credentials
+  Future<void> clearSavedCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keyRememberMe);
+      await prefs.remove(_keySavedEmail);
+      await prefs.remove(_keySavedPassword);
+    } catch (e) {
+      debugPrint('AuthService.clearSavedCredentials error: $e');
+    }
+  }
+
   /// Create a new account with email, password, display name, and optional photo.
   Future<UserCredential> signUpWithEmailAndPassword({
     required String email,
@@ -271,8 +340,15 @@ class AuthService {
 
   /// Send password reset link to user's email.
   Future<void> sendPasswordResetEmail({required String email}) async {
+    final cleanEmail = email.trim();
+    if (cleanEmail.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-email',
+        message: 'Please enter your email address.',
+      );
+    }
     try {
-      await _requireAuth.sendPasswordResetEmail(email: email.trim());
+      await _requireAuth.sendPasswordResetEmail(email: cleanEmail);
     } catch (e) {
       debugPrint('AuthService.sendPasswordResetEmail error: $e');
       rethrow;
@@ -328,6 +404,8 @@ class AuthService {
           return 'An account already exists for this email address.';
         case 'invalid-email':
           return 'Please enter a valid email address.';
+        case 'missing-email':
+          return 'Please enter your email address.';
         case 'weak-password':
           return 'The password is too weak. Please use at least 6 characters.';
         case 'user-disabled':
@@ -335,9 +413,14 @@ class AuthService {
         case 'too-many-requests':
           return 'Too many attempts. Please wait a moment and try again.';
         case 'operation-not-allowed':
-          return 'Email/Password sign-in is disabled in Firebase Console.';
+          return 'Password reset or email sign-in is disabled in Firebase Console.';
         case 'network-request-failed':
           return 'Network error. Please check your internet connection.';
+        case 'quota-exceeded':
+          return 'Email quota exceeded. Please try again later.';
+        case 'invalid-continue-uri':
+        case 'unauthorized-continue-uri':
+          return 'Password reset service configuration error. Please contact support.';
         case 'invalid-api-key':
           return 'Firebase API key is not configured. Please use "Continue in Offline Mode" below, or provide your Firebase project keys in firebase_options.dart.';
         default:
@@ -347,7 +430,17 @@ class AuthService {
           }
           return msg.isNotEmpty ? msg : 'Authentication failed. Please try again.';
       }
+    } else if (error is FirebaseException) {
+      final msg = error.message ?? '';
+      if (msg.toLowerCase().contains('not been initialized') || error.code == 'no-app') {
+        return 'Firebase service is not initialized. Please ensure your project is properly configured.';
+      }
+      return msg.isNotEmpty ? msg : 'A service error occurred. Please try again.';
     }
-    return error?.toString() ?? 'An unexpected error occurred.';
+    final str = error?.toString() ?? '';
+    if (str.contains('SocketException') || str.contains('Failed host lookup') || str.contains('NetworkImageLoadException')) {
+      return 'Network connection error. Please check your internet connection.';
+    }
+    return str.isNotEmpty ? str : 'An unexpected error occurred.';
   }
 }

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
+import '../animations/animated_pressable.dart';
 
 enum FinancialChartMode { comparison, profit }
 
@@ -225,9 +226,11 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
 
   Widget _buildRangeButton(int count, String text) {
     final isSelected = _monthsCount == count;
-    return GestureDetector(
+    return AnimatedPressable(
       onTap: () => setState(() => _monthsCount = count),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.transparent,
@@ -247,9 +250,11 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
 
   Widget _buildModeButton(FinancialChartMode mode, IconData icon, String label) {
     final isSelected = _mode == mode;
-    return GestureDetector(
+    return AnimatedPressable(
       onTap: () => setState(() => _mode = mode),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary.withValues(alpha: 0.18) : Colors.transparent,
@@ -476,6 +481,8 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
           );
         }),
       ),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeInOutCubic,
     );
   }
 
@@ -630,6 +637,8 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
           ),
         ],
       ),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeInOutCubic,
     );
   }
 

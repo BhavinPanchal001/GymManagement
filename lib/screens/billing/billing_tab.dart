@@ -9,11 +9,20 @@ import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
 import '../../widgets/bill_history_sheet.dart';
+import '../../widgets/collect_balance_dialog.dart';
+import '../../widgets/bill_receipt_dialog.dart';
 import '../customers/customer_detail_screen.dart';
 import '../reports/pending_payments_report_screen.dart';
 import '../reports/gym_statistics_screen.dart';
 import 'expense_tab.dart';
 import 'balance_sheet_tab.dart';
+import '../../widgets/voice_search_suffix.dart';
+import '../../utils/animation_utils.dart';
+import '../../widgets/animations/animated_counter.dart';
+import '../../widgets/animations/animated_empty_state.dart';
+import '../../widgets/animations/animated_fade_slide.dart';
+import '../../widgets/animations/animated_pressable.dart';
+import '../../widgets/animations/app_page_route.dart';
 
 enum BillingFilter { all, pending, paid }
 
@@ -101,7 +110,11 @@ class _BillingTabState extends State<BillingTab> {
           }
         }
 
-        var customers = gym.customers.where((c) => c.isActive).toList();
+        // Active members + archived members with billing records (dues or payments) for this month
+        var customers = gym.customers.where((c) {
+          if (c.isActive) return true;
+          return dueIds.contains(c.id) || gym.isMonthCoveredByPaidPayment(c.id, monthKey);
+        }).toList();
         if (_filter == BillingFilter.pending) {
           customers = customers.where((c) => dueIds.contains(c.id)).toList();
         } else if (_filter == BillingFilter.paid) {
@@ -275,16 +288,11 @@ class _BillingTabState extends State<BillingTab> {
                     decoration: InputDecoration(
                       hintText: 'Search by name, phone, or card #...',
                       prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
-                              tooltip: 'Clear search',
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
+                      suffixIcon: VoiceSearchSuffix(
+                        controller: _searchController,
+                        voiceHint: 'Say member name, phone, or card number...',
+                        onChanged: (_) => setState(() {}),
+                      ),
                     ),
                   ),
                 ),
@@ -344,27 +352,33 @@ class _BillingTabState extends State<BillingTab> {
                                       Expanded(
                                         child: _buildStatBox(
                                           'Collected',
+                                          totalCollected,
                                           GymDateUtils.formatCurrency(totalCollected, symbol: currency),
                                           AppColors.paid,
                                           '$paidCount paid',
+                                          prefix: currency,
                                         ),
                                       ),
                                       Container(width: 1, height: 40, color: AppColors.surfaceBorder),
                                       Expanded(
                                         child: _buildStatBox(
                                           'Pending Dues',
+                                          totalPending,
                                           GymDateUtils.formatCurrency(totalPending, symbol: currency),
                                           AppColors.pending,
                                           '$pendingCount pending',
+                                          prefix: currency,
                                         ),
                                       ),
                                       Container(width: 1, height: 40, color: AppColors.surfaceBorder),
                                       Expanded(
                                         child: _buildStatBox(
                                           'Total Expected',
+                                          totalExpected,
                                           GymDateUtils.formatCurrency(totalExpected, symbol: currency),
                                           AppColors.textPrimary,
                                           '$totalMembers members',
+                                          prefix: currency,
                                         ),
                                       ),
                                     ],
@@ -373,30 +387,51 @@ class _BillingTabState extends State<BillingTab> {
                                   // Progress Bar
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(6),
-                                    child: LinearProgressIndicator(
-                                      value: progress,
-                                      minHeight: 8,
-                                      backgroundColor: AppColors.surfaceBorder,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        progress >= 0.8
-                                            ? AppColors.paid
-                                            : progress >= 0.5
-                                                ? AppColors.pending
-                                                : AppColors.absent,
-                                      ),
+                                    child: TweenAnimationBuilder<double>(
+                                      tween: Tween<double>(begin: 0.0, end: progress),
+                                      duration: AppAnimations.normalDuration,
+                                      curve: AppAnimations.curveEaseOut,
+                                      builder: (context, animatedVal, _) {
+                                        return LinearProgressIndicator(
+                                          value: animatedVal,
+                                          minHeight: 8,
+                                          backgroundColor: AppColors.surfaceBorder,
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            animatedVal >= 0.8
+                                                ? AppColors.paid
+                                                : animatedVal >= 0.5
+                                                    ? AppColors.pending
+                                                    : AppColors.absent,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        'Collection Rate: ${(progress * 100).toStringAsFixed(1)}%',
-                                        style: TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Collection Rate: ',
+                                            style: TextStyle(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          AnimatedCounter(
+                                            value: progress * 100,
+                                            suffix: '%',
+                                            decimalPlaces: 1,
+                                            style: TextStyle(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                       Text(
                                         '$paidCount of $totalMembers Cleared',
@@ -478,28 +513,18 @@ class _BillingTabState extends State<BillingTab> {
                       if (customers.isEmpty)
                         SliverFillRemaining(
                           hasScrollBody: false,
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  if (searchQuery.isNotEmpty) ...[
-                                    Icon(Icons.person_search_rounded, size: 54, color: AppColors.textMuted),
-                                    const SizedBox(height: 12),
-                                  ],
-                                  Text(
-                                    searchQuery.isNotEmpty
-                                        ? 'No members found matching "${_searchController.text.trim()}"'
-                                        : _filter == BillingFilter.pending
-                                            ? 'All member payments are cleared for this month!'
-                                            : 'No records found for this month.',
-                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
+                          child: AnimatedEmptyState(
+                            icon: Icons.payments_outlined,
+                            title: searchQuery.isNotEmpty
+                                ? 'No members found matching "${_searchController.text.trim()}"'
+                                : _filter == BillingFilter.pending
+                                    ? 'All member payments are cleared for this month!'
+                                    : 'No records found for this month.',
+                            subtitle: searchQuery.isNotEmpty
+                                ? 'Check spelling or search by phone/card number'
+                                : _filter == BillingFilter.pending
+                                    ? 'Outstanding! 100% of memberships are settled for this cycle.'
+                                    : null,
                           ),
                         )
                       else
@@ -514,13 +539,17 @@ class _BillingTabState extends State<BillingTab> {
                               final attendanceSummary = gym.getMonthlyAttendanceSummary(customer.id, monthKey);
                               final presentDays = attendanceSummary['present'] ?? 0;
 
-                              return _buildBillingRow(
-                                customer,
-                                payment,
-                                monthKey,
-                                presentDays,
-                                currency,
-                                dueIds.contains(customer.id),
+                              return AnimatedFadeSlide.staggered(
+                                index: i,
+                                maxStaggerIndex: 6,
+                                child: _buildBillingRow(
+                                  customer,
+                                  payment,
+                                  monthKey,
+                                  presentDays,
+                                  currency,
+                                  dueIds.contains(customer.id),
+                                ),
                               );
                             },
                           ),
@@ -544,11 +573,11 @@ class _BillingTabState extends State<BillingTab> {
   }) {
     final isSelected = _billingSection == index;
     return Expanded(
-      child: InkWell(
+      child: AnimatedPressable(
         onTap: () => _selectSection(index),
-        borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: AppAnimations.microDuration,
+          curve: AppAnimations.curveEaseInOut,
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primary : Colors.transparent,
@@ -601,7 +630,7 @@ class _BillingTabState extends State<BillingTab> {
     );
   }
 
-  Widget _buildStatBox(String title, String amount, Color color, String sub) {
+  Widget _buildStatBox(String title, num? numericAmount, String amount, Color color, String sub, {String prefix = ''}) {
     return Column(
       children: [
         Text(
@@ -613,10 +642,17 @@ class _BillingTabState extends State<BillingTab> {
         const SizedBox(height: 4),
         FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(
-            amount,
-            style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w900),
-          ),
+          child: numericAmount != null
+              ? AnimatedCounter(
+                  value: numericAmount,
+                  prefix: prefix,
+                  decimalPlaces: (numericAmount is int || numericAmount % 1 == 0) ? 0 : 2,
+                  style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w900),
+                )
+              : Text(
+                  amount,
+                  style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w900),
+                ),
         ),
         const SizedBox(height: 2),
         Text(
@@ -631,13 +667,13 @@ class _BillingTabState extends State<BillingTab> {
 
   Widget _buildFilterChip(String label, BillingFilter filter) {
     final isSelected = _filter == filter;
-    return InkWell(
+    return AnimatedPressable(
       onTap: () {
         setState(() => _filter = filter);
       },
-      borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: AppAnimations.microDuration,
+        curve: AppAnimations.curveEaseInOut,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
@@ -668,17 +704,18 @@ class _BillingTabState extends State<BillingTab> {
   ) {
     final isPaid = payment.isPaid;
 
-    return InkWell(
+    return AnimatedPressable(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
+          AppPageRoute(
             builder: (_) => CustomerDetailScreen(customerId: customer.id),
           ),
         );
       },
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
+      child: AnimatedContainer(
+        duration: AppAnimations.normalDuration,
+        curve: AppAnimations.curveEaseInOut,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -705,15 +742,55 @@ class _BillingTabState extends State<BillingTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        customer.name,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              customer.name,
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (!customer.isActive) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: AppColors.pending.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: AppColors.pending.withValues(alpha: 0.4),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.archive_outlined,
+                                    size: 10,
+                                    color: AppColors.pending,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'ARCHIVED',
+                                    style: TextStyle(
+                                      color: AppColors.pending,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 3),
                       Row(
@@ -751,36 +828,48 @@ class _BillingTabState extends State<BillingTab> {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isPaid
-                            ? AppColors.paid.withValues(alpha: 0.15)
-                            : (isDue
-                                ? AppColors.pending.withValues(alpha: 0.15)
-                                : AppColors.surfaceElevated),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
+                    InkWell(
+                      onTap: (isPaid && payment.balanceDue > 0)
+                          ? () async {
+                              final current = GymService().getPaymentById(payment.id) ?? payment;
+                              final bill = await CollectBalanceDialog.show(context, current);
+                              if (bill != null && mounted) {
+                                await BillReceiptDialog.show(context, bill: bill);
+                              }
+                            }
+                          : null,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
                           color: isPaid
-                              ? AppColors.paid.withValues(alpha: 0.5)
+                              ? AppColors.paid.withValues(alpha: 0.15)
                               : (isDue
-                                  ? AppColors.pending.withValues(alpha: 0.5)
-                                  : AppColors.surfaceBorder),
-                          width: 0.8,
+                                  ? AppColors.pending.withValues(alpha: 0.15)
+                                  : AppColors.surfaceElevated),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: isPaid
+                                ? AppColors.paid.withValues(alpha: 0.5)
+                                : (isDue
+                                    ? AppColors.pending.withValues(alpha: 0.5)
+                                    : AppColors.surfaceBorder),
+                            width: 0.8,
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        isPaid
-                            ? (payment.isPartiallyPaid
-                                ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
-                                : 'PAID')
-                            : (isDue ? 'PENDING' : 'NOT DUE'),
-                        style: TextStyle(
-                          color: isPaid
-                              ? AppColors.paid
-                              : (isDue ? AppColors.pending : AppColors.textMuted),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
+                        child: Text(
+                          isPaid
+                              ? (payment.isPartiallyPaid
+                                  ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
+                                  : 'PAID')
+                              : (isDue ? 'PENDING' : 'NOT DUE'),
+                          style: TextStyle(
+                            color: isPaid
+                                ? AppColors.paid
+                                : (isDue ? AppColors.pending : AppColors.textMuted),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                     ),
@@ -901,45 +990,108 @@ class _BillingTabState extends State<BillingTab> {
                     ),
                   ),
                   const SizedBox(width: 6),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      MarkPaymentDialog.show(
+                        context,
+                        customer: customer,
+                        monthYear: monthKey,
+                        currentRecord: payment,
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: AppColors.surfaceElevated,
+                      foregroundColor: AppColors.textSecondary,
+                      side: BorderSide(color: AppColors.surfaceBorder),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: const Size(0, 30),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: Icon(
+                      Icons.edit_note_rounded,
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    label: Text(
+                      'Edit',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      MarkPaymentDialog.show(
+                        context,
+                        customer: customer,
+                        monthYear: monthKey,
+                        currentRecord: payment,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.primaryOn,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide.none,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: const Size(0, 30),
+                    ),
+                    icon: Icon(
+                      Icons.check_circle_rounded,
+                      size: 14,
+                      color: AppColors.primaryOn,
+                    ),
+                    label: Text(
+                      'Mark Paid',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryOn,
+                      ),
+                    ),
+                  ),
                 ],
-                ElevatedButton.icon(
-                  onPressed: () {
-                    MarkPaymentDialog.show(
-                      context,
-                      customer: customer,
-                      monthYear: monthKey,
-                      currentRecord: payment,
-                    );
+              ],
+            ),
+            if (isPaid && payment.balanceDue > 0) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final current = GymService().getPaymentById(payment.id) ?? payment;
+                    final bill = await CollectBalanceDialog.show(context, current);
+                    if (bill != null && mounted) {
+                      await BillReceiptDialog.show(context, bill: bill);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isPaid ? AppColors.surfaceElevated : AppColors.primary,
-                    foregroundColor: isPaid ? AppColors.textPrimary : AppColors.primaryOn,
+                    backgroundColor: AppColors.pending,
+                    foregroundColor: Colors.white,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: isPaid
-                          ? BorderSide(color: AppColors.surfaceBorder)
-                          : BorderSide.none,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    minimumSize: const Size(0, 30),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: const Size(0, 36),
                   ),
-                  icon: Icon(
-                    isPaid ? Icons.edit_note_rounded : Icons.check_circle_rounded,
-                    size: 14,
-                    color: isPaid ? AppColors.textSecondary : AppColors.primaryOn,
-                  ),
+                  icon: const Icon(Icons.payments_rounded, size: 16),
                   label: Text(
-                    isPaid ? 'Edit' : 'Mark Paid',
-                    style: TextStyle(
-                      fontSize: 11,
+                    'Collect Balance ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}',
+                    style: const TextStyle(
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      color: isPaid ? AppColors.textPrimary : AppColors.primaryOn,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),

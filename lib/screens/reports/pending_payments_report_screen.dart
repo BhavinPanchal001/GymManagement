@@ -12,6 +12,7 @@ import '../../widgets/collect_balance_dialog.dart';
 import '../../widgets/bill_receipt_dialog.dart';
 import '../../widgets/whatsapp_reminder_sheet.dart';
 import 'export_report_dialog.dart';
+import '../../widgets/voice_search_suffix.dart';
 
 enum DateRangePreset {
   allOutstanding('All Outstanding'),
@@ -514,15 +515,13 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       hintText: 'Search member or phone...',
                       hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
                       prefixIcon: Icon(Icons.search_rounded, color: AppColors.textMuted, size: 18),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear_rounded, color: AppColors.textSecondary, size: 16),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
+                      suffixIcon: VoiceSearchSuffix(
+                        controller: _searchController,
+                        voiceHint: 'Say member name or phone number...',
+                        iconSize: 18,
+                        onChanged: (val) => setState(() => _searchQuery = val),
+                        onClear: () => setState(() => _searchQuery = ''),
+                      ),
                       contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                       filled: true,
                       fillColor: AppColors.surface,
@@ -871,15 +870,20 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       child: ElevatedButton.icon(
                         onPressed: () => _openMarkPaid(customer, item.pendingRecords.first),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.primaryOn,
+                          backgroundColor: item.pendingRecords.first.isPaid ? AppColors.pending : AppColors.primary,
+                          foregroundColor: item.pendingRecords.first.isPaid ? Colors.white : AppColors.primaryOn,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        icon: const Icon(Icons.check_circle_rounded, size: 15),
+                        icon: Icon(
+                          item.pendingRecords.first.isPaid ? Icons.payments_rounded : Icons.check_circle_rounded,
+                          size: 15,
+                        ),
                         label: Text(
-                          item.pendingRecords.first.isPaid ? 'Collect Balance' : 'Record Payment',
+                          item.pendingRecords.first.isPaid
+                              ? 'Collect Balance ${GymDateUtils.formatCurrency(item.pendingRecords.first.balanceDue, symbol: currency)}'
+                              : 'Record Payment',
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -887,6 +891,29 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       ),
                     ),
                   ),
+                  if (item.pendingRecords.first.isPaid) ...[
+                    const SizedBox(width: 6),
+                    IconButton(
+                      icon: const Icon(Icons.edit_note_rounded, size: 16),
+                      tooltip: 'Payment Corrections (Edit)',
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.surfaceElevated,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: AppColors.surfaceBorder),
+                        ),
+                      ),
+                      onPressed: () => MarkPaymentDialog.show(
+                        context,
+                        customer: customer,
+                        monthYear: item.pendingRecords.first.monthYear,
+                        currentRecord: item.pendingRecords.first,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],

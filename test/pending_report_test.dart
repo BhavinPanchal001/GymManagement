@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gym/services/gym_service.dart';
 import 'package:gym/models/payment.dart';
-import 'package:gym/utils/date_utils.dart';
 import 'package:gym/screens/reports/pending_payments_report_screen.dart';
 import 'package:gym/screens/reports/export_report_dialog.dart';
 
@@ -12,7 +11,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    // await GymService().resetToDemoData(force: true);
+    await GymService().resetToDemoData(force: true);
   });
 
   test('GymService pending dues range operations test', () {
@@ -77,7 +76,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify empty state appears
-    expect(find.text('All Clear!'), findsOneWidget);
+    expect(find.text('No Matching Members'), findsOneWidget);
   });
 
   testWidgets('ExportReportDialog shows CSV and Text options', (tester) async {

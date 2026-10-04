@@ -5,6 +5,7 @@ import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/add_expense_dialog.dart';
+import '../../widgets/voice_search_suffix.dart';
 
 class ExpenseTab extends StatefulWidget {
   final DateTime selectedMonth;
@@ -149,15 +150,13 @@ class _ExpenseTabState extends State<ExpenseTab> {
                     filled: true,
                     fillColor: AppColors.surfaceElevated,
                     prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textMuted),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.clear, size: 16, color: AppColors.textSecondary),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
+                    suffixIcon: VoiceSearchSuffix(
+                      controller: _searchController,
+                      voiceHint: 'Say expense title, category, or note...',
+                      iconSize: 18,
+                      onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                      onClear: () => setState(() => _searchQuery = ''),
+                    ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),

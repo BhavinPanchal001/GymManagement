@@ -460,6 +460,8 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
           ),
         ],
       ),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeInOutCubic,
     );
   }
 }

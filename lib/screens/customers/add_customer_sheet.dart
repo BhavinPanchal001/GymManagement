@@ -9,6 +9,25 @@ import '../../utils/date_utils.dart';
 import '../../utils/nav_keys.dart';
 import '../../widgets/avatar_selector.dart';
 import 'customer_detail_screen.dart';
+import '../../widgets/voice_search_suffix.dart';
+import '../../widgets/animations/animated_pressable.dart';
+import '../../widgets/animations/animated_success_dialog.dart';
+enum RegistrationPaymentMode {
+  payLater,
+  partialPayment,
+  fullPayment;
+
+  String get label {
+    switch (this) {
+      case RegistrationPaymentMode.payLater:
+        return 'Pay Later';
+      case RegistrationPaymentMode.partialPayment:
+        return 'Partial';
+      case RegistrationPaymentMode.fullPayment:
+        return 'Full';
+    }
+  }
+}
 
 class AddCustomerSheet extends StatefulWidget {
   final Customer? customerToEdit;
@@ -44,7 +63,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   late TextEditingController _bicepController;
   late TextEditingController _waistController;
   late TextEditingController _legController;
-  bool _showMeasurements = false;
+  bool _showOptionalDetails = false;
+  RegistrationPaymentMode _paymentMode = RegistrationPaymentMode.payLater;
+  late TextEditingController _paidAmountController;
 
   String? _selectedImagePath;
   late DateTime _joinDate;
@@ -52,12 +73,20 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   late DateTime _membershipEndDate;
   String _selectedPlan = CustomerPlan.normal;
   int _selectedDurationMonths = 1;
-  bool _collectPaymentNow = false;
   PaymentMethod _selectedPaymentMethod = PaymentMethod.cash;
   bool _isLoading = false;
   late final String _registrationOperationId;
 
   bool get isEditing => widget.customerToEdit != null;
+
+  bool get _hasOptionalDataFilled =>
+      _addressController.text.trim().isNotEmpty ||
+      _notesController.text.trim().isNotEmpty ||
+      _weightController.text.trim().isNotEmpty ||
+      _chestController.text.trim().isNotEmpty ||
+      _bicepController.text.trim().isNotEmpty ||
+      _waistController.text.trim().isNotEmpty ||
+      _legController.text.trim().isNotEmpty;
 
   @override
   void initState() {
@@ -87,10 +116,20 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     _bicepController = TextEditingController(text: widget.customerToEdit?.bicep ?? '');
     _waistController = TextEditingController(text: widget.customerToEdit?.waist ?? '');
     _legController = TextEditingController(text: widget.customerToEdit?.leg ?? '');
-    _showMeasurements =
-        (widget.customerToEdit?.weight.isNotEmpty == true ||
-        widget.customerToEdit?.chest.isNotEmpty == true ||
-        widget.customerToEdit?.bicep.isNotEmpty == true);
+
+    final hasOptionalData = (widget.customerToEdit?.address.isNotEmpty == true) ||
+        (widget.customerToEdit?.notes.isNotEmpty == true) ||
+        (widget.customerToEdit?.weight.isNotEmpty == true) ||
+        (widget.customerToEdit?.chest.isNotEmpty == true) ||
+        (widget.customerToEdit?.bicep.isNotEmpty == true) ||
+        (widget.customerToEdit?.waist.isNotEmpty == true) ||
+        (widget.customerToEdit?.leg.isNotEmpty == true);
+    _showOptionalDetails = hasOptionalData;
+
+    _paidAmountController = TextEditingController();
+    _paidAmountController.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     _selectedImagePath = widget.customerToEdit?.imagePath ?? 'avatar:1';
     _joinDate = widget.customerToEdit?.joinDate ?? DateTime.now();
@@ -113,6 +152,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     _bicepController.dispose();
     _waistController.dispose();
     _legController.dispose();
+    _paidAmountController.dispose();
     super.dispose();
   }
 
@@ -216,6 +256,35 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     setState(() => _isLoading = true);
 
     try {
+      final totalFee = gymService.settings.totalForConfiguredPrice(
+        gymService.settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths),
+      );
+      double? customPaidAmount;
+      if (!isEditing && _paymentMode == RegistrationPaymentMode.partialPayment) {
+        final text = _paidAmountController.text.trim();
+        final parsed = double.tryParse(text);
+        if (parsed == null || parsed <= 0) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enter a valid amount received for partial payment.')),
+          );
+          return;
+        }
+        if (parsed > totalFee + 0.005) {
+          setState(() => _isLoading = false);
+          final sym = gymService.settings.currencySymbol;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Amount received ($sym${parsed.toStringAsFixed(0)}) cannot exceed the total fee ($sym${totalFee.toInt()}).',
+              ),
+            ),
+          );
+          return;
+        }
+        customPaidAmount = parsed;
+      }
+
       Customer? createdCustomer;
       if (isEditing) {
         final updated = widget.customerToEdit!.copyWith(
@@ -237,6 +306,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         );
         await gymService.updateCustomer(updated);
       } else {
+        final collectNow = _paymentMode != RegistrationPaymentMode.payLater;
         createdCustomer = await gymService.addCustomer(
           name: _nameController.text.trim(),
           phone: _phoneController.text.trim(),
@@ -252,19 +322,41 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           bicep: _bicepController.text.trim(),
           waist: _waistController.text.trim(),
           leg: _legController.text.trim(),
-          markAsPaidNow: _collectPaymentNow,
-          initialPaymentMethod: _collectPaymentNow ? _selectedPaymentMethod : null,
+          markAsPaidNow: collectNow,
+          initialPaymentMethod: collectNow ? _selectedPaymentMethod : null,
           membershipStartDate: _membershipStartDate,
           membershipEndDate: _membershipEndDate,
           membershipFee: gymService.settings.getPriceForDuration(
             _selectedPlan, _selectedDurationMonths,
           ),
+          paidAmount: _paymentMode == RegistrationPaymentMode.partialPayment
+              ? customPaidAmount
+              : null,
           operationId: _registrationOperationId,
         );
       }
 
       if (!mounted) return;
       setState(() => _isLoading = false);
+
+      String successMessage;
+      if (isEditing) {
+        successMessage = '${_nameController.text.trim()} updated successfully';
+      } else if (_paymentMode == RegistrationPaymentMode.fullPayment) {
+        successMessage = '${_nameController.text.trim()} registered with fee paid in full';
+      } else if (_paymentMode == RegistrationPaymentMode.partialPayment && customPaidAmount != null) {
+        successMessage = '${_nameController.text.trim()} registered with ${gymService.settings.currencySymbol}${customPaidAmount.toInt()} partial payment';
+      } else {
+        successMessage = '${_nameController.text.trim()} added to your gym roster';
+      }
+
+      await AnimatedSuccessDialog.show(
+        context,
+        title: isEditing ? 'Member Updated' : 'Member Registered',
+        message: successMessage,
+      );
+
+      if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context, true);
 
@@ -365,10 +457,18 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _nameController,
+                textCapitalization: TextCapitalization.words,
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'e.g. Rahul Sharma',
                   prefixIcon: Icon(Icons.person_rounded, color: AppColors.primary, size: 20),
+                  suffixIcon: VoiceSearchSuffix(
+                    controller: _nameController,
+                    title: 'Speak Member Name',
+                    voiceHint: 'Say member full name...',
+                    submitLabel: 'Apply',
+                    onChanged: (_) => setState(() {}),
+                  ),
                 ),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
@@ -396,6 +496,25 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 decoration: InputDecoration(
                   hintText: 'e.g. 9876543210',
                   prefixIcon: Icon(Icons.phone_rounded, color: AppColors.secondary, size: 20),
+                  suffixIcon: VoiceSearchSuffix(
+                    controller: _phoneController,
+                    title: 'Speak Phone Number',
+                    voiceHint: 'Say 10-digit phone number...',
+                    submitLabel: 'Apply',
+                    transformQuery: (text) {
+                      String digits = VoiceSearchSuffix.extractDigits(text);
+                      if (digits.length == 12 && digits.startsWith('91')) {
+                        digits = digits.substring(2);
+                      } else if (digits.length == 11 && digits.startsWith('0')) {
+                        digits = digits.substring(1);
+                      }
+                      if (digits.length > 10) {
+                        digits = digits.substring(0, 10);
+                      }
+                      return digits;
+                    },
+                    onChanged: (_) => setState(() {}),
+                  ),
                 ),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
@@ -527,26 +646,6 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
               const SizedBox(height: 16),
 
-              // Address Field
-              Text(
-                'Address (Optional)',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _addressController,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Station Road, Market Area',
-                  prefixIcon: Icon(Icons.location_on_outlined, color: AppColors.textMuted, size: 20),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Body Measurements Expandable Card
-              _buildMeasurementsCard(),
-              const SizedBox(height: 16),
-
               // Membership Plan Selector
               Row(
                 children: [
@@ -607,42 +706,35 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               // Upfront Payment Toggle Card (Only when registering new member)
               if (!isEditing) ...[_buildUpfrontPaymentCard(currency), const SizedBox(height: 16)],
 
-              // Notes Field
-              Text(
-                'Workout Notes / Goals (Optional)',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _notesController,
-                maxLines: 2,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                decoration: const InputDecoration(hintText: 'e.g. Weight loss plan, morning slot 7am'),
-              ),
+              // Collapsible Optional Details Card
+              _buildOptionalDetailsCard(),
               const SizedBox(height: 24),
 
               // Submit Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveCustomer,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.primaryOn,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
+              AnimatedPressable(
+                onTap: _isLoading ? null : _saveCustomer,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _saveCustomer,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.primaryOn,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryOn),
+                          )
+                        : Text(
+                            isEditing ? 'Save Changes' : 'Register Member',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                          ),
                   ),
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryOn),
-                        )
-                      : Text(
-                          isEditing ? 'Save Changes' : 'Register Member',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.2),
-                        ),
                 ),
               ),
             ],
@@ -663,9 +755,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   }) {
     final isSelected = _selectedPlan == planKey;
 
-    return InkWell(
+    return AnimatedPressable(
       onTap: () => setState(() => _selectedPlan = planKey),
-      borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(12),
@@ -784,12 +875,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: InkWell(
+            child: AnimatedPressable(
               onTap: () => setState(() {
                 _selectedDurationMonths = pkg.months;
                 _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(_membershipStartDate, _selectedDurationMonths);
               }),
-              borderRadius: BorderRadius.circular(12),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -881,17 +971,36 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths),
     );
 
+    Color activeColor;
+    switch (_paymentMode) {
+      case RegistrationPaymentMode.fullPayment:
+        activeColor = AppColors.paid;
+        break;
+      case RegistrationPaymentMode.partialPayment:
+        activeColor = const Color(0xFFFF9100);
+        break;
+      case RegistrationPaymentMode.payLater:
+        activeColor = AppColors.primary;
+        break;
+    }
+
+    final enteredAmount = double.tryParse(_paidAmountController.text.trim()) ?? 0.0;
+    final effectivePaid = enteredAmount > fee ? fee : (enteredAmount < 0 ? 0.0 : enteredAmount);
+    final remainingBalance = (fee - effectivePaid) > 0.005 ? (fee - effectivePaid) : 0.0;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _collectPaymentNow
-            ? AppColors.paid.withValues(alpha: 0.08)
+        color: _paymentMode != RegistrationPaymentMode.payLater
+            ? activeColor.withValues(alpha: 0.06)
             : AppColors.surfaceElevated.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _collectPaymentNow ? AppColors.paid.withValues(alpha: 0.5) : AppColors.surfaceBorder,
-          width: _collectPaymentNow ? 1.5 : 1.0,
+          color: _paymentMode != RegistrationPaymentMode.payLater
+              ? activeColor.withValues(alpha: 0.45)
+              : AppColors.surfaceBorder,
+          width: _paymentMode != RegistrationPaymentMode.payLater ? 1.5 : 1.0,
         ),
       ),
       child: Column(
@@ -902,12 +1011,16 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: (_collectPaymentNow ? AppColors.paid : AppColors.primary).withValues(alpha: 0.15),
+                  color: activeColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.payments_rounded,
-                  color: _collectPaymentNow ? AppColors.paid : AppColors.primary,
+                  _paymentMode == RegistrationPaymentMode.fullPayment
+                      ? Icons.check_circle_rounded
+                      : (_paymentMode == RegistrationPaymentMode.partialPayment
+                          ? Icons.pie_chart_rounded
+                          : Icons.payments_rounded),
+                  color: activeColor,
                   size: 20,
                 ),
               ),
@@ -917,29 +1030,69 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Collect Payment Now',
+                      'Registration Payment',
                       style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Mark membership as settled upfront',
+                      'Full payment, partial advance, or pay later',
                       style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                     ),
                   ],
                 ),
               ),
-              Switch.adaptive(
-                value: _collectPaymentNow,
-                // activeThumbColor: AppColors.paid,
-                activeTrackColor: AppColors.paid.withValues(alpha: 0.5),
-                onChanged: (val) {
-                  setState(() => _collectPaymentNow = val);
-                },
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: activeColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  GymDateUtils.formatCurrency(fee, symbol: currency),
+                  style: TextStyle(color: activeColor, fontWeight: FontWeight.w800, fontSize: 13),
+                ),
               ),
             ],
           ),
-          ...[
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
+
+          // 3-Mode Selector Tabs
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.surfaceBorder),
+            ),
+            child: Row(
+              children: [
+                _buildPaymentTabOption(
+                  mode: RegistrationPaymentMode.payLater,
+                  label: 'Pay Later',
+                  icon: Icons.schedule_rounded,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(width: 4),
+                _buildPaymentTabOption(
+                  mode: RegistrationPaymentMode.partialPayment,
+                  label: 'Partial',
+                  icon: Icons.pie_chart_outline_rounded,
+                  color: const Color(0xFFFF9100),
+                ),
+                const SizedBox(width: 4),
+                _buildPaymentTabOption(
+                  mode: RegistrationPaymentMode.fullPayment,
+                  label: 'Full Paid',
+                  icon: Icons.check_circle_outline_rounded,
+                  color: AppColors.paid,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Mode-specific details
+          if (_paymentMode == RegistrationPaymentMode.payLater) ...[
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -947,146 +1100,202 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.surfaceBorder),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: _pickMembershipStartDate,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'START DATE',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(Icons.edit_calendar_rounded, size: 12, color: AppColors.primary),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                GymDateUtils.formatDate(_membershipStartDate),
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.textSecondary),
-                      ),
-                      Expanded(
-                        child: InkWell(
-                          onTap: _pickMembershipEndDate,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'EXPIRY DATE',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(Icons.edit_calendar_rounded, size: 12, color: AppColors.primary),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                GymDateUtils.formatDate(_membershipEndDate),
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.date_range_rounded, size: 13, color: AppColors.primary),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Validity: ${GymDateUtils.formatDateRange(_membershipStartDate, _membershipEndDate)}',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+                  Icon(Icons.info_outline_rounded, size: 18, color: AppColors.textSecondary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Full registration fee ($currency${fee.toInt()}) will be marked pending. You can collect payment at any time.',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
+          ],
+
+          if (_paymentMode == RegistrationPaymentMode.fullPayment) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.paid.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.surfaceBorder),
+                border: Border.all(color: AppColors.paid.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
+                      Icon(Icons.check_circle_rounded, color: AppColors.paid, size: 18),
+                      const SizedBox(width: 8),
                       Text(
-                        'Total Registration Fee',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        '${CustomerPlan.getShortLabel(_selectedPlan)} • $_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"}',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 10),
+                        'Full Fee Settled Upfront',
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
                       ),
                     ],
                   ),
                   Text(
                     GymDateUtils.formatCurrency(fee, symbol: currency),
-                    style: TextStyle(color: AppColors.paid, fontSize: 18, fontWeight: FontWeight.w900),
+                    style: TextStyle(color: AppColors.paid, fontSize: 16, fontWeight: FontWeight.w900),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            if (_collectPaymentNow) ...[
+          ],
+
+          if (_paymentMode == RegistrationPaymentMode.partialPayment) ...[
+            // Amount Received Field
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Amount Received Today',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      'Total Fee: $currency${fee.toInt()}',
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _paidAmountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                  ],
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. ${(fee / 2).toInt()}',
+                    prefixIcon: Container(
+                      width: 40,
+                      alignment: Alignment.center,
+                      child: Text(
+                        currency,
+                        style: const TextStyle(color: Color(0xFFFF9100), fontSize: 18, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Quick Shortcut Chips
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildAmountChip(
+                      label: '50% ($currency${(fee * 0.5).toInt()})',
+                      amount: fee * 0.5,
+                      isSelected: (enteredAmount - (fee * 0.5)).abs() < 0.5,
+                    ),
+                    if (fee > 1000 && (fee * 0.5).toInt() != 500)
+                      _buildAmountChip(
+                        label: '$currency 500',
+                        amount: 500,
+                        isSelected: (enteredAmount - 500).abs() < 0.5,
+                      ),
+                    if (fee > 2000 && (fee * 0.5).toInt() != 1000)
+                      _buildAmountChip(
+                        label: '$currency 1,000',
+                        amount: 1000,
+                        isSelected: (enteredAmount - 1000).abs() < 0.5,
+                      ),
+                    _buildAmountChip(
+                      label: 'Full ($currency${fee.toInt()})',
+                      amount: fee,
+                      isSelected: (enteredAmount - fee).abs() < 0.5,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Real-time Balance Box
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.check_circle_outline_rounded, size: 14, color: AppColors.paid),
+                              const SizedBox(width: 4),
+                              Text('Paid Today', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                            ],
+                          ),
+                          Text(
+                            GymDateUtils.formatCurrency(effectivePaid, symbol: currency),
+                            style: TextStyle(color: AppColors.paid, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Divider(height: 1, color: AppColors.surfaceBorder),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.pending_actions_rounded,
+                                size: 14,
+                                color: remainingBalance > 0 ? const Color(0xFFFF9100) : AppColors.paid,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                remainingBalance > 0 ? 'Remaining Balance Due' : 'Balance Settled',
+                                style: TextStyle(
+                                  color: remainingBalance > 0 ? const Color(0xFFFF9100) : AppColors.paid,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (remainingBalance > 0 ? const Color(0xFFFF9100) : AppColors.paid).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              GymDateUtils.formatCurrency(remainingBalance, symbol: currency),
+                              style: TextStyle(
+                                color: remainingBalance > 0 ? const Color(0xFFFF9100) : AppColors.paid,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ],
+
+          // Payment Method Selector (when not payLater)
+          if (_paymentMode != RegistrationPaymentMode.payLater) ...[
             Text(
               'Payment Method',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700),
@@ -1095,136 +1304,455 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  [
-                    PaymentMethod.cash,
-                    PaymentMethod.gpay,
-                    PaymentMethod.phonepe,
-                    PaymentMethod.paytm,
-                    PaymentMethod.upi,
-                    PaymentMethod.card,
-                  ].map((method) {
-                    final isSelected = _selectedPaymentMethod == method;
-                    return InkWell(
-                      onTap: () => setState(() => _selectedPaymentMethod = method),
+              children: [
+                PaymentMethod.cash,
+                PaymentMethod.gpay,
+                PaymentMethod.phonepe,
+                PaymentMethod.paytm,
+                PaymentMethod.upi,
+                PaymentMethod.card,
+                PaymentMethod.netBanking,
+              ].map((method) {
+                final isSelected = _selectedPaymentMethod == method;
+                return InkWell(
+                  onTap: () => setState(() => _selectedPaymentMethod = method),
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? activeColor.withValues(alpha: 0.18) : AppColors.surface,
                       borderRadius: BorderRadius.circular(10),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.paid.withValues(alpha: 0.18) : AppColors.surface,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isSelected ? AppColors.paid : AppColors.surfaceBorder,
-                            width: isSelected ? 1.5 : 1.0,
+                      border: Border.all(
+                        color: isSelected ? activeColor : AppColors.surfaceBorder,
+                        width: isSelected ? 1.5 : 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                          size: 14,
+                          color: isSelected ? activeColor : AppColors.textMuted,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          method.label,
+                          style: TextStyle(
+                            color: isSelected ? activeColor : AppColors.textPrimary,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 12,
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                              size: 14,
-                              color: isSelected ? AppColors.paid : AppColors.textMuted,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              method.label,
-                              style: TextStyle(
-                                color: isSelected ? AppColors.paid : AppColors.textPrimary,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
-            ],
+            const SizedBox(height: 12),
           ],
+
+          // Validity Range Widget (Start Date -> Expiry Date)
+          _buildValidityDatesCard(),
         ],
       ),
     );
   }
 
-  Widget _buildMeasurementsCard() {
+  Widget _buildPaymentTabOption({
+    required RegistrationPaymentMode mode,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    final isSelected = _paymentMode == mode;
+    return Expanded(
+      child: AnimatedPressable(
+        onTap: () {
+          setState(() {
+            _paymentMode = mode;
+            if (mode == RegistrationPaymentMode.fullPayment) {
+              final fee = GymService().settings.totalForConfiguredPrice(
+                GymService().settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths),
+              );
+              _paidAmountController.text = fee.toStringAsFixed(0);
+            }
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.16) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? color : Colors.transparent,
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected ? color : AppColors.textMuted,
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isSelected ? color : AppColors.textSecondary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmountChip({
+    required String label,
+    required double amount,
+    required bool isSelected,
+  }) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _paidAmountController.text = amount.toInt().toString();
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF9100).withValues(alpha: 0.2) : AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF9100) : AppColors.surfaceBorder,
+            width: isSelected ? 1.4 : 1.0,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFFFF9100) : AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildValidityDatesCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: _pickMembershipStartDate,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'START DATE',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.edit_calendar_rounded, size: 12, color: AppColors.primary),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        GymDateUtils.formatDate(_membershipStartDate),
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.textSecondary),
+              ),
+              Expanded(
+                child: InkWell(
+                  onTap: _pickMembershipEndDate,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'EXPIRY DATE',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.edit_calendar_rounded, size: 12, color: AppColors.primary),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        GymDateUtils.formatDate(_membershipEndDate),
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.date_range_rounded, size: 13, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Validity: ${GymDateUtils.formatDateRange(_membershipStartDate, _membershipEndDate)}',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionalDetailsCard() {
+    final hasFilled = _hasOptionalDataFilled;
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _showOptionalDetails ? AppColors.primary.withValues(alpha: 0.4) : AppColors.surfaceBorder,
+        ),
       ),
       child: Column(
         children: [
           InkWell(
-            onTap: () => setState(() => _showMeasurements = !_showMeasurements),
-            borderRadius: BorderRadius.circular(14),
+            onTap: () => setState(() => _showOptionalDetails = !_showOptionalDetails),
+            borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFB71C1C).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.straighten_rounded, color: Color(0xFFB71C1C), size: 18),
+                    child: Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Body Measurements (Entry Card)',
-                          style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Optional Details',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (hasFilled) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.secondary.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'Filled',
+                                  style: TextStyle(color: AppColors.secondary, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          'Wt, Chest, Bicep, Waist, Leg',
+                          'Address, Body Measurements, Workout Notes',
                           style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                         ),
                       ],
                     ),
                   ),
-                  Icon(
-                    _showMeasurements ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                    color: AppColors.textSecondary,
+                  AnimatedRotation(
+                    turns: _showOptionalDetails ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    child: Icon(Icons.expand_more_rounded, color: AppColors.textSecondary),
                   ),
                 ],
               ),
             ),
           ),
-          if (_showMeasurements) ...[
-            Divider(height: 1, color: AppColors.surfaceBorder),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  Row(
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            child: _showOptionalDetails
+                ? Column(
                     children: [
-                      Expanded(child: _buildMeasurementInput('Weight (Wt)', '72 kg', _weightController)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _buildMeasurementInput('Chest', '38"', _chestController)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _buildMeasurementInput('Bicep', '14.5"', _bicepController)),
+                      Divider(height: 1, color: AppColors.surfaceBorder),
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Address Field
+                            Text(
+                              'Address (Optional)',
+                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _addressController,
+                              textCapitalization: TextCapitalization.sentences,
+                              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: 'e.g. Station Road, Market Area',
+                                prefixIcon: Icon(Icons.location_on_outlined, color: AppColors.textMuted, size: 20),
+                                suffixIcon: VoiceSearchSuffix(
+                                  controller: _addressController,
+                                  title: 'Speak Address',
+                                  voiceHint: 'Say member address...',
+                                  submitLabel: 'Apply',
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Workout Notes / Goals Field
+                            Text(
+                              'Workout Notes / Goals (Optional)',
+                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _notesController,
+                              textCapitalization: TextCapitalization.sentences,
+                              maxLines: 2,
+                              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: 'e.g. Weight loss plan, morning slot 7am',
+                                suffixIcon: VoiceSearchSuffix(
+                                  controller: _notesController,
+                                  title: 'Speak Workout Notes',
+                                  voiceHint: 'Say member notes or goals...',
+                                  submitLabel: 'Apply',
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Body Measurements Section Header
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFB71C1C).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(Icons.straighten_rounded, color: Color(0xFFB71C1C), size: 15),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Body Measurements (Entry Card)',
+                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(child: _buildMeasurementInput('Weight (Wt)', '72 kg', _weightController)),
+                                const SizedBox(width: 8),
+                                Expanded(child: _buildMeasurementInput('Chest', '38"', _chestController)),
+                                const SizedBox(width: 8),
+                                Expanded(child: _buildMeasurementInput('Bicep', '14.5"', _bicepController)),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(child: _buildMeasurementInput('Waist', '32"', _waistController)),
+                                const SizedBox(width: 8),
+                                Expanded(child: _buildMeasurementInput('Leg', '22"', _legController)),
+                                const Expanded(child: SizedBox()),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(child: _buildMeasurementInput('Waist', '32"', _waistController)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _buildMeasurementInput('Leg', '22"', _legController)),
-                      const Expanded(child: SizedBox()),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

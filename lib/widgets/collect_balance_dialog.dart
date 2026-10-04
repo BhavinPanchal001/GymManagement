@@ -8,10 +8,7 @@ import '../utils/date_utils.dart';
 class CollectBalanceDialog extends StatefulWidget {
   final PaymentRecord payment;
   const CollectBalanceDialog({super.key, required this.payment});
-  static Future<BillRecord?> show(
-    BuildContext context,
-    PaymentRecord payment,
-  ) => showDialog<BillRecord>(
+  static Future<BillRecord?> show(BuildContext context, PaymentRecord payment) => showDialog<BillRecord>(
     context: context,
     builder: (_) => CollectBalanceDialog(payment: payment),
   );
@@ -30,9 +27,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
   @override
   void initState() {
     super.initState();
-    _amount = TextEditingController(
-      text: widget.payment.balanceDue.toStringAsFixed(2),
-    );
+    _amount = TextEditingController(text: widget.payment.balanceDue.toStringAsFixed(2));
   }
 
   @override
@@ -44,13 +39,8 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
 
   Future<void> _save() async {
     final value = double.tryParse(_amount.text.trim());
-    if (value == null ||
-        !value.isFinite ||
-        value <= 0 ||
-        value > widget.payment.balanceDue + 0.005) {
-      setState(
-        () => _error = 'Enter a positive amount within the remaining balance.',
-      );
+    if (value == null || !value.isFinite || value <= 0 || value > widget.payment.balanceDue + 0.005) {
+      setState(() => _error = 'Enter a positive amount within the remaining balance.');
       return;
     }
     setState(() {
@@ -70,9 +60,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
     } catch (error) {
       if (mounted) {
         setState(
-          () => _error = error is ArgumentError
-              ? error.message.toString()
-              : 'Could not save. Please try again.',
+          () => _error = error is ArgumentError ? error.message.toString() : 'Could not save. Please try again.',
         );
       }
     } finally {
@@ -88,48 +76,66 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Remaining balance: ${GymService().settings.currencySymbol}${widget.payment.balanceDue.toStringAsFixed(2)}',
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF9800).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFF9800).withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.pending_actions_rounded, color: Color(0xFFFF9800), size: 20),
+                const SizedBox(width: 8),
+                const Text('Remaining Balance: ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(
+                  GymDateUtils.formatCurrency(widget.payment.balanceDue, symbol: GymService().settings.currencySymbol),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFFFF9800)),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _amount,
             enabled: !_saving,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Amount received'),
+            decoration: InputDecoration(
+              labelText: 'Amount received',
+              prefixText: '${GymService().settings.currencySymbol} ',
+            ),
           ),
+          const SizedBox(height: 6),
           TextButton.icon(
-            icon: const Icon(Icons.calendar_today),
+            icon: const Icon(Icons.calendar_today, size: 16),
             label: Text('Received on: ${GymDateUtils.formatDate(_received)}'),
             onPressed: _saving
                 ? null
                 : () async {
+                    final now = DateTime.now();
                     final date = await showDatePicker(
                       context: context,
-                      initialDate: _received,
+                      initialDate: _received.isAfter(now) ? now : _received,
                       firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
+                      lastDate: DateTime(now.year + 1),
                     );
                     if (date != null && mounted) {
                       setState(() => _received = date);
                     }
                   },
           ),
+          const SizedBox(height: 6),
           DropdownButtonFormField<PaymentMethod>(
-            value: _method,
+            // initialValue: _method,
             decoration: const InputDecoration(labelText: 'Payment method'),
-            items: PaymentMethod.values
-                .map((m) => DropdownMenuItem(value: m, child: Text(m.label)))
-                .toList(),
-            onChanged: _saving ? null : (m) => setState(() => _method = m!),
+            items: PaymentMethod.values.map((m) => DropdownMenuItem(value: m, child: Text(m.label))).toList(),
+            onChanged: _saving ? null : (m) => setState(() => _method = m ?? PaymentMethod.cash),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _reference,
             enabled: !_saving,
-            decoration: const InputDecoration(
-              labelText: 'Transaction reference (optional)',
-            ),
+            decoration: const InputDecoration(labelText: 'Transaction reference (optional)'),
           ),
           if (_error != null)
             Padding(
@@ -140,14 +146,8 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
       ),
     ),
     actions: [
-      TextButton(
-        onPressed: _saving ? null : () => Navigator.pop(context),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(
-        onPressed: _saving ? null : _save,
-        child: Text(_saving ? 'Saving…' : 'Save collection'),
-      ),
+      TextButton(onPressed: _saving ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+      FilledButton(onPressed: _saving ? null : _save, child: Text(_saving ? 'Saving…' : 'Save collection')),
     ],
   );
 }

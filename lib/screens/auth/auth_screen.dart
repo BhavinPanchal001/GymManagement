@@ -22,6 +22,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   final _signInEmailController = TextEditingController();
   final _signInPasswordController = TextEditingController();
   bool _signInObscurePassword = true;
+  bool _rememberMe = false;
   bool _isSignInLoading = false;
   String? _signInError;
 
@@ -50,6 +51,29 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         }
       });
     });
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final isRemembered = await AuthService().getRememberMe();
+      if (isRemembered) {
+        final creds = await AuthService().getSavedCredentials();
+        if (mounted) {
+          setState(() {
+            _rememberMe = true;
+            if (creds['email'] != null && creds['email']!.isNotEmpty) {
+              _signInEmailController.text = creds['email']!;
+            }
+            if (creds['password'] != null && creds['password']!.isNotEmpty) {
+              _signInPasswordController.text = creds['password']!;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading saved credentials: $e');
+    }
   }
 
   @override
@@ -79,6 +103,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       await GymService().detachUser(clearMemory: true);
 
       await AuthService().signInWithEmailAndPassword(
+        email: _signInEmailController.text,
+        password: _signInPasswordController.text,
+      );
+
+      // Save credentials if Remember Me is checked, or clear them if unchecked
+      await AuthService().saveCredentials(
+        rememberMe: _rememberMe,
         email: _signInEmailController.text,
         password: _signInPasswordController.text,
       );
@@ -267,7 +298,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   if (val == null || val.trim().isEmpty) {
                     return 'Please enter your email';
                   }
-                  if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val.trim())) {
+                  if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(val.trim())) {
                     return 'Please enter a valid email address';
                   }
                   return null;
@@ -304,19 +335,85 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               ),
               const SizedBox(height: 8),
 
-              // Forgot Password button
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    ForgotPasswordSheet.show(context, initialEmail: _signInEmailController.text.trim());
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.secondary,
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              // Remember Me & Forgot Password
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _rememberMe = !_rememberMe;
+                      });
+                      if (!_rememberMe) {
+                        AuthService().saveCredentials(rememberMe: false);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: Checkbox(
+                              value: _rememberMe,
+                              onChanged: (val) {
+                                setState(() {
+                                  _rememberMe = val ?? false;
+                                });
+                                if (!_rememberMe) {
+                                  AuthService().saveCredentials(rememberMe: false);
+                                }
+                              },
+                              activeColor: AppColors.primary,
+                              checkColor: AppColors.primaryOn,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              side: BorderSide(
+                                color: AppColors.textMuted.withValues(alpha: 0.6),
+                                width: 1.5,
+                              ),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Remember Me',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: const Text('Forgot Password?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                ),
+                  TextButton(
+                    onPressed: () async {
+                      final resetEmail = await ForgotPasswordSheet.show(
+                        context,
+                        initialEmail: _signInEmailController.text.trim(),
+                      );
+                      if (resetEmail != null && resetEmail.trim().isNotEmpty && mounted) {
+                        setState(() {
+                          _signInEmailController.text = resetEmail.trim();
+                        });
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.secondary,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Forgot Password?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -459,7 +556,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   if (val == null || val.trim().isEmpty) {
                     return 'Please enter your email';
                   }
-                  if (!RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val.trim())) {
+                  if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(val.trim())) {
                     return 'Please enter a valid email address';
                   }
                   return null;

@@ -7,13 +7,21 @@ import '../../services/phone_service.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
+import '../../utils/animation_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
 import '../../widgets/bill_history_sheet.dart';
+import '../../widgets/collect_balance_dialog.dart';
+import '../../widgets/bill_receipt_dialog.dart';
 import '../../widgets/user_profile_menu_button.dart';
-import '../../widgets/dashboard_metrics_grid.dart';
 import 'add_customer_sheet.dart';
 import 'customer_detail_screen.dart';
+import '../../widgets/dashboard_metrics_grid.dart';
+import '../../widgets/voice_search_suffix.dart';
+import '../../widgets/animations/animated_empty_state.dart';
+import '../../widgets/animations/animated_fade_slide.dart';
+import '../../widgets/animations/animated_pressable.dart';
+import '../../widgets/animations/app_page_route.dart';
 
 enum CustomerFilter { all, active, pendingPayment, archived }
 
@@ -98,15 +106,11 @@ class _CustomersTabState extends State<CustomersTab> {
                   decoration: InputDecoration(
                     hintText: 'Search by name, phone, or card #...',
                     prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.clear_rounded, color: AppColors.textSecondary),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {});
-                            },
-                          )
-                        : null,
+                    suffixIcon: VoiceSearchSuffix(
+                      controller: _searchController,
+                      voiceHint: 'Say member name, phone, or card number...',
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
                 ),
               ),
@@ -138,20 +142,14 @@ class _CustomersTabState extends State<CustomersTab> {
               // Customer List
               Expanded(
                 child: list.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.person_search_rounded, size: 54, color: AppColors.textMuted),
-                            const SizedBox(height: 12),
-                            Text(
-                              _searchController.text.isNotEmpty
-                                  ? 'No members found matching "${_searchController.text}"'
-                                  : 'No members registered yet',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
-                            ),
-                          ],
-                        ),
+                    ? AnimatedEmptyState(
+                        icon: Icons.person_search_rounded,
+                        title: _searchController.text.isNotEmpty
+                            ? 'No members found matching "${_searchController.text}"'
+                            : 'No members registered yet',
+                        subtitle: _searchController.text.isNotEmpty
+                            ? 'Check spelling or try searching by phone number or card #'
+                            : 'Tap "+ Add Member" below to register your first gym member',
                       )
                     : ListView.separated(
                         physics: const BouncingScrollPhysics(),
@@ -164,20 +162,27 @@ class _CustomersTabState extends State<CustomersTab> {
                           final attendanceSummary = gymService.getMonthlyAttendanceSummary(customer.id, currentMonth);
                           final presentDays = attendanceSummary['present'] ?? 0;
 
-                          return _buildCustomerCard(customer, payment, currentMonth, presentDays);
+                          return AnimatedFadeSlide.staggered(
+                            index: index,
+                            maxStaggerIndex: 6,
+                            child: _buildCustomerCard(customer, payment, currentMonth, presentDays),
+                          );
                         },
                       ),
               ),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => AddCustomerSheet.show(context),
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.primaryOn,
-            icon: const Icon(Icons.person_add_rounded),
-            label: const Text(
-              'Add Member',
-              style: TextStyle(fontWeight: FontWeight.w800),
+          floatingActionButton: AnimatedPressable(
+            onTap: () => AddCustomerSheet.show(context),
+            child: FloatingActionButton.extended(
+              onPressed: () => AddCustomerSheet.show(context),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.primaryOn,
+              icon: const Icon(Icons.person_add_rounded),
+              label: const Text(
+                'Add Member',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         );
@@ -187,13 +192,13 @@ class _CustomersTabState extends State<CustomersTab> {
 
   Widget _buildFilterChip(String label, CustomerFilter filter) {
     final isSelected = _selectedFilter == filter;
-    return InkWell(
+    return AnimatedPressable(
       onTap: () {
         setState(() => _selectedFilter = filter);
       },
-      borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: AppAnimations.microDuration,
+        curve: AppAnimations.curveEaseInOut,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
@@ -225,17 +230,18 @@ class _CustomersTabState extends State<CustomersTab> {
     final isNew = stage.isNew;
     final currency = GymService().settings.currencySymbol;
 
-    return InkWell(
+    return AnimatedPressable(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
+          AppPageRoute(
             builder: (_) => CustomerDetailScreen(customerId: customer.id),
           ),
         );
       },
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
+      child: AnimatedContainer(
+        duration: AppAnimations.normalDuration,
+        curve: AppAnimations.curveEaseInOut,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -247,295 +253,374 @@ class _CustomersTabState extends State<CustomersTab> {
             width: isPaid ? 1 : 1.2,
           ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CustomerAvatar(
-              imagePath: customer.imagePath,
-              imageBase64: customer.imageBase64,
-              name: customer.name,
-              radius: 24,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    customer.name,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  InkWell(
-                    onTap: () {
-                      PhoneService().makeCall(
-                        customer.phone,
-                        context: context,
-                        memberName: customer.name,
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.phone_outlined, color: AppColors.secondary, size: 13),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              customer.phone,
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 5,
-                    runSpacing: 4,
+            Row(
+              children: [
+                CustomerAvatar(
+                  imagePath: customer.imagePath,
+                  imageBase64: customer.imageBase64,
+                  name: customer.name,
+                  radius: 24,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6,
-                          vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
+                      Text(
+                        customer.name,
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
                         ),
-                        child: Text(
-                          '$presentDays days',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      InkWell(
+                        onTap: () {
+                          PhoneService().makeCall(
+                            customer.phone,
+                            context: context,
+                            memberName: customer.name,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.phone_outlined, color: AppColors.secondary, size: 13),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  customer.phone,
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6,
-                          vertical: 2),
-                        decoration: BoxDecoration(
-                          color: customer.planType == CustomerPlan.personalTrainingDiet
-                              ? const Color(0xFFFF9100).withValues(alpha: 0.15)
-                              : (customer.planType == CustomerPlan.personalTraining
-                                  ? AppColors.secondary.withValues(alpha: 0.15)
-                                  : AppColors.surfaceElevated),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: customer.planType == CustomerPlan.personalTrainingDiet
-                                ? const Color(0xFFFF9100).withValues(alpha: 0.4)
-                                : (customer.planType == CustomerPlan.personalTraining
-                                    ? AppColors.secondary.withValues(alpha: 0.4)
-                                    : AppColors.surfaceBorder),
-                          ),
-                        ),
-                        child: Text(
-                          customer.planDurationMonths > 1
-                              ? '${CustomerPlan.getShortLabel(customer.planType)} • ${customer.planDurationMonths}M'
-                              : CustomerPlan.getShortLabel(customer.planType),
-                          style: TextStyle(
-                            color: customer.planType == CustomerPlan.personalTrainingDiet
-                                ? const Color(0xFFFF9100)
-                                : (customer.planType == CustomerPlan.personalTraining
-                                    ? AppColors.secondary
-                                    : AppColors.textSecondary),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Builder(
-                        builder: (context) {
-                          final days = GymService().getDaysUntilExpiry(customer);
-                          if (days > 15) return const SizedBox.shrink();
-                          final isUrgent = days <= 3;
-                          final color = days < 0
-                              ? const Color(0xFFD50000)
-                              : (isUrgent ? const Color(0xFFFF5252) : const Color(0xFFFF9100));
-                          final text = days < 0
-                              ? 'Expired'
-                              : (days == 0 ? 'Exp Today' : '${days}d left');
-                          return Container(
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 5,
+                        runSpacing: 4,
+                        children: [
+                          Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6,
                               vertical: 2),
                             decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
+                              color: AppColors.primary.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: color.withValues(alpha: 0.4)),
                             ),
                             child: Text(
-                              text,
+                              '$presentDays days',
                               style: TextStyle(
-                                color: color,
+                                color: AppColors.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6,
+                              vertical: 2),
+                            decoration: BoxDecoration(
+                              color: customer.planType == CustomerPlan.personalTrainingDiet
+                                  ? const Color(0xFFFF9100).withValues(alpha: 0.15)
+                                  : (customer.planType == CustomerPlan.personalTraining
+                                      ? AppColors.secondary.withValues(alpha: 0.15)
+                                      : AppColors.surfaceElevated),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: customer.planType == CustomerPlan.personalTrainingDiet
+                                    ? const Color(0xFFFF9100).withValues(alpha: 0.4)
+                                    : (customer.planType == CustomerPlan.personalTraining
+                                        ? AppColors.secondary.withValues(alpha: 0.4)
+                                        : AppColors.surfaceBorder),
+                              ),
+                            ),
+                            child: Text(
+                              customer.planDurationMonths > 1
+                                  ? '${CustomerPlan.getShortLabel(customer.planType)} • ${customer.planDurationMonths}M'
+                                  : CustomerPlan.getShortLabel(customer.planType),
+                              style: TextStyle(
+                                color: customer.planType == CustomerPlan.personalTrainingDiet
+                                    ? const Color(0xFFFF9100)
+                                    : (customer.planType == CustomerPlan.personalTraining
+                                        ? AppColors.secondary
+                                        : AppColors.textSecondary),
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        },
+                          ),
+                          Builder(
+                            builder: (context) {
+                              final days = GymService().getDaysUntilExpiry(customer);
+                              if (days > 15) return const SizedBox.shrink();
+                              final isUrgent = days <= 3;
+                              final color = days < 0
+                                  ? const Color(0xFFD50000)
+                                  : (isUrgent ? const Color(0xFFFF5252) : const Color(0xFFFF9100));
+                              final text = days < 0
+                                  ? 'Expired'
+                                  : (days == 0 ? 'Exp Today' : '${days}d left');
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6,
+                                  vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: color.withValues(alpha: 0.4)),
+                                ),
+                                child: Text(
+                                  text,
+                                  style: TextStyle(
+                                    color: color,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: Icon(Icons.call_rounded, color: AppColors.primary, size: 16),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                    padding: const EdgeInsets.all(6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.35)),
+                    ),
+                  ),
+                  tooltip: 'Call Member',
+                  onPressed: () {
+                    PhoneService().makeCall(
+                      customer.phone,
+                      context: context,
+                      memberName: customer.name,
+                    );
+                  },
+                ),
+                const SizedBox(width: 4),
+                if (isPaid) ...[
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: const Icon(Icons.receipt_long_rounded, color: AppColors.paid, size: 16),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.paid.withValues(alpha: 0.15),
+                      padding: const EdgeInsets.all(6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: AppColors.paid.withValues(alpha: 0.35)),
+                      ),
+                    ),
+                    tooltip: 'View Bill / Receipt',
+                    onPressed: () {
+                      BillHistorySheet.showForPayment(
+                        context,
+                        customer: customer,
+                        payment: payment,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ] else if (isNew) ...[
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: const Icon(Icons.waving_hand_rounded, color: Color(0xFF00B4D8), size: 16),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFF00B4D8).withValues(alpha: 0.15),
+                      padding: const EdgeInsets.all(6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: const Color(0xFF00B4D8).withValues(alpha: 0.35)),
+                      ),
+                    ),
+                    tooltip: 'Send Welcome Message',
+                    onPressed: () {
+                      WhatsAppService().showWelcomeSheet(
+                        context: context,
+                        customer: customer,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ] else ...[
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: const Icon(Icons.chat_bubble_rounded, color: AppColors.whatsapp, size: 16),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.whatsapp.withValues(alpha: 0.15),
+                      padding: const EdgeInsets.all(6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.35)),
+                      ),
+                    ),
+                    tooltip: 'Send WhatsApp Reminder',
+                    onPressed: () {
+                      WhatsAppService().showReminderSheet(
+                        context: context,
+                        customer: customer,
+                        monthYear: currentMonth,
+                        amount: GymService().pendingAmountOf(payment),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
                 ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              icon: Icon(Icons.call_rounded, color: AppColors.primary, size: 16),
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                padding: const EdgeInsets.all(6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.35)),
-                ),
-              ),
-              tooltip: 'Call Member',
-              onPressed: () {
-                PhoneService().makeCall(
-                  customer.phone,
-                  context: context,
-                  memberName: customer.name,
-                );
-              },
-            ),
-            const SizedBox(width: 4),
-            if (isPaid) ...[
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: const Icon(Icons.receipt_long_rounded, color: AppColors.paid, size: 16),
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.paid.withValues(alpha: 0.15),
-                  padding: const EdgeInsets.all(6),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(color: AppColors.paid.withValues(alpha: 0.35)),
-                  ),
-                ),
-                tooltip: 'View Bill / Receipt',
-                onPressed: () {
-                  BillHistorySheet.showForPayment(
-                    context,
-                    customer: customer,
-                    payment: payment,
-                  );
-                },
-              ),
-              const SizedBox(width: 4),
-            ] else if (isNew) ...[
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: const Icon(Icons.waving_hand_rounded, color: Color(0xFF00B4D8), size: 16),
-                style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFF00B4D8).withValues(alpha: 0.15),
-                  padding: const EdgeInsets.all(6),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(color: const Color(0xFF00B4D8).withValues(alpha: 0.35)),
-                  ),
-                ),
-                tooltip: 'Send Welcome Message',
-                onPressed: () {
-                  WhatsAppService().showWelcomeSheet(
-                    context: context,
-                    customer: customer,
-                  );
-                },
-              ),
-              const SizedBox(width: 4),
-            ] else ...[
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: const Icon(Icons.chat_bubble_rounded, color: AppColors.whatsapp, size: 16),
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.whatsapp.withValues(alpha: 0.15),
-                  padding: const EdgeInsets.all(6),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.35)),
-                  ),
-                ),
-                tooltip: 'Send WhatsApp Reminder',
-                onPressed: () {
-                  WhatsAppService().showReminderSheet(
-                    context: context,
-                    customer: customer,
-                    monthYear: currentMonth,
-                    amount: GymService().pendingAmountOf(payment),
-                  );
-                },
-              ),
-              const SizedBox(width: 4),
-            ],
 
-            // Payment status pill with action
-            InkWell(
-              onTap: () {
-                MarkPaymentDialog.show(
-                  context,
-                  customer: customer,
-                  monthYear: currentMonth,
-                  currentRecord: payment,
-                );
-              },
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isPaid
-                      ? AppColors.paid.withValues(alpha: 0.15)
-                      : (isNew ? const Color(0xFF00B4D8).withValues(alpha: 0.15) : AppColors.pending.withValues(alpha: 0.15)),
+                // Payment status pill with action
+                InkWell(
+                  onTap: () async {
+                    if (isPaid && payment.balanceDue > 0) {
+                      final current = GymService().getPaymentById(payment.id) ?? payment;
+                      final bill = await CollectBalanceDialog.show(context, current);
+                      if (bill != null && mounted) {
+                        await BillReceiptDialog.show(context, bill: bill);
+                      }
+                    } else {
+                      MarkPaymentDialog.show(
+                        context,
+                        customer: customer,
+                        monthYear: currentMonth,
+                        currentRecord: payment,
+                      );
+                    }
+                  },
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isPaid
-                        ? AppColors.paid
-                        : (isNew ? const Color(0xFF00B4D8) : AppColors.pending),
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      isPaid
-                          ? (payment.isPartiallyPaid
-                              ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
-                              : 'PAID')
-                          : (isNew ? 'NEW' : 'DUE'),
-                      style: TextStyle(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isPaid
+                          ? AppColors.paid.withValues(alpha: 0.15)
+                          : (isNew ? const Color(0xFF00B4D8).withValues(alpha: 0.15) : AppColors.pending.withValues(alpha: 0.15)),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
                         color: isPaid
                             ? AppColors.paid
                             : (isNew ? const Color(0xFF00B4D8) : AppColors.pending),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      GymDateUtils.formatCurrency(payment.displayAmount, symbol: currency),
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isPaid
+                              ? (payment.isPartiallyPaid
+                                  ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
+                                  : 'PAID')
+                              : (isNew ? 'NEW' : 'DUE'),
+                          style: TextStyle(
+                            color: isPaid
+                                ? AppColors.paid
+                                : (isNew ? const Color(0xFF00B4D8) : AppColors.pending),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          GymDateUtils.formatCurrency(payment.displayAmount, symbol: currency),
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (isPaid && payment.balanceDue > 0) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.pending.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.pending.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final current = GymService().getPaymentById(payment.id) ?? payment;
+                          final bill = await CollectBalanceDialog.show(context, current);
+                          if (bill != null && mounted) {
+                            await BillReceiptDialog.show(context, bill: bill);
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.pending,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          minimumSize: const Size(0, 32),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        icon: const Icon(Icons.payments_rounded, size: 15),
+                        label: Text(
+                          'Collect Balance ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}',
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        MarkPaymentDialog.show(
+                          context,
+                          customer: customer,
+                          monthYear: currentMonth,
+                          currentRecord: payment,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: AppColors.surfaceElevated,
+                        foregroundColor: AppColors.textSecondary,
+                        side: BorderSide(color: AppColors.surfaceBorder),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        minimumSize: const Size(0, 32),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.edit_note_rounded, size: 14),
+                      label: const Text(
+                        'Edit',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

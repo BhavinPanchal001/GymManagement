@@ -44,10 +44,11 @@ dependencies:
   cloud_firestore: ^5.6.5
   url_launcher: ^6.3.2
   fl_chart: ^0.70.2
-  pdf: 3.11.1
-  printing: 5.13.2
+  pdf: ^3.11.1
+  printing: ^5.14.0
   firebase_messaging: ^15.2.10
   flutter_local_notifications: ^18.0.1
+  speech_to_text: ^7.4.0
 
 dev_dependencies:
   flutter_test:

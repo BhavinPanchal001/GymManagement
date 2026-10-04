@@ -46,6 +46,10 @@ class NotificationService {
   /// Initializes local notifications and Firebase Cloud Messaging
   Future<void> init() async {
     if (_isInitialized) return;
+    if (kIsWeb) {
+      _isInitialized = true;
+      return;
+    }
 
     // 1. Initialize local notifications
     const AndroidInitializationSettings androidSettings =
@@ -197,6 +201,7 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
+    if (kIsWeb) return;
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       channelId,

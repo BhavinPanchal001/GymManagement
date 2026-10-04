@@ -1071,6 +1071,7 @@ class GymService extends ChangeNotifier {
     DateTime? membershipStartDate,
     DateTime? membershipEndDate,
     double? membershipFee,
+    double? paidAmount,
     String? operationId,
   }) => _serializeFinancialSave(() async {
     final operationCustomerId = operationId == null ? null : 'cust_operation_$operationId';
@@ -1125,15 +1126,29 @@ class GymService extends ChangeNotifier {
       final actualEnd = membershipEndDate ??
           GymDateUtils.computeAnniversaryEndDate(actualStart, planDurationMonths);
       _validateMembership(fee, planDurationMonths, actualStart, actualEnd);
+      final double collectedAmount;
+      if (markAsPaidNow) {
+        if (paidAmount != null && paidAmount > 0) {
+          collectedAmount = paidAmount > fee ? fee : paidAmount;
+        } else {
+          collectedAmount = fee;
+        }
+      } else {
+        collectedAmount = 0.0;
+      }
       final record = PaymentRecord(
         id: 'membership_${customer.id}',
         customerId: customer.id,
         monthYear: GymDateUtils.toMonthKey(actualStart),
-        method: markAsPaidNow ? initialPaymentMethod ?? PaymentMethod.cash : null,
-        amount: markAsPaidNow ? fee : 0,
+        method: (markAsPaidNow && collectedAmount > 0)
+            ? initialPaymentMethod ?? PaymentMethod.cash
+            : null,
+        amount: collectedAmount,
         totalDue: fee,
-        status: markAsPaidNow ? PaymentStatus.paid : PaymentStatus.pending,
-        paidAt: markAsPaidNow ? DateTime.now() : null,
+        status: (markAsPaidNow && collectedAmount > 0)
+            ? PaymentStatus.paid
+            : PaymentStatus.pending,
+        paidAt: (markAsPaidNow && collectedAmount > 0) ? DateTime.now() : null,
         isTaxEnabled: _settings.isTaxEnabled,
         taxLabel: _settings.taxLabel,
         taxRatePercent: _settings.taxRatePercent,
@@ -1147,7 +1162,7 @@ class GymService extends ChangeNotifier {
         planType: planType,
       );
       payments.add(record);
-      if (markAsPaidNow) bills.add(_buildPaidBill(customer, record));
+      if (markAsPaidNow && collectedAmount > 0) bills.add(_buildPaidBill(customer, record));
     }
     await _commitFinancialRecords(customers: [customer], payments: payments, bills: bills);
     return customer;
@@ -1808,6 +1823,49 @@ class GymService extends ChangeNotifier {
 
   PaymentRecord? getPaymentById(String id) => _paymentMap[id];
 
+  /// Returns any paid payment for [customerId] whose coverage range
+  /// [effectiveStartDate, effectiveEndDate] overlaps with [startDate, endDate].
+  /// Ignores the payment with id [excludePaymentId] (used when updating an existing payment).
+  PaymentRecord? findOverlappingPaidPayment({
+    required String customerId,
+    required DateTime startDate,
+    required DateTime endDate,
+    String? excludePaymentId,
+  }) {
+    final startDay = DateTime(startDate.year, startDate.month, startDate.day);
+    final endDay = DateTime(endDate.year, endDate.month, endDate.day);
+    if (endDay.isBefore(startDay)) return null;
+
+    final candidates = _paymentMap.values
+        .where((p) =>
+            p.customerId == customerId &&
+            p.isPaid &&
+            (excludePaymentId == null || p.id != excludePaymentId))
+        .toList();
+    candidates.sort((a, b) => b.effectiveStartDate.compareTo(a.effectiveStartDate));
+
+    for (final p in candidates) {
+      final pStart = DateTime(
+        p.effectiveStartDate.year,
+        p.effectiveStartDate.month,
+        p.effectiveStartDate.day,
+      );
+      final pEnd = DateTime(
+        p.effectiveEndDate.year,
+        p.effectiveEndDate.month,
+        p.effectiveEndDate.day,
+      );
+
+      // Two closed intervals [startDay, endDay] and [pStart, pEnd] overlap iff:
+      // startDay <= pEnd and endDay >= pStart
+      if (!startDay.isAfter(pEnd) && !endDay.isBefore(pStart)) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+
   PaymentRecord getRenewalPaymentRecord(Customer customer) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -2133,8 +2191,8 @@ class GymService extends ChangeNotifier {
     if (saved != null) return saved;
     final effectivePaidAt = paidAt ?? DateTime.now();
     final customer = getCustomerById(customerId);
-    if (customer == null || !customer.isActive) {
-      throw ArgumentError('Restore the member before recording a new payment.');
+    if (customer == null) {
+      throw ArgumentError('Customer not found.');
     }
     PaymentRecord? matchingAgreement;
     if (agreementId != null) {
@@ -2147,6 +2205,9 @@ class GymService extends ChangeNotifier {
       if (matchingAgreement == null || matchingAgreement.isPaid) {
         throw ArgumentError('Use balance collection for an existing payment.');
       }
+    }
+    if (!customer.isActive && matchingAgreement == null) {
+      throw ArgumentError('Restore the member before recording a new payment.');
     }
     final effectiveDuration = durationMonths ?? matchingAgreement?.durationMonths ?? 1;
 
@@ -2214,6 +2275,20 @@ class GymService extends ChangeNotifier {
       computedEndDate,
       effectivePaidAt,
     );
+
+    final overlapping = findOverlappingPaidPayment(
+      customerId: customerId,
+      startDate: computedStartDate,
+      endDate: computedEndDate,
+      excludePaymentId: agreementId,
+    );
+    if (overlapping != null) {
+      throw ArgumentError(
+        'The selected period (${GymDateUtils.formatDateRange(computedStartDate, computedEndDate)}) '
+        'overlaps with an already paid membership (${overlapping.formattedDateRange}).',
+      );
+    }
+
 
     final record = PaymentRecord(
       id: matchingAgreement?.id ?? _newPaymentId(customerId),
@@ -2427,6 +2502,18 @@ class GymService extends ChangeNotifier {
         updated.effectiveEndDate != record.effectiveEndDate ||
         updated.paidAt != record.paidAt;
     if (financialEdit) {
+      final overlapping = findOverlappingPaidPayment(
+        customerId: record.customerId,
+        startDate: updated.effectiveStartDate,
+        endDate: updated.effectiveEndDate,
+        excludePaymentId: record.id,
+      );
+      if (overlapping != null) {
+        throw ArgumentError(
+          'The updated period (${GymDateUtils.formatDateRange(updated.effectiveStartDate, updated.effectiveEndDate)}) '
+          'overlaps with an already paid membership (${overlapping.formattedDateRange}).',
+        );
+      }
       _validatePayment(
         updated.amount,
         updated.totalDue,
@@ -2587,6 +2674,7 @@ class GymService extends ChangeNotifier {
 
     double totalPending = 0;
     int pendingCount = 0;
+    final dueCustomerIds = <String>{};
     final parts = monthYear.split('-');
     if (parts.length == 2) {
       final y = int.tryParse(parts[0]) ?? DateTime.now().year;
@@ -2597,20 +2685,29 @@ class GymService extends ChangeNotifier {
         if (g.monthKey == monthYear) {
           totalPending += g.totalAmount;
           pendingCount += g.items.length;
+          for (final item in g.items) {
+            dueCustomerIds.add(item.customer.id);
+          }
         }
       }
     }
 
     int paidCount = 0;
+    final paidCustomerIds = <String>{};
     for (final customer in _customers) {
-      if (customer.isActive &&
-          isMonthCoveredByPaidPayment(customer.id, monthYear)) {
+      if (isMonthCoveredByPaidPayment(customer.id, monthYear)) {
         paidCount++;
+        paidCustomerIds.add(customer.id);
       }
     }
 
+    final relevantMembersCount = _customers.where((c) {
+      if (c.isActive) return true;
+      return dueCustomerIds.contains(c.id) || paidCustomerIds.contains(c.id);
+    }).length;
+
     return {
-      'totalMembers': _customers.where((c) => c.isActive).length,
+      'totalMembers': relevantMembersCount,
       'totalExpected': totalCollected + totalPending,
       'totalCollected': totalCollected,
       'totalPending': totalPending,

@@ -9,6 +9,7 @@ import '../utils/date_utils.dart';
 import 'bill_history_sheet.dart';
 import 'bill_receipt_dialog.dart';
 import 'collect_balance_dialog.dart';
+import 'animations/animated_success_dialog.dart';
 
 class MarkPaymentDialog extends StatefulWidget {
   final Customer customer;
@@ -86,6 +87,15 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   bool _isLoading = false;
   final _operationId = GymService().newPaymentOperationId();
   bool _updateFutureRenewalDefault = false;
+
+  PaymentRecord? get _overlappingPayment {
+    return GymService().findOverlappingPaidPayment(
+      customerId: widget.customer.id,
+      startDate: _startDate,
+      endDate: _endDate,
+      excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+    );
+  }
 
   final List<PaymentMethod> _methods = [
     PaymentMethod.gpay,
@@ -222,11 +232,23 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       builder: (context, child) => Theme(data: Theme.of(context), child: child!),
     );
     if (picked != null) {
+      final newEnd = GymDateUtils.computeAnniversaryEndDate(picked, _selectedDurationMonths);
+      final overlapping = GymService().findOverlappingPaidPayment(
+        customerId: widget.customer.id,
+        startDate: picked,
+        endDate: newEnd,
+        excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+      );
       setState(() {
         _startDate = picked;
-        _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+        _endDate = newEnd;
         _cycleModeIndex = 2;
       });
+      if (overlapping != null && mounted) {
+        _showError(
+          'Warning: Selected range overlaps with paid membership (${overlapping.formattedDateRange}).',
+        );
+      }
     }
   }
 
@@ -239,15 +261,34 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       builder: (context, child) => Theme(data: Theme.of(context), child: child!),
     );
     if (picked != null) {
+      final overlapping = GymService().findOverlappingPaidPayment(
+        customerId: widget.customer.id,
+        startDate: _startDate,
+        endDate: picked,
+        excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+      );
       setState(() {
         _endDate = picked;
         _cycleModeIndex = 2;
       });
+      if (overlapping != null && mounted) {
+        _showError(
+          'Warning: Selected range overlaps with paid membership (${overlapping.formattedDateRange}).',
+        );
+      }
     }
   }
 
   Future<void> _submitPayment() async {
     if (_isLoading) return;
+    final overlapping = _overlappingPayment;
+    if (overlapping != null) {
+      _showError(
+        'Cannot save payment: the selected period (${GymDateUtils.formatDateRange(_startDate, _endDate)}) '
+        'overlaps with an already paid membership (${overlapping.formattedDateRange}).',
+      );
+      return;
+    }
     final amount = double.tryParse(_amountController.text.trim());
     final isUpdate = widget.currentRecord.isPaid;
     final unchangedMoney =
@@ -297,19 +338,15 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isUpdate
-                ? 'Payment updated for ${widget.customer.name}!'
-                : 'Payment marked as Paid & Bill created for ${widget.customer.name}!',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: AppColors.paid,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-        Navigator.pop(context, bill);
+        await AnimatedSuccessDialog.show(
+          context,
+          title: isUpdate ? 'Payment Updated!' : 'Payment Recorded!',
+          message: '${widget.customer.name} • ${widget.monthYear}',
+          autoDismiss: const Duration(milliseconds: 900),
+        );
+        if (mounted) {
+          Navigator.pop(context, bill);
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -751,9 +788,20 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _submitPayment,
+                onPressed: _isLoading
+                    ? null
+                    : () {
+                        final overlapping = _overlappingPayment;
+                        if (overlapping != null) {
+                          _showError(
+                            'Cannot record payment: the selected period (${GymDateUtils.formatDateRange(_startDate, _endDate)}) overlaps with an already paid membership (${overlapping.formattedDateRange}).',
+                          );
+                          return;
+                        }
+                        _submitPayment();
+                      },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: _overlappingPayment != null ? AppColors.absent : AppColors.primary,
                   foregroundColor: AppColors.primaryOn,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
@@ -767,14 +815,16 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.check_circle_rounded, size: 20),
+                          Icon(_overlappingPayment != null ? Icons.block_rounded : Icons.check_circle_rounded, size: 20),
                           const SizedBox(width: 8),
                           Flexible(child: Text(
-                            isAlreadyPaid
-                                ? 'Update Payment Record'
-                                : ((double.tryParse(_amountController.text.trim()) ?? 0) + 0.005 < _totalDue
-                                    ? 'Record Partial Payment'
-                                    : 'Confirm & Mark as Paid'),
+                            _overlappingPayment != null
+                                ? 'Dates Overlap With Paid Plan'
+                                : (isAlreadyPaid
+                                    ? 'Update Payment Record'
+                                    : ((double.tryParse(_amountController.text.trim()) ?? 0) + 0.005 < _totalDue
+                                        ? 'Record Partial Payment'
+                                        : 'Confirm & Mark as Paid')),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -951,11 +1001,23 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 Expanded(
                   child: InkWell(
                     onTap: () {
+                      final newEnd = GymDateUtils.computeAnniversaryEndDate(today, _selectedDurationMonths);
+                      final overlapping = GymService().findOverlappingPaidPayment(
+                        customerId: widget.customer.id,
+                        startDate: today,
+                        endDate: newEnd,
+                        excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+                      );
                       setState(() {
                         _cycleModeIndex = 0;
                         _startDate = today;
-                        _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+                        _endDate = newEnd;
                       });
+                      if (overlapping != null && mounted) {
+                        _showError(
+                          'Warning: Fresh start date overlaps with paid membership (${overlapping.formattedDateRange}).',
+                        );
+                      }
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
@@ -1010,11 +1072,28 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 Expanded(
                   child: InkWell(
                     onTap: () {
+                      final nextStart = DateTime(
+                        _lastExpiryDate.year,
+                        _lastExpiryDate.month,
+                        _lastExpiryDate.day + 1,
+                      );
+                      final newEnd = GymDateUtils.computeAnniversaryEndDate(nextStart, _selectedDurationMonths);
+                      final overlapping = GymService().findOverlappingPaidPayment(
+                        customerId: widget.customer.id,
+                        startDate: nextStart,
+                        endDate: newEnd,
+                        excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+                      );
                       setState(() {
                         _cycleModeIndex = 1;
-                        _startDate = _lastExpiryDate.add(const Duration(days: 1));
-                        _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+                        _startDate = nextStart;
+                        _endDate = newEnd;
                       });
+                      if (overlapping != null && mounted) {
+                        _showError(
+                          'Warning: This range overlaps with paid membership (${overlapping.formattedDateRange}).',
+                        );
+                      }
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
@@ -1070,122 +1149,215 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           ],
 
           // Exact Start & End Date Pickers Row
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: _pickStartDate,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.surfaceBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: Text(
-                              'START DATE',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                              ),
-                            )),
-                            Icon(Icons.edit_calendar_rounded, size: 13, color: AppColors.primary),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          GymDateUtils.formatDate(_startDate),
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.textSecondary),
-              ),
-              Expanded(
-                child: InkWell(
-                  onTap: _pickEndDate,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.surfaceBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: Text(
-                              'EXPIRY DATE',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                              ),
-                            )),
-                            Icon(Icons.edit_calendar_rounded, size: 13, color: AppColors.primary),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          GymDateUtils.formatDate(_endDate),
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
+          Builder(builder: (context) {
+            final overlapping = _overlappingPayment;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.date_range_rounded, size: 14, color: AppColors.primary),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Plan Validity: ${GymDateUtils.formatDateRange(_startDate, _endDate)} ($_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"})',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickStartDate,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: overlapping != null ? AppColors.absent : AppColors.surfaceBorder,
+                              width: overlapping != null ? 1.5 : 1.0,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: Text(
+                                    'START DATE',
+                                    style: TextStyle(
+                                      color: overlapping != null ? AppColors.absent : AppColors.textSecondary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  )),
+                                  Icon(Icons.edit_calendar_rounded, size: 13, color: overlapping != null ? AppColors.absent : AppColors.primary),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                GymDateUtils.formatDate(_startDate),
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.textSecondary),
+                    ),
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickEndDate,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: overlapping != null ? AppColors.absent : AppColors.surfaceBorder,
+                              width: overlapping != null ? 1.5 : 1.0,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: Text(
+                                    'EXPIRY DATE',
+                                    style: TextStyle(
+                                      color: overlapping != null ? AppColors.absent : AppColors.textSecondary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  )),
+                                  Icon(Icons.edit_calendar_rounded, size: 13, color: overlapping != null ? AppColors.absent : AppColors.primary),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                GymDateUtils.formatDate(_endDate),
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (overlapping != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.absent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.absent.withValues(alpha: 0.45)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.error_outline_rounded, color: AppColors.absent, size: 16),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Overlaps with paid plan (${overlapping.formattedDateRange})',
+                                style: const TextStyle(
+                                  color: AppColors.absent,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'This member has already paid for dates within this period. Please select a non-overlapping start date.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () {
+                            final nextStart = DateTime(
+                              overlapping.effectiveEndDate.year,
+                              overlapping.effectiveEndDate.month,
+                              overlapping.effectiveEndDate.day + 1,
+                            );
+                            setState(() {
+                              _startDate = nextStart;
+                              _endDate = GymDateUtils.computeAnniversaryEndDate(nextStart, _selectedDurationMonths);
+                              _cycleModeIndex = 2;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.auto_fix_high_rounded, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Start after paid plan (${GymDateUtils.formatShortDate(DateTime(overlapping.effectiveEndDate.year, overlapping.effectiveEndDate.month, overlapping.effectiveEndDate.day + 1))})',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.date_range_rounded, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Plan Validity: ${GymDateUtils.formatDateRange(_startDate, _endDate)} ($_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"})',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
@@ -1250,12 +1422,24 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 padding: const EdgeInsets.only(right: 8),
                 child: InkWell(
                   onTap: () {
+                    final newEnd = GymDateUtils.computeAnniversaryEndDate(_startDate, pkg.months);
+                    final overlapping = GymService().findOverlappingPaidPayment(
+                      customerId: widget.customer.id,
+                      startDate: _startDate,
+                      endDate: newEnd,
+                      excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+                    );
                     setState(() {
                       _selectedDurationMonths = pkg.months;
                       _totalDue = payablePrice;
                       _amountController.text = payablePrice.toStringAsFixed(2);
-                      _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+                      _endDate = newEnd;
                     });
+                    if (overlapping != null && mounted) {
+                      _showError(
+                        'Warning: This package duration overlaps with paid membership (${overlapping.formattedDateRange}).',
+                      );
+                    }
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(

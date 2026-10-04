@@ -727,4 +727,72 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Get Started'), findsOneWidget);
   });
+
+  test('AuthService remember me credentials storage test', () async {
+    final auth = AuthService();
+
+    // Initially should be false and empty
+    expect(await auth.getRememberMe(), false);
+    var creds = await auth.getSavedCredentials();
+    expect(creds['email'], '');
+    expect(creds['password'], '');
+
+    // Save credentials with rememberMe = true
+    await auth.saveCredentials(
+      rememberMe: true,
+      email: 'owner@fitpilot.com',
+      password: 'supersecretpass',
+    );
+    expect(await auth.getRememberMe(), true);
+    creds = await auth.getSavedCredentials();
+    expect(creds['email'], 'owner@fitpilot.com');
+    expect(creds['password'], 'supersecretpass');
+
+    // Turn off remember me
+    await auth.saveCredentials(rememberMe: false);
+    expect(await auth.getRememberMe(), false);
+    creds = await auth.getSavedCredentials();
+    expect(creds['email'], '');
+    expect(creds['password'], '');
+  });
+
+  testWidgets('AuthScreen Remember Me UI and auto-population test', (tester) async {
+    final auth = AuthService();
+    // Pre-save credentials
+    await auth.saveCredentials(
+      rememberMe: true,
+      email: 'remembered@example.com',
+      password: 'mypassword123',
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: AuthScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify Remember Me checkbox and text are visible
+    expect(find.text('Remember Me'), findsOneWidget);
+    expect(find.byType(Checkbox), findsOneWidget);
+
+    // Verify fields are pre-populated
+    expect(find.text('remembered@example.com'), findsOneWidget);
+    expect(find.text('mypassword123'), findsOneWidget);
+
+    // Verify Checkbox is checked
+    final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
+    expect(checkbox.value, isTrue);
+
+    // Tap Remember Me to uncheck
+    await tester.tap(find.text('Remember Me'));
+    await tester.pumpAndSettle();
+
+    final uncheckedBox = tester.widget<Checkbox>(find.byType(Checkbox));
+    expect(uncheckedBox.value, isFalse);
+
+    // Check credentials cleared in storage
+    expect(await auth.getRememberMe(), false);
+  });
 }
+

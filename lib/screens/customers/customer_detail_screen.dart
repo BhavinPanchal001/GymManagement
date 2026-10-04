@@ -12,6 +12,9 @@ import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
 import '../../widgets/mark_month_attendance_dialog.dart';
 import '../../widgets/bill_history_sheet.dart';
+import '../../widgets/collect_balance_dialog.dart';
+import '../../widgets/bill_receipt_dialog.dart';
+import '../../widgets/animations/animated_fade_slide.dart';
 import 'add_customer_sheet.dart';
 import 'member_card_screen.dart';
 
@@ -34,6 +37,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   late DateTime _displayedMonth;
   late TabController _tabController;
   bool _isCustomRangeMode = false;
+  bool _isDuesExpanded = false;
   DateTime? _customStartDate;
   DateTime? _customEndDate;
   Timer? _midnightTimer;
@@ -104,6 +108,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
     if (picked != null) {
       setState(() {
+        _isCustomRangeMode = false;
         _displayedMonth = DateTime(picked.year, picked.month, 1);
       });
     }
@@ -136,12 +141,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
   void _prevMonth() {
     setState(() {
+      _isCustomRangeMode = false;
       _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month - 1, 1);
     });
   }
 
   void _nextMonth() {
     setState(() {
+      _isCustomRangeMode = false;
       _displayedMonth = DateTime(_displayedMonth.year, _displayedMonth.month + 1, 1);
     });
   }
@@ -358,24 +365,46 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Profile Overview Banner
-                          _buildProfileCard(customer),
+                          AnimatedFadeSlide.staggered(
+                            index: 0,
+                            child: _buildProfileCard(customer),
+                          ),
                           const SizedBox(height: 16),
 
-                          _buildDueBreakdownCard(customer, currency),
+                          AnimatedFadeSlide.staggered(
+                            index: 1,
+                            child: _buildDueBreakdownCard(customer, currency),
+                          ),
                           const SizedBox(height: 16),
 
                           // Unpaid Attended Dues Alert Card (if any)
                           if (unpaidAttendedMonths.isNotEmpty) ...[
-                            _buildDuesAlertBanner(customer, unpaidAttendedMonths, currency),
+                            AnimatedFadeSlide.staggered(
+                              index: 2,
+                              child: _buildDuesAlertBanner(customer, unpaidAttendedMonths, currency),
+                            ),
                             const SizedBox(height: 16),
                           ],
 
+                          // Month Selector Header for Payment Card
+                          AnimatedFadeSlide.staggered(
+                            index: 2,
+                            child: _buildMonthSelectorHeader(customer, showMarkMenu: false),
+                          ),
+                          const SizedBox(height: 12),
+
                           // Selected Month Payment Card
-                          _buildMonthPaymentCard(customer, monthKey, paymentRecord, currency, attendanceSummary),
+                          AnimatedFadeSlide.staggered(
+                            index: 2,
+                            child: _buildMonthPaymentCard(customer, monthKey, paymentRecord, currency, attendanceSummary),
+                          ),
                           const SizedBox(height: 24),
 
                           // Full Payment History Section with context-aware attendance badges
-                          _buildPaymentHistorySection(customer, currency),
+                          AnimatedFadeSlide.staggered(
+                            index: 3,
+                            child: _buildPaymentHistorySection(customer, currency),
+                          ),
                           const SizedBox(height: 32),
                         ],
                       ),
@@ -389,15 +418,24 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Attendance Overview & Direct Settle Card
-                          _buildAttendanceOverviewCard(customer, monthKey, currency),
+                          AnimatedFadeSlide.staggered(
+                            index: 0,
+                            child: _buildAttendanceOverviewCard(customer, monthKey, currency),
+                          ),
                           const SizedBox(height: 16),
 
                           // Month Navigation & Mark All Menu
-                          _buildMonthSelectorHeader(customer),
+                          AnimatedFadeSlide.staggered(
+                            index: 1,
+                            child: _buildMonthSelectorHeader(customer),
+                          ),
                           const SizedBox(height: 14),
 
                           // Interactive Calendar Grid
-                          _buildInteractiveCalendar(customer, monthKey),
+                          AnimatedFadeSlide.staggered(
+                            index: 2,
+                            child: _buildInteractiveCalendar(customer, monthKey),
+                          ),
                           const SizedBox(height: 32),
                         ],
                       ),
@@ -954,28 +992,40 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ),
               ),
               const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10,
-                  vertical: 6),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(badgeIcon, color: badgeColor, size: 14),
-                    const SizedBox(width: 5),
-                    Text(
-                      badgeText,
-                      style: TextStyle(
-                        color: badgeColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
+              InkWell(
+                onTap: (isPaid && record.balanceDue > 0)
+                    ? () async {
+                        final current = GymService().getPaymentById(record.id) ?? record;
+                        final bill = await CollectBalanceDialog.show(context, current);
+                        if (bill != null && mounted) {
+                          await BillReceiptDialog.show(context, bill: bill);
+                        }
+                      }
+                    : null,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10,
+                    vertical: 6),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(badgeIcon, color: badgeColor, size: 14),
+                      const SizedBox(width: 5),
+                      Text(
+                        badgeText,
+                        style: TextStyle(
+                          color: badgeColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1012,6 +1062,33 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               ],
             ),
             const SizedBox(height: 12),
+            if (record.balanceDue > 0) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final current = GymService().getPaymentById(record.id) ?? record;
+                    final bill = await CollectBalanceDialog.show(context, current);
+                    if (bill != null && mounted) {
+                      await BillReceiptDialog.show(context, bill: bill);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.pending,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.payments_rounded, size: 18),
+                  label: Text(
+                    'Collect Balance ${GymDateUtils.formatCurrency(record.balanceDue, symbol: currency)}',
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             Row(
               children: [
                 Expanded(
@@ -1040,16 +1117,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: OutlinedButton.icon(
                     onPressed: () => MarkPaymentDialog.show(
                       context,
                       customer: customer,
                       monthYear: monthKey,
                       currentRecord: record,
                     ),
-                    style: ElevatedButton.styleFrom(
+                    style: OutlinedButton.styleFrom(
                       backgroundColor: AppColors.surfaceElevated,
-                      foregroundColor: AppColors.textPrimary,
+                      foregroundColor: AppColors.textSecondary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1380,7 +1457,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     return Container(
       key: const ValueKey('due-breakdown-card'),
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -1389,100 +1465,155 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Current Dues',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Text(
-                GymDateUtils.formatCurrency(dues.totalAmount, symbol: currency),
-                style: TextStyle(
-                  color: dues.totalCount == 0 ? AppColors.paid : AppColors.textPrimary,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          for (final (urgency, title, hint, icon, color) in rows)
-            Builder(builder: (context) {
-              final bucket = dues.of(urgency);
-              final active = !bucket.isEmpty;
-              final tone = active ? color : AppColors.textMuted;
-              final earliestEnd = bucket.earliestEndDate;
-              final detail = earliestEnd == null
-                  ? hint
-                  : urgency == DueUrgency.overdue
-                      ? 'Plan ended ${GymDateUtils.formatShortDate(earliestEnd)}'
-                      : '$hint • by ${GymDateUtils.formatShortDate(earliestEnd)}';
-              return Container(
-                key: ValueKey('due-${urgency.name}'),
-                margin: const EdgeInsets.only(top: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: tone.withValues(alpha: active ? 0.1 : 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: tone.withValues(alpha: active ? 0.4 : 0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(icon, color: tone, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: TextStyle(
-                              color: active ? tone : AppColors.textSecondary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12.5,
-                            ),
-                          ),
-                          Text(
-                            detail,
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 10.5),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+          InkWell(
+            onTap: () => setState(() => _isDuesExpanded = !_isDuesExpanded),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Row(
                       children: [
                         Text(
-                          '${bucket.count}',
+                          'Current Dues',
                           style: TextStyle(
-                            color: tone,
+                            color: AppColors.textPrimary,
                             fontWeight: FontWeight.w900,
-                            fontSize: 16,
+                            fontSize: 14,
                           ),
                         ),
-                        Text(
-                          GymDateUtils.formatCurrency(bucket.amount, symbol: currency),
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 10.5,
+                        if (dues.totalCount > 0) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: AppColors.pending.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${dues.totalCount}',
+                              style: TextStyle(
+                                color: AppColors.pending,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
-                  ],
-                ),
-              );
-            }),
+                  ),
+                  Text(
+                    GymDateUtils.formatCurrency(dues.totalAmount, symbol: currency),
+                    style: TextStyle(
+                      color: dues.totalCount == 0 ? AppColors.paid : AppColors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  AnimatedRotation(
+                    turns: _isDuesExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _isDuesExpanded
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Divider(color: AppColors.surfaceBorder, height: 1),
+                        const SizedBox(height: 6),
+                        for (final (urgency, title, hint, icon, color) in rows)
+                          Builder(builder: (context) {
+                            final bucket = dues.of(urgency);
+                            final active = !bucket.isEmpty;
+                            final tone = active ? color : AppColors.textMuted;
+                            final earliestEnd = bucket.earliestEndDate;
+                            final detail = earliestEnd == null
+                                ? hint
+                                : urgency == DueUrgency.overdue
+                                    ? 'Plan ended ${GymDateUtils.formatShortDate(earliestEnd)}'
+                                    : '$hint • by ${GymDateUtils.formatShortDate(earliestEnd)}';
+                            return Container(
+                              key: ValueKey('due-${urgency.name}'),
+                              margin: const EdgeInsets.only(top: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: tone.withValues(alpha: active ? 0.1 : 0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: tone.withValues(alpha: active ? 0.4 : 0.2)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(icon, color: tone, size: 18),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: TextStyle(
+                                            color: active ? tone : AppColors.textSecondary,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 12.5,
+                                          ),
+                                        ),
+                                        Text(
+                                          detail,
+                                          style: TextStyle(color: AppColors.textSecondary, fontSize: 10.5),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '${bucket.count}',
+                                        style: TextStyle(
+                                          color: tone,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      Text(
+                                        GymDateUtils.formatCurrency(bucket.amount, symbol: currency),
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 10.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -1939,7 +2070,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
-  Widget _buildMonthSelectorHeader(Customer customer) {
+  Widget _buildMonthSelectorHeader(Customer customer, {bool showMarkMenu = true}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -1990,8 +2121,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               onPressed: _nextMonth,
               tooltip: 'Next Month',
             ),
-            const SizedBox(width: 4),
-            _buildMarkMonthMenu(customer),
+            if (showMarkMenu) ...[
+              const SizedBox(width: 4),
+              _buildMarkMonthMenu(customer),
+            ],
           ],
         ),
       ],
@@ -2571,7 +2704,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             physics: const NeverScrollableScrollPhysics(),
             itemCount: history.length,
             separatorBuilder: (context, index) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
+            itemBuilder: (_, i) {
               final item = history[i];
               final unpaidAttended = gym.getUnpaidAttendedDaysInMonth(customer.id, item.monthYear);
               final coveredAttended = gym.getAttendedDaysCoveredByPayment(customer.id, item);
@@ -2593,151 +2726,233 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         : (hasUnpaidDues ? AppColors.pending.withValues(alpha: 0.4) : AppColors.surfaceBorder),
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: item.isPaid
-                            ? AppColors.paid.withValues(alpha: 0.15)
-                            : (hasUnpaidDues
-                                ? AppColors.pending.withValues(alpha: 0.15)
-                                : AppColors.surfaceElevated),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        item.isPaid
-                            ? Icons.check_circle_rounded
-                            : (hasUnpaidDues ? Icons.warning_amber_rounded : Icons.pending_rounded),
-                        color: item.isPaid
-                            ? AppColors.paid
-                            : (hasUnpaidDues ? AppColors.pending : AppColors.textMuted),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            periodTitle,
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          if (item.isPaid) ...[
-                            if (coveredAttended > 0) ...[
-                              Text(
-                                '✓ $coveredAttended Days Attended • Paid ${item.paidAt != null ? "on ${GymDateUtils.formatShortDate(item.paidAt!)}" : ""}',
-                                style: TextStyle(
-                                  color: AppColors.paid,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ] else ...[
-                              Text(
-                                'Active Coverage (${GymDateUtils.formatShortDate(item.effectiveStartDate)} – ${GymDateUtils.formatShortDate(item.effectiveEndDate)}) • Paid ${item.paidAt != null ? "on ${GymDateUtils.formatShortDate(item.paidAt!)}" : ""}',
-                                style: const TextStyle(
-                                  color: AppColors.paid,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ] else if (unpaidAttended > 0) ...[
-                            Text(
-                              '⚠️ $unpaidAttended Days Attended • Payment Due',
-                              style: TextStyle(
-                                color: AppColors.pending,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ] else ...[
-                            Text(
-                              '0 Days Attended • Pending',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          GymDateUtils.formatCurrency(item.displayAmount, symbol: currency),
-                          style: TextStyle(
-                            color: item.isPaid ? AppColors.paid : AppColors.textPrimary,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: item.isPaid
+                                ? AppColors.paid.withValues(alpha: 0.15)
+                                : (hasUnpaidDues
+                                    ? AppColors.pending.withValues(alpha: 0.15)
+                                    : AppColors.surfaceElevated),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            item.isPaid
+                                ? Icons.check_circle_rounded
+                                : (hasUnpaidDues ? Icons.warning_amber_rounded : Icons.pending_rounded),
+                            color: item.isPaid
+                                ? AppColors.paid
+                                : (hasUnpaidDues ? AppColors.pending : AppColors.textMuted),
+                            size: 18,
                           ),
                         ),
-                        if (hasUnpaidDues)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              'DUE',
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                periodTitle,
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              if (item.isPaid) ...[
+                                if (coveredAttended > 0) ...[
+                                  Text(
+                                    '✓ $coveredAttended Days Attended • Paid ${item.paidAt != null ? "on ${GymDateUtils.formatShortDate(item.paidAt!)}" : ""}',
+                                    style: TextStyle(
+                                      color: AppColors.paid,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ] else ...[
+                                  Text(
+                                    'Active Coverage (${GymDateUtils.formatShortDate(item.effectiveStartDate)} – ${GymDateUtils.formatShortDate(item.effectiveEndDate)}) • Paid ${item.paidAt != null ? "on ${GymDateUtils.formatShortDate(item.paidAt!)}" : ""}',
+                                    style: const TextStyle(
+                                      color: AppColors.paid,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ] else if (unpaidAttended > 0) ...[
+                                Text(
+                                  '⚠️ $unpaidAttended Days Attended • Payment Due',
+                                  style: TextStyle(
+                                    color: AppColors.pending,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ] else ...[
+                                Text(
+                                  '0 Days Attended • Pending',
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11.5),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              GymDateUtils.formatCurrency(item.displayAmount, symbol: currency),
                               style: TextStyle(
-                                color: AppColors.pending,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
+                                color: item.isPaid ? AppColors.paid : AppColors.textPrimary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
                               ),
                             ),
+                            if (item.isPaid && item.balanceDue > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  'BAL ${GymDateUtils.formatCurrency(item.balanceDue, symbol: currency)}',
+                                  style: TextStyle(
+                                    color: AppColors.pending,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              )
+                            else if (hasUnpaidDues)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  'DUE',
+                                  style: TextStyle(
+                                    color: AppColors.pending,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                        if (item.isPaid) ...[
+                          IconButton(
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            icon: const Icon(Icons.receipt_long_rounded, color: AppColors.paid, size: 16),
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppColors.paid.withValues(alpha: 0.15),
+                              padding: const EdgeInsets.all(6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(color: AppColors.paid.withValues(alpha: 0.4)),
+                              ),
+                            ),
+                            tooltip: 'View Bill / Receipt',
+                            onPressed: () {
+                              BillHistorySheet.showForPayment(
+                                context,
+                                customer: customer,
+                                payment: item,
+                              );
+                            },
                           ),
+                        ] else ...[
+                          ElevatedButton(
+                            onPressed: () => MarkPaymentDialog.show(
+                              context,
+                              customer: customer,
+                              monthYear: item.monthYear,
+                              currentRecord: item,
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: hasUnpaidDues ? AppColors.pending : AppColors.surfaceElevated,
+                              foregroundColor: hasUnpaidDues ? Colors.black : AppColors.primary,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              visualDensity: VisualDensity.compact,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(
+                                  color: hasUnpaidDues ? AppColors.pending : AppColors.surfaceBorder,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              hasUnpaidDues ? 'Settle' : 'Pay',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                    const SizedBox(width: 8),
-                    if (item.isPaid) ...[
-                      IconButton(
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        icon: const Icon(Icons.receipt_long_rounded, color: AppColors.paid, size: 16),
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppColors.paid.withValues(alpha: 0.15),
-                          padding: const EdgeInsets.all(6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(color: AppColors.paid.withValues(alpha: 0.4)),
-                          ),
+                    if (item.isPaid && item.balanceDue > 0) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.pending.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.pending.withValues(alpha: 0.25)),
                         ),
-                        tooltip: 'View Bill / Receipt',
-                        onPressed: () {
-                          BillHistorySheet.showForPayment(
-                            context,
-                            customer: customer,
-                            payment: item,
-                          );
-                        },
-                      ),
-                    ] else ...[
-                      ElevatedButton(
-                        onPressed: () => MarkPaymentDialog.show(
-                          context,
-                          customer: customer,
-                          monthYear: item.monthYear,
-                          currentRecord: item,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: hasUnpaidDues ? AppColors.pending : AppColors.surfaceElevated,
-                          foregroundColor: hasUnpaidDues ? Colors.black : AppColors.primary,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          visualDensity: VisualDensity.compact,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: hasUnpaidDues ? AppColors.pending : AppColors.surfaceBorder,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  final current = GymService().getPaymentById(item.id) ?? item;
+                                  final bill = await CollectBalanceDialog.show(context, current);
+                                  if (bill != null && mounted) {
+                                    await BillReceiptDialog.show(context, bill: bill);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.pending,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  minimumSize: const Size(0, 32),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                icon: const Icon(Icons.payments_rounded, size: 15),
+                                label: Text(
+                                  'Collect Balance ${GymDateUtils.formatCurrency(item.balanceDue, symbol: currency)}',
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        child: Text(
-                          hasUnpaidDues ? 'Settle' : 'Pay',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                            const SizedBox(width: 6),
+                            OutlinedButton.icon(
+                              onPressed: () => MarkPaymentDialog.show(
+                                context,
+                                customer: customer,
+                                monthYear: item.monthYear,
+                                currentRecord: item,
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: AppColors.surfaceElevated,
+                                foregroundColor: AppColors.textSecondary,
+                                side: BorderSide(color: AppColors.surfaceBorder),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                minimumSize: const Size(0, 32),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: const Icon(Icons.edit_note_rounded, size: 14),
+                              label: const Text(
+                                'Edit',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

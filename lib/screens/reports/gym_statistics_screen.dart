@@ -10,6 +10,10 @@ import '../../widgets/charts/financial_trends_chart.dart';
 import '../../widgets/charts/membership_donut_chart.dart';
 import '../customers/expiring_members_sheet.dart';
 import 'pending_payments_report_screen.dart';
+import '../../utils/animation_utils.dart';
+import '../../widgets/animations/animated_counter.dart';
+import '../../widgets/animations/animated_fade_slide.dart';
+import '../../widgets/animations/animated_pressable.dart';
 
 enum AnalyticsCategoryFilter { all, financials, attendance, memberships }
 
@@ -104,13 +108,16 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // 1. Gym Overview Banner Card
-                _buildOverviewBanner(
-                  gymName: gym.settings.gymName,
-                  totalMembers: totalCustomers,
-                  activeMembers: totalActive,
-                  inactiveMembers: inactiveCount,
-                  presentToday: presentToday,
-                  attendanceRate: attendanceRate,
+                AnimatedFadeSlide(
+                  offset: const Offset(0, -0.05),
+                  child: _buildOverviewBanner(
+                    gymName: gym.settings.gymName,
+                    totalMembers: totalCustomers,
+                    activeMembers: totalActive,
+                    inactiveMembers: inactiveCount,
+                    presentToday: presentToday,
+                    attendanceRate: attendanceRate,
+                  ),
                 ),
 
                 const SizedBox(height: 16),
@@ -137,7 +144,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: _buildFinancialMetricBox(
                           title: 'Total Revenue',
                           subtitle: 'Month collections',
-                          amount: GymDateUtils.formatCurrency(currentMonthIncome, symbol: currency),
+                          amount: currentMonthIncome,
+                          currency: currency,
                           color: AppColors.paid,
                           icon: Icons.trending_up_rounded,
                         ),
@@ -147,7 +155,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: _buildFinancialMetricBox(
                           title: 'Total Expenses',
                           subtitle: 'Month expenses',
-                          amount: GymDateUtils.formatCurrency(currentMonthExpense, symbol: currency),
+                          amount: currentMonthExpense,
+                          currency: currency,
                           color: AppColors.absent,
                           icon: Icons.trending_down_rounded,
                         ),
@@ -162,14 +171,15 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: _buildFinancialMetricBox(
                           title: currentMonthProfit >= 0 ? 'Month Net Profit' : 'Month Net Loss',
                           subtitle: currentMonthProfit >= 0 ? 'Surplus income' : 'Operating deficit',
-                          amount: GymDateUtils.formatCurrency(currentMonthProfit.abs(), symbol: currency),
+                          amount: currentMonthProfit.abs(),
+                          currency: currency,
                           color: currentMonthProfit >= 0 ? AppColors.paid : AppColors.absent,
                           icon: currentMonthProfit >= 0 ? Icons.savings_rounded : Icons.warning_amber_rounded,
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: InkWell(
+                        child: AnimatedPressable(
                           onTap: () {
                             Navigator.push(
                               context,
@@ -178,11 +188,11 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                               ),
                             );
                           },
-                          borderRadius: BorderRadius.circular(16),
                           child: _buildFinancialMetricBox(
                             title: 'Pending Dues',
                             subtitle: 'Tap to view report',
-                            amount: GymDateUtils.formatCurrency(totalDues, symbol: currency),
+                            amount: totalDues,
+                            currency: currency,
                             color: AppColors.pending,
                             icon: Icons.history_rounded,
                             showArrow: true,
@@ -225,7 +235,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: _buildFinancialMetricBox(
                           title: "Today's Collection",
                           subtitle: 'Cash & online inflow',
-                          amount: GymDateUtils.formatCurrency(todayCollection, symbol: currency),
+                          amount: todayCollection,
+                          currency: currency,
                           color: AppColors.paid,
                           icon: Icons.arrow_downward_rounded,
                         ),
@@ -235,7 +246,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: _buildFinancialMetricBox(
                           title: "Today's Expense",
                           subtitle: 'Operating costs out',
-                          amount: GymDateUtils.formatCurrency(todayExpense, symbol: currency),
+                          amount: todayExpense,
+                          currency: currency,
                           color: AppColors.absent,
                           icon: Icons.arrow_upward_rounded,
                         ),
@@ -340,11 +352,19 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         const SizedBox(height: 12),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: totalActive > 0 ? (presentToday / totalActive).clamp(0.0, 1.0) : 0,
-                            backgroundColor: AppColors.surfaceBorder,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                            minHeight: 8,
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween<double>(
+                              begin: 0.0,
+                              end: totalActive > 0 ? (presentToday / totalActive).clamp(0.0, 1.0) : 0.0,
+                            ),
+                            duration: AppAnimations.contentDuration,
+                            curve: Curves.easeOutCubic,
+                            builder: (context, val, _) => LinearProgressIndicator(
+                              value: val,
+                              backgroundColor: AppColors.surfaceBorder,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              minHeight: 8,
+                            ),
                           ),
                         ),
                       ],
@@ -484,9 +504,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           final isSelected = _selectedFilter == f.$1;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: InkWell(
+            child: AnimatedPressable(
               onTap: () => setState(() => _selectedFilter = f.$1),
-              borderRadius: BorderRadius.circular(12),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -616,7 +635,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               Expanded(
                 child: _buildBannerStat(
                   label: 'Total Members',
-                  value: '$totalMembers',
+                  count: totalMembers,
                   icon: Icons.groups_rounded,
                   color: AppColors.primary,
                 ),
@@ -625,7 +644,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               Expanded(
                 child: _buildBannerStat(
                   label: 'Active',
-                  value: '$activeMembers',
+                  count: activeMembers,
                   icon: Icons.check_circle_rounded,
                   color: AppColors.paid,
                 ),
@@ -634,7 +653,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               Expanded(
                 child: _buildBannerStat(
                   label: 'Inactive',
-                  value: '$inactiveMembers',
+                  count: inactiveMembers,
                   icon: Icons.pause_circle_rounded,
                   color: AppColors.textMuted,
                 ),
@@ -648,7 +667,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
 
   Widget _buildBannerStat({
     required String label,
-    required String value,
+    required int count,
     required IconData icon,
     required Color color,
   }) {
@@ -659,8 +678,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           children: [
             Icon(icon, size: 14, color: color),
             const SizedBox(width: 4),
-            Text(
-              value,
+            AnimatedCounter(
+              value: count,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
@@ -734,7 +753,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
     required List<Customer> members,
     bool isUrgent = false,
   }) {
-    return InkWell(
+    return AnimatedPressable(
       onTap: () {
         ExpiringMembersSheet.show(
           context,
@@ -745,7 +764,6 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           icon: icon,
         );
       },
-      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
@@ -843,7 +861,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
   Widget _buildFinancialMetricBox({
     required String title,
     required String subtitle,
-    required String amount,
+    required double amount,
+    required String currency,
     required Color color,
     required IconData icon,
     bool showArrow = false,
@@ -877,8 +896,9 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
-              amount,
+            child: AnimatedCounter(
+              value: amount,
+              prefix: '$currency ',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,

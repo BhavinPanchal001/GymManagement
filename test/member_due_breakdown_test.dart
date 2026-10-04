@@ -149,6 +149,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Current Dues'), findsOneWidget);
+    // Card is expandable and collapsed by default
+    expect(find.byKey(const ValueKey('due-upcoming')), findsNothing);
+
+    // Tap to expand
+    await tester.tap(find.text('Current Dues'));
+    await tester.pumpAndSettle();
+
     for (final key in ['due-upcoming', 'due-attendedInPlan', 'due-overdue']) {
       expect(find.byKey(ValueKey(key)), findsOneWidget);
     }
@@ -162,5 +169,10 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    // Tap to collapse
+    await tester.tap(find.text('Current Dues'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('due-upcoming')), findsNothing);
   });
 }

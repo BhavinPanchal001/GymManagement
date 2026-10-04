@@ -405,7 +405,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
 
                 // Payment Method Dropdown
                 DropdownButtonFormField<PaymentMethod>(
-                  value: _selectedPaymentMethod,
+                  // initialValue: _selectedPaymentMethod,
                   dropdownColor: AppColors.surfaceElevated,
                   style: TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(

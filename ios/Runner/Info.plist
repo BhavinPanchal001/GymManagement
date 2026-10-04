@@ -51,5 +51,9 @@
 		<string>https</string>
 		<string>tel</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app requires access to the microphone for voice search across members, attendance, billing, and expenses.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app requires speech recognition access to search by voice.</string>
 </dict>
 </plist>
