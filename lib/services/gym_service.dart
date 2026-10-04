@@ -1342,7 +1342,9 @@ class GymService extends ChangeNotifier {
     if (query.trim().isEmpty) return customers;
     final q = query.toLowerCase().trim();
     return _customers.where((c) {
-      return c.name.toLowerCase().contains(q) || c.phone.contains(q);
+      return c.name.toLowerCase().contains(q) ||
+          c.phone.contains(q) ||
+          c.cardNumber.toLowerCase().contains(q);
     }).toList();
   }
 
