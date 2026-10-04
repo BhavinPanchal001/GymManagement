@@ -4,6 +4,11 @@ import 'plan_package.dart';
 
 class GymSettings {
   final String gymName;
+  final String gymTagline;
+  final String gymAddress;
+  final String gymPhone;
+  final String gymEmail;
+  final String gymTimings;
   final String? gymLogoPath;
   final String? gymLogoBase64;
   final double standardMonthlyFee;
@@ -11,9 +16,21 @@ class GymSettings {
   final double ptPlanFee;
   final double ptDietPlanFee;
   final String currencySymbol;
+  final bool isTaxEnabled;
+  final String taxLabel;
+  final double taxRatePercent;
+  final bool isTaxInclusive;
+  final String receiptTerms;
   final bool isFirestoreConnected;
   final bool isPaymentDueNotificationEnabled;
   final List<PlanDurationPackage> durationPackages;
+
+  static const String defaultTagline = 'Gym Management & Billing Suite';
+  static const String defaultReceiptTerms =
+      '1. All gym membership fees once paid are non-refundable, non-adjustable, and strictly non-transferable under any circumstances.\n'
+      '2. Membership is valid strictly for the specified period. Post expiration, admission requires timely renewal.\n'
+      '3. Members are required to carry this digital receipt or membership card and adhere strictly to gym safety rules and equipment etiquette.\n'
+      '4. Management reserves the right of admission and membership suspension in case of violation of gym guidelines.';
 
   static const List<PlanDurationPackage> defaultPackages = [
     // Normal Plan Packages
@@ -37,6 +54,11 @@ class GymSettings {
 
   const GymSettings({
     this.gymName = 'IronPulse Fitness Club',
+    this.gymTagline = defaultTagline,
+    this.gymAddress = '',
+    this.gymPhone = '',
+    this.gymEmail = '',
+    this.gymTimings = '',
     this.gymLogoPath,
     this.gymLogoBase64,
     this.standardMonthlyFee = 600.0,
@@ -44,6 +66,11 @@ class GymSettings {
     this.ptPlanFee = 2500.0,
     this.ptDietPlanFee = 3500.0,
     this.currencySymbol = '₹',
+    this.isTaxEnabled = false,
+    this.taxLabel = 'GST',
+    this.taxRatePercent = 18.0,
+    this.isTaxInclusive = true,
+    this.receiptTerms = defaultReceiptTerms,
     this.isFirestoreConnected = false,
     this.isPaymentDueNotificationEnabled = true,
     this.durationPackages = defaultPackages,
@@ -80,6 +107,27 @@ class GymSettings {
     return singleFee * (months > 0 ? months : 1);
   }
 
+  double totalForConfiguredPrice(double configuredPrice) {
+    if (!isTaxEnabled ||
+        isTaxInclusive ||
+        !taxRatePercent.isFinite ||
+        taxRatePercent <= 0) {
+      return configuredPrice;
+    }
+    return configuredPrice * (1 + taxRatePercent / 100);
+  }
+
+  double taxAmountFromTotal(double total) {
+    if (!isTaxEnabled ||
+        !taxRatePercent.isFinite ||
+        taxRatePercent <= 0 ||
+        total <= 0) {
+      return 0;
+    }
+    final rate = taxRatePercent / 100;
+    return total - (total / (1 + rate));
+  }
+
   /// Resolves the monthly price for a given plan type key (1-month baseline)
   double getFeeForPlan(String? planType) {
     switch (planType) {
@@ -97,6 +145,11 @@ class GymSettings {
 
   GymSettings copyWith({
     String? gymName,
+    String? gymTagline,
+    String? gymAddress,
+    String? gymPhone,
+    String? gymEmail,
+    String? gymTimings,
     String? gymLogoPath,
     String? gymLogoBase64,
     bool clearGymLogo = false,
@@ -106,6 +159,11 @@ class GymSettings {
     double? ptPlanFee,
     double? ptDietPlanFee,
     String? currencySymbol,
+    bool? isTaxEnabled,
+    String? taxLabel,
+    double? taxRatePercent,
+    bool? isTaxInclusive,
+    String? receiptTerms,
     bool? isFirestoreConnected,
     bool? isPaymentDueNotificationEnabled,
     List<PlanDurationPackage>? durationPackages,
@@ -134,6 +192,11 @@ class GymSettings {
 
     return GymSettings(
       gymName: gymName ?? this.gymName,
+      gymTagline: gymTagline ?? this.gymTagline,
+      gymAddress: gymAddress ?? this.gymAddress,
+      gymPhone: gymPhone ?? this.gymPhone,
+      gymEmail: gymEmail ?? this.gymEmail,
+      gymTimings: gymTimings ?? this.gymTimings,
       gymLogoPath: clearGymLogo ? null : (gymLogoPath ?? this.gymLogoPath),
       gymLogoBase64: clearGymLogoBase64
           ? null
@@ -143,6 +206,11 @@ class GymSettings {
       ptPlanFee: effectivePtFee,
       ptDietPlanFee: effectivePtDietFee,
       currencySymbol: currencySymbol ?? this.currencySymbol,
+      isTaxEnabled: isTaxEnabled ?? this.isTaxEnabled,
+      taxLabel: taxLabel ?? this.taxLabel,
+      taxRatePercent: taxRatePercent ?? this.taxRatePercent,
+      isTaxInclusive: isTaxInclusive ?? this.isTaxInclusive,
+      receiptTerms: receiptTerms ?? this.receiptTerms,
       isFirestoreConnected: isFirestoreConnected ?? this.isFirestoreConnected,
       isPaymentDueNotificationEnabled: isPaymentDueNotificationEnabled ?? this.isPaymentDueNotificationEnabled,
       durationPackages: updatedPackages,
@@ -153,6 +221,11 @@ class GymSettings {
     final effectivePackages = durationPackages.isNotEmpty ? durationPackages : defaultPackages;
     return {
       'gymName': gymName,
+      'gymTagline': gymTagline,
+      'gymAddress': gymAddress,
+      'gymPhone': gymPhone,
+      'gymEmail': gymEmail,
+      'gymTimings': gymTimings,
       'gymLogoPath': gymLogoPath,
       'gymLogoBase64': gymLogoBase64,
       'standardMonthlyFee': normalPlanFee,
@@ -160,6 +233,11 @@ class GymSettings {
       'ptPlanFee': ptPlanFee,
       'ptDietPlanFee': ptDietPlanFee,
       'currencySymbol': currencySymbol,
+      'isTaxEnabled': isTaxEnabled,
+      'taxLabel': taxLabel,
+      'taxRatePercent': taxRatePercent,
+      'isTaxInclusive': isTaxInclusive,
+      'receiptTerms': receiptTerms,
       'isFirestoreConnected': isFirestoreConnected,
       'isPaymentDueNotificationEnabled': isPaymentDueNotificationEnabled,
       'durationPackages': effectivePackages.map((p) => p.toMap()).toList(),
@@ -171,6 +249,13 @@ class GymSettings {
     final normalFee = (map['normalPlanFee'] as num?)?.toDouble() ?? standardFee;
     final ptFee = (map['ptPlanFee'] as num?)?.toDouble() ?? 2500.0;
     final ptDietFee = (map['ptDietPlanFee'] as num?)?.toDouble() ?? 3500.0;
+    final storedTaxRate =
+        (map['taxRatePercent'] as num?)?.toDouble() ?? 18.0;
+    final taxRate = storedTaxRate.isFinite &&
+            storedTaxRate >= 0 &&
+            storedTaxRate <= 100
+        ? storedTaxRate
+        : 18.0;
 
     List<PlanDurationPackage> packages = [];
     if (map['durationPackages'] is List) {
@@ -184,6 +269,11 @@ class GymSettings {
 
     return GymSettings(
       gymName: map['gymName'] as String? ?? 'IronPulse Fitness Club',
+      gymTagline: map['gymTagline'] as String? ?? defaultTagline,
+      gymAddress: map['gymAddress'] as String? ?? '',
+      gymPhone: map['gymPhone'] as String? ?? '',
+      gymEmail: map['gymEmail'] as String? ?? '',
+      gymTimings: map['gymTimings'] as String? ?? '',
       gymLogoPath: map['gymLogoPath'] as String?,
       gymLogoBase64: map['gymLogoBase64'] as String?,
       standardMonthlyFee: normalFee,
@@ -191,6 +281,11 @@ class GymSettings {
       ptPlanFee: ptFee,
       ptDietPlanFee: ptDietFee,
       currencySymbol: map['currencySymbol'] as String? ?? '₹',
+      isTaxEnabled: map['isTaxEnabled'] as bool? ?? false,
+      taxLabel: map['taxLabel'] as String? ?? 'GST',
+      taxRatePercent: taxRate,
+      isTaxInclusive: map['isTaxInclusive'] as bool? ?? true,
+      receiptTerms: map['receiptTerms'] as String? ?? defaultReceiptTerms,
       isFirestoreConnected: map['isFirestoreConnected'] as bool? ?? false,
       isPaymentDueNotificationEnabled: map['isPaymentDueNotificationEnabled'] as bool? ?? true,
       durationPackages: packages,

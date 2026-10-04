@@ -26,6 +26,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _phoneController;
   late TextEditingController _gymNameController;
   late TextEditingController _emailController;
+  late TextEditingController _gymTaglineController;
+  late TextEditingController _gymAddressController;
+  late TextEditingController _gymPhoneController;
+  late TextEditingController _gymEmailController;
+  late TextEditingController _gymTimingsController;
+  late TextEditingController _taxLabelController;
+  late TextEditingController _taxRateController;
+  late TextEditingController _receiptTermsController;
+  late bool _isTaxEnabled;
+  late bool _isTaxInclusive;
 
   String _selectedPlanTier = CustomerPlan.normal;
   late List<PlanDurationPackage> _packages;
@@ -45,6 +55,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController = TextEditingController(text: auth.phoneNumber ?? '');
     _emailController = TextEditingController(text: auth.email);
     _gymNameController = TextEditingController(text: gym.settings.gymName);
+    _gymTaglineController = TextEditingController(text: gym.settings.gymTagline);
+    _gymAddressController = TextEditingController(text: gym.settings.gymAddress);
+    _gymPhoneController = TextEditingController(text: gym.settings.gymPhone);
+    _gymEmailController = TextEditingController(text: gym.settings.gymEmail);
+    _gymTimingsController = TextEditingController(text: gym.settings.gymTimings);
+    _taxLabelController = TextEditingController(text: gym.settings.taxLabel);
+    _taxRateController = TextEditingController(
+      text: gym.settings.taxRatePercent.toStringAsFixed(
+        gym.settings.taxRatePercent.truncateToDouble() ==
+                gym.settings.taxRatePercent
+            ? 0
+            : 2,
+      ),
+    );
+    _receiptTermsController = TextEditingController(
+      text: gym.settings.receiptTerms,
+    );
+    _isTaxEnabled = gym.settings.isTaxEnabled;
+    _isTaxInclusive = gym.settings.isTaxInclusive;
     _selectedImagePath = gym.settings.gymLogoPath ?? auth.profilePhotoPath;
 
     final allPackages = gym.settings.durationPackages.isNotEmpty
@@ -64,6 +93,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _gymNameController.dispose();
+    _gymTaglineController.dispose();
+    _gymAddressController.dispose();
+    _gymPhoneController.dispose();
+    _gymEmailController.dispose();
+    _gymTimingsController.dispose();
+    _taxLabelController.dispose();
+    _taxRateController.dispose();
+    _receiptTermsController.dispose();
     for (var c in _packageControllers.values) {
       c.dispose();
     }
@@ -110,8 +147,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         orElse: () => const PlanDurationPackage(id: 'pkg_pt_diet_1', planType: CustomerPlan.personalTrainingDiet, months: 1, price: 3500.0),
       );
 
+      final parsedTaxRate = double.tryParse(_taxRateController.text.trim());
+      final taxRate = parsedTaxRate != null &&
+              parsedTaxRate.isFinite &&
+              parsedTaxRate >= 0 &&
+              parsedTaxRate <= 100
+          ? parsedTaxRate
+          : gym.settings.taxRatePercent;
       final updatedSettings = gym.settings.copyWith(
         gymName: newGymName.isNotEmpty ? newGymName : gym.settings.gymName,
+        gymTagline: _gymTaglineController.text.trim(),
+        gymAddress: _gymAddressController.text.trim(),
+        gymPhone: _gymPhoneController.text.trim(),
+        gymEmail: _gymEmailController.text.trim(),
+        gymTimings: _gymTimingsController.text.trim(),
         gymLogoPath: _selectedImagePath,
         clearGymLogo: _selectedImagePath == null || _selectedImagePath!.isEmpty,
         normalPlanFee: normal1m.price,
@@ -119,6 +168,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ptPlanFee: pt1m.price,
         ptDietPlanFee: ptDiet1m.price,
         durationPackages: updatedPackages,
+        isTaxEnabled: _isTaxEnabled,
+        taxLabel: _taxLabelController.text.trim().isEmpty
+            ? gym.settings.taxLabel
+            : _taxLabelController.text.trim(),
+        taxRatePercent: taxRate,
+        isTaxInclusive: _isTaxInclusive,
+        receiptTerms: _receiptTermsController.text.trim().isEmpty
+            ? GymSettings.defaultReceiptTerms
+            : _receiptTermsController.text.trim(),
       );
 
       await gym.updateSettings(updatedSettings);
@@ -383,7 +441,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Gym Title',
+                          'Gym Details',
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 16,
@@ -404,6 +462,167 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _gymTaglineController,
+                      label: 'Tagline / Subtitle',
+                      hint: 'e.g. Strength & Conditioning Gym',
+                      icon: Icons.short_text_rounded,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _gymAddressController,
+                      label: 'Gym Address',
+                      hint: 'Address printed on receipts',
+                      icon: Icons.location_on_outlined,
+                      keyboardType: TextInputType.multiline,
+                      minLines: 2,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _gymPhoneController,
+                      label: 'Gym Contact Phone',
+                      hint: '+91 98765 43210',
+                      icon: Icons.phone_in_talk_outlined,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _gymEmailController,
+                      label: 'Gym Contact Email',
+                      hint: 'contact@gym.com',
+                      icon: Icons.alternate_email_rounded,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _gymTimingsController,
+                      label: 'Operational Hours / Timings',
+                      hint: 'e.g. Mon–Sat: 6 AM–11 AM, 5 PM–10 PM',
+                      icon: Icons.schedule_rounded,
+                      keyboardType: TextInputType.multiline,
+                      minLines: 2,
+                      maxLines: 4,
+                      helperText:
+                          'Used in WhatsApp welcome messages. Leave blank to omit timings.',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.surfaceBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Receipt & Tax Preferences',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        'Enable Tax on Receipts',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Show a GST, VAT, or sales tax breakdown.',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      value: _isTaxEnabled,
+                      activeTrackColor: AppColors.primary,
+                      onChanged: (value) => setState(() => _isTaxEnabled = value),
+                    ),
+                    if (_isTaxEnabled) ...[
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        controller: _taxLabelController,
+                        label: 'Tax Label',
+                        hint: 'GST, VAT, Sales Tax',
+                        icon: Icons.label_outline_rounded,
+                        validator: (value) {
+                          if (_isTaxEnabled &&
+                              (value == null || value.trim().isEmpty)) {
+                            return 'Please enter a tax label';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _taxRateController,
+                        label: 'Tax Rate (%)',
+                        hint: '18',
+                        icon: Icons.percent_rounded,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (value) {
+                          if (!_isTaxEnabled) return null;
+                          final rate = double.tryParse(value?.trim() ?? '');
+                          if (rate == null ||
+                              !rate.isFinite ||
+                              rate < 0 ||
+                              rate > 100) {
+                            return 'Enter a tax rate from 0 to 100';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'Prices Include Tax',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _isTaxInclusive
+                              ? 'Tax is included in the configured plan prices.'
+                              : 'Tax is added to configured plan prices.',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                        value: _isTaxInclusive,
+                        activeTrackColor: AppColors.primary,
+                        onChanged: (value) =>
+                            setState(() => _isTaxInclusive = value),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: _receiptTermsController,
+                      label: 'Terms & Conditions (Footer Note)',
+                      hint: 'Enter receipt and membership policies',
+                      icon: Icons.policy_outlined,
+                      keyboardType: TextInputType.multiline,
+                      minLines: 5,
+                      maxLines: 10,
+                      maxLength: 800,
                     ),
                   ],
                 ),
@@ -966,6 +1185,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     bool readOnly = false,
     String? helperText,
     String? Function(String?)? validator,
+    int minLines = 1,
+    int maxLines = 1,
+    int? maxLength,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -983,6 +1205,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           controller: controller,
           keyboardType: keyboardType,
           readOnly: readOnly,
+          minLines: minLines,
+          maxLines: maxLines,
+          maxLength: maxLength,
           style: TextStyle(
             color: readOnly ? AppColors.textMuted : AppColors.textPrimary,
             fontSize: 15,

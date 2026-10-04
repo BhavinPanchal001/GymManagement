@@ -23,6 +23,12 @@ class BillRecord {
   final String? transactionRef;
   final String gymName;
   final DateTime issuedAt;
+  final bool isTaxEnabled;
+  final String taxLabel;
+  final double taxRatePercent;
+  final bool isTaxInclusive;
+  final double taxableAmount;
+  final double taxAmount;
   final String status; // 'PAID' or 'CANCELLED'
   final int durationMonths;
   final String? coveragePeriod;
@@ -46,6 +52,12 @@ class BillRecord {
     this.transactionRef,
     required this.gymName,
     required this.issuedAt,
+    this.isTaxEnabled = false,
+    this.taxLabel = 'GST',
+    this.taxRatePercent = 0.0,
+    this.isTaxInclusive = true,
+    this.taxableAmount = 0.0,
+    this.taxAmount = 0.0,
     this.status = 'PAID',
     this.durationMonths = 1,
     this.coveragePeriod,
@@ -89,6 +101,12 @@ class BillRecord {
     String? transactionRef,
     String? gymName,
     DateTime? issuedAt,
+    bool? isTaxEnabled,
+    String? taxLabel,
+    double? taxRatePercent,
+    bool? isTaxInclusive,
+    double? taxableAmount,
+    double? taxAmount,
     String? status,
     int? durationMonths,
     String? coveragePeriod,
@@ -112,6 +130,12 @@ class BillRecord {
       transactionRef: transactionRef ?? this.transactionRef,
       gymName: gymName ?? this.gymName,
       issuedAt: issuedAt ?? this.issuedAt,
+      isTaxEnabled: isTaxEnabled ?? this.isTaxEnabled,
+      taxLabel: taxLabel ?? this.taxLabel,
+      taxRatePercent: taxRatePercent ?? this.taxRatePercent,
+      isTaxInclusive: isTaxInclusive ?? this.isTaxInclusive,
+      taxableAmount: taxableAmount ?? this.taxableAmount,
+      taxAmount: taxAmount ?? this.taxAmount,
       status: status ?? this.status,
       durationMonths: durationMonths ?? this.durationMonths,
       coveragePeriod: coveragePeriod ?? this.coveragePeriod,
@@ -138,6 +162,12 @@ class BillRecord {
       'transactionRef': transactionRef,
       'gymName': gymName,
       'issuedAt': issuedAt.toIso8601String(),
+      'isTaxEnabled': isTaxEnabled,
+      'taxLabel': taxLabel,
+      'taxRatePercent': taxRatePercent,
+      'isTaxInclusive': isTaxInclusive,
+      'taxableAmount': taxableAmount,
+      'taxAmount': taxAmount,
       'status': status,
       'durationMonths': durationMonths,
       'coveragePeriod': coveragePeriod,
@@ -168,6 +198,12 @@ class BillRecord {
       issuedAt: map['issuedAt'] != null
           ? (DateTime.tryParse(map['issuedAt'] as String) ?? DateTime.now())
           : DateTime.now(),
+      isTaxEnabled: map['isTaxEnabled'] as bool? ?? false,
+      taxLabel: map['taxLabel'] as String? ?? 'GST',
+      taxRatePercent: (map['taxRatePercent'] as num?)?.toDouble() ?? 0.0,
+      isTaxInclusive: map['isTaxInclusive'] as bool? ?? true,
+      taxableAmount: (map['taxableAmount'] as num?)?.toDouble() ?? 0.0,
+      taxAmount: (map['taxAmount'] as num?)?.toDouble() ?? 0.0,
       status: map['status'] as String? ?? 'PAID',
       durationMonths: (map['durationMonths'] as num?)?.toInt() ?? 1,
       coveragePeriod: map['coveragePeriod'] as String?,

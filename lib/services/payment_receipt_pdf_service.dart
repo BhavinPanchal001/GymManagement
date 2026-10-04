@@ -79,6 +79,18 @@ class PaymentReceiptPdfService {
     return result.isEmpty ? 'Zero Rupees Only' : '$result Rupees Only';
   }
 
+  static double calculateTaxAmount({
+    required double amount,
+    required double ratePercent,
+    required bool isInclusive,
+  }) {
+    if (amount <= 0 || ratePercent <= 0) return 0;
+    final rate = ratePercent / 100;
+    return isInclusive
+        ? amount - (amount / (1 + rate))
+        : amount * rate;
+  }
+
   /// Generates the official Payment Receipt / Invoice as a vector PDF document
   Future<Uint8List> generateReceiptPdf({
     required BillRecord bill,
@@ -193,6 +205,27 @@ class PaymentReceiptPdfService {
     }
 
     final gymName = sanitize(currentGymName.toUpperCase());
+    final gymAddress = sanitize(gymSettings.gymAddress.trim());
+    final gymPhone = sanitize(gymSettings.gymPhone.trim());
+    final gymEmail = sanitize(gymSettings.gymEmail.trim());
+    final receiptTerms = sanitize(gymSettings.receiptTerms.trim().isEmpty
+        ? GymSettings.defaultReceiptTerms
+        : gymSettings.receiptTerms.trim());
+    final taxLabel = sanitize(effectiveBill.taxLabel.trim().isEmpty
+        ? 'Tax'
+        : effectiveBill.taxLabel.trim());
+    final taxRateText =
+        effectiveBill.taxRatePercent.truncateToDouble() ==
+                effectiveBill.taxRatePercent
+            ? effectiveBill.taxRatePercent.toStringAsFixed(0)
+            : effectiveBill.taxRatePercent.toStringAsFixed(2);
+    final taxAmount =
+        effectiveBill.isTaxEnabled ? effectiveBill.taxAmount : 0.0;
+    final receiptSubtotal = effectiveBill.isTaxEnabled
+        ? (effectiveBill.taxableAmount > 0
+            ? effectiveBill.taxableAmount
+            : effectiveBill.amount - taxAmount)
+        : effectiveBill.amount;
 
     final memberId = effectiveCustomer?.cardNumber.trim().isNotEmpty == true
         ? effectiveCustomer!.cardNumber.trim()
@@ -287,7 +320,9 @@ class PaymentReceiptPdfService {
                               ),
                               pw.SizedBox(height: 3),
                               pw.Text(
-                                'Official Payment Receipt & Tax Invoice',
+                                effectiveBill.isTaxEnabled
+                                    ? 'Official Payment Receipt & Tax Invoice'
+                                    : 'Official Payment Receipt',
                                 style: pw.TextStyle(
                                   font: effectiveMedium,
                                   fontSize: 8.5,
@@ -295,6 +330,31 @@ class PaymentReceiptPdfService {
                                   letterSpacing: 0.5,
                                 ),
                               ),
+                              if (gymAddress.isNotEmpty) ...[
+                                pw.SizedBox(height: 3),
+                                pw.Text(
+                                  gymAddress,
+                                  style: pw.TextStyle(
+                                    font: effectiveRegular,
+                                    fontSize: 7.5,
+                                    color: slateMedium,
+                                  ),
+                                ),
+                              ],
+                              if (gymPhone.isNotEmpty || gymEmail.isNotEmpty) ...[
+                                pw.SizedBox(height: 2),
+                                pw.Text(
+                                  [
+                                    if (gymPhone.isNotEmpty) gymPhone,
+                                    if (gymEmail.isNotEmpty) gymEmail,
+                                  ].join(' | '),
+                                  style: pw.TextStyle(
+                                    font: effectiveRegular,
+                                    fontSize: 7.5,
+                                    color: slateMedium,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -341,7 +401,9 @@ class PaymentReceiptPdfService {
                         ),
                         pw.SizedBox(height: 8),
                         pw.Text(
-                          'RECEIPT / TAX INVOICE',
+                          effectiveBill.isTaxEnabled
+                              ? 'RECEIPT / TAX INVOICE'
+                              : 'PAYMENT RECEIPT',
                           style: pw.TextStyle(
                             font: effectiveBold,
                             fontSize: 14,
@@ -717,11 +779,16 @@ class PaymentReceiptPdfService {
                       ),
                       child: pw.Column(
                         children: [
-                          _buildSummaryRow('Subtotal:', formatMoney(planTotal), effectiveRegular, effectiveMedium),
-                          pw.SizedBox(height: 4),
-                          _buildSummaryRow('Discount / Offer:', formatMoney(0.0), effectiveRegular, effectiveMedium),
-                          pw.SizedBox(height: 4),
-                          _buildSummaryRow('Taxes / GST:', 'Inclusive', effectiveRegular, effectiveMedium),
+                          _buildSummaryRow('Subtotal:', formatMoney(receiptSubtotal), effectiveRegular, effectiveMedium),
+                          if (effectiveBill.isTaxEnabled) ...[
+                            pw.SizedBox(height: 4),
+                            _buildSummaryRow(
+                              '$taxLabel ($taxRateText%):',
+                              '${formatMoney(taxAmount)} ${effectiveBill.isTaxInclusive ? "(Included)" : "(Exclusive)"}',
+                              effectiveRegular,
+                              effectiveMedium,
+                            ),
+                          ],
                           if (isInstallment) ...[
                             if (paidEarlier > 0) ...[
                               pw.SizedBox(height: 4),
@@ -794,13 +861,10 @@ class PaymentReceiptPdfService {
                     ),
                     pw.SizedBox(height: 3),
                     pw.Text(
-                      '1. All gym membership fees once paid are non-refundable, non-adjustable, and strictly non-transferable under any circumstances.\n'
-                      '2. Membership is valid strictly for the specified period ($validityPeriod). Post expiration, admission requires timely renewal.\n'
-                      '3. Members are required to carry this digital receipt or membership card and adhere strictly to gym safety rules and equipment etiquette.\n'
-                      '4. Management reserves the right of admission and membership suspension in case of violation of gym guidelines.',
+                      receiptTerms,
                       style: pw.TextStyle(
                         font: effectiveRegular,
-                        fontSize: 7.2,
+                        fontSize: receiptTerms.length > 650 ? 6.5 : 7.2,
                         color: slateMedium,
                         lineSpacing: 1.5,
                       ),
