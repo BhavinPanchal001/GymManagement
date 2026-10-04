@@ -9,6 +9,7 @@ import '../models/bill.dart';
 import '../models/expense.dart';
 import '../models/gym_settings.dart';
 import '../utils/date_utils.dart';
+import '../utils/image_storage_utils.dart';
 import 'firestore_service.dart';
 import 'auth_service.dart';
 import 'cloud_sync_queue.dart';
@@ -1032,11 +1033,15 @@ class GymService extends ChangeNotifier {
     while (_customers.any((c) => c.id == newId)) {
       newId += 'x';
     }
+    final imageBase64 = ImageStorageUtils.isLocalFilePath(imagePath)
+        ? await ImageStorageUtils.createThumbnailBase64(imagePath!)
+        : null;
     final customer = Customer(
       id: newId,
       name: name.trim(),
       phone: phone.trim(),
       imagePath: imagePath,
+      imageBase64: imageBase64,
       joinDate: joinDate ?? DateTime.now(),
       isActive: true,
       notes: notes.trim(),
@@ -1251,8 +1256,25 @@ class GymService extends ChangeNotifier {
   Future<void> updateCustomer(Customer updated) async {
     final index = _customers.indexWhere((c) => c.id == updated.id);
     if (index != -1) {
+      final previous = _customers[index];
+      final imageChanged = previous.imagePath != updated.imagePath;
+      final imageBase64 =
+          imageChanged && ImageStorageUtils.isLocalFilePath(updated.imagePath)
+          ? await ImageStorageUtils.createThumbnailBase64(updated.imagePath!)
+          : null;
+      final prepared = imageChanged
+          ? updated.copyWith(
+              imageBase64: imageBase64,
+              clearImageBase64: imageBase64 == null,
+            )
+          : updated;
       await _freezeUnagreedAttendance();
-      await _serializeFinancialSave(() => _commitFinancialRecords(customers: [updated]));
+      await _serializeFinancialSave(
+        () => _commitFinancialRecords(customers: [prepared]),
+      );
+      if (imageChanged) {
+        await ImageStorageUtils.deleteManagedImage(previous.imagePath);
+      }
     }
   }
 
@@ -2801,18 +2823,38 @@ class GymService extends ChangeNotifier {
 
   Future<void> updateSettings(GymSettings newSettings) async {
     await _freezeUnagreedAttendance();
-    _settings = newSettings;
+    final previousLogoPath = _settings.gymLogoPath;
+    final logoChanged = previousLogoPath != newSettings.gymLogoPath;
+    final logoBase64 = logoChanged
+        ? (newSettings.gymLogoPath == null ||
+                  newSettings.gymLogoPath!.isEmpty ||
+                  newSettings.gymLogoPath!.startsWith('avatar:')
+              ? null
+              : await ImageStorageUtils.createThumbnailBase64(
+                  newSettings.gymLogoPath!,
+                ))
+        : newSettings.gymLogoBase64;
+    final preparedSettings = logoChanged
+        ? newSettings.copyWith(
+            gymLogoBase64: logoBase64,
+            clearGymLogoBase64: logoBase64 == null,
+          )
+        : newSettings;
+    _settings = preparedSettings;
     notifyListeners();
     await _saveSettings();
+    if (logoChanged) {
+      await ImageStorageUtils.deleteManagedImage(previousLogoPath);
+    }
   }
 
   Future<void> updateGymLogo(String? logoPath) async {
-    _settings = _settings.copyWith(
-      gymLogoPath: logoPath,
-      clearGymLogo: logoPath == null || logoPath.isEmpty,
+    await updateSettings(
+      _settings.copyWith(
+        gymLogoPath: logoPath,
+        clearGymLogo: logoPath == null || logoPath.isEmpty,
+      ),
     );
-    notifyListeners();
-    await _saveSettings();
   }
 
   Future<void> updateStandardMonthlyFee(double fee) async {
