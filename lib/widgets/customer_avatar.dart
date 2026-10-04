@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../utils/image_storage_utils.dart';
 
 class CustomerAvatar extends StatelessWidget {
   final String? imagePath;
+  final String? imageBase64;
   final String name;
   final double radius;
   final VoidCallback? onTap;
@@ -10,6 +12,7 @@ class CustomerAvatar extends StatelessWidget {
   const CustomerAvatar({
     super.key,
     required this.imagePath,
+    this.imageBase64,
     required this.name,
     this.radius = 24,
     this.onTap,
@@ -93,14 +96,7 @@ class CustomerAvatar extends StatelessWidget {
           ),
         );
       } else {
-        String cleanPath = imagePath!;
-        if (cleanPath.startsWith('file://')) {
-          try {
-            cleanPath = Uri.parse(cleanPath).toFilePath();
-          } catch (_) {
-            cleanPath = cleanPath.replaceFirst('file://', '');
-          }
-        }
+        final cleanPath = ImageStorageUtils.normalizeFilePath(imagePath!);
         final file = File(cleanPath);
         if (file.existsSync()) {
           avatarContent = Container(
@@ -122,11 +118,11 @@ class CustomerAvatar extends StatelessWidget {
             ),
           );
         } else {
-          avatarContent = _buildInitialsFallback();
+          avatarContent = _buildSyncedThumbnail() ?? _buildInitialsFallback();
         }
       }
     } else {
-      avatarContent = _buildInitialsFallback();
+      avatarContent = _buildSyncedThumbnail() ?? _buildInitialsFallback();
     }
 
     if (onTap != null) {
@@ -137,6 +133,29 @@ class CustomerAvatar extends StatelessWidget {
     }
 
     return avatarContent;
+  }
+
+  Widget? _buildSyncedThumbnail() {
+    final bytes = ImageStorageUtils.decodeBase64Image(imageBase64);
+    if (bytes == null) return null;
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        image: DecorationImage(
+          image: MemoryImage(bytes),
+          fit: BoxFit.cover,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildInitialsFallback() {

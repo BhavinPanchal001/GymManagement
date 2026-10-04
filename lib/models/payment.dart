@@ -96,6 +96,12 @@ class PaymentRecord {
   final DateTime? paidAt;
   final String? notes;
   final String? transactionRef;
+  final bool isTaxEnabled;
+  final String taxLabel;
+  final double taxRatePercent;
+  final bool isTaxInclusive;
+  final double taxableAmount;
+  final double taxAmount;
   /// Number of months covered by this payment (1 for standard monthly, or 3, 6, 12)
   final int durationMonths;
   /// If this month was covered as part of a multi-month package paid in another month,
@@ -120,6 +126,12 @@ class PaymentRecord {
     this.paidAt,
     this.notes,
     this.transactionRef,
+    this.isTaxEnabled = false,
+    this.taxLabel = 'GST',
+    this.taxRatePercent = 0.0,
+    this.isTaxInclusive = true,
+    this.taxableAmount = 0.0,
+    this.taxAmount = 0.0,
     this.durationMonths = 1,
     this.coveredByMonthYear,
     this.startDate,
@@ -176,6 +188,12 @@ class PaymentRecord {
     DateTime? paidAt,
     String? notes,
     String? transactionRef,
+    bool? isTaxEnabled,
+    String? taxLabel,
+    double? taxRatePercent,
+    bool? isTaxInclusive,
+    double? taxableAmount,
+    double? taxAmount,
     int? durationMonths,
     String? coveredByMonthYear,
     DateTime? startDate,
@@ -195,6 +213,12 @@ class PaymentRecord {
       paidAt: paidAt ?? this.paidAt,
       notes: notes ?? this.notes,
       transactionRef: transactionRef ?? this.transactionRef,
+      isTaxEnabled: isTaxEnabled ?? this.isTaxEnabled,
+      taxLabel: taxLabel ?? this.taxLabel,
+      taxRatePercent: taxRatePercent ?? this.taxRatePercent,
+      isTaxInclusive: isTaxInclusive ?? this.isTaxInclusive,
+      taxableAmount: taxableAmount ?? this.taxableAmount,
+      taxAmount: taxAmount ?? this.taxAmount,
       durationMonths: durationMonths ?? this.durationMonths,
       coveredByMonthYear: coveredByMonthYear ?? this.coveredByMonthYear,
       startDate: startDate ?? this.startDate,
@@ -218,6 +242,12 @@ class PaymentRecord {
       'paidAt': paidAt?.toIso8601String(),
       'notes': notes,
       'transactionRef': transactionRef,
+      'isTaxEnabled': isTaxEnabled,
+      'taxLabel': taxLabel,
+      'taxRatePercent': taxRatePercent,
+      'isTaxInclusive': isTaxInclusive,
+      'taxableAmount': taxableAmount,
+      'taxAmount': taxAmount,
       'durationMonths': durationMonths,
       'coveredByMonthYear': coveredByMonthYear,
       'startDate': startDate?.toIso8601String(),
@@ -245,6 +275,12 @@ class PaymentRecord {
           : null,
       notes: map['notes'] as String?,
       transactionRef: map['transactionRef'] as String?,
+      isTaxEnabled: map['isTaxEnabled'] as bool? ?? false,
+      taxLabel: map['taxLabel'] as String? ?? 'GST',
+      taxRatePercent: (map['taxRatePercent'] as num?)?.toDouble() ?? 0.0,
+      isTaxInclusive: map['isTaxInclusive'] as bool? ?? true,
+      taxableAmount: (map['taxableAmount'] as num?)?.toDouble() ?? 0.0,
+      taxAmount: (map['taxAmount'] as num?)?.toDouble() ?? 0.0,
       durationMonths: (map['durationMonths'] as num?)?.toInt() ?? 1,
       coveredByMonthYear: map['coveredByMonthYear'] as String?,
       startDate: map['startDate'] != null
@@ -278,6 +314,53 @@ class MemberPendingSummary {
 
   List<String> get pendingMonths =>
       pendingRecords.map((r) => r.monthYear).toList();
+}
+
+enum DueUrgency {
+  /// Plan still running and not attended yet: can be paid by the plan end.
+  upcoming,
+  /// Plan still running but already attended: should be paid now.
+  attendedInPlan,
+  /// Plan period has ended and the fee is still unpaid.
+  overdue,
+}
+
+class DueBucket {
+  final List<PaymentRecord> records;
+  final double amount;
+
+  const DueBucket({this.records = const [], this.amount = 0});
+
+  int get count => records.length;
+  bool get isEmpty => records.isEmpty;
+
+  DateTime? get earliestEndDate => records.isEmpty
+      ? null
+      : records
+          .map((r) => r.effectiveEndDate)
+          .reduce((a, b) => a.isBefore(b) ? a : b);
+}
+
+class MemberDueBreakdown {
+  final DueBucket upcoming;
+  final DueBucket attendedInPlan;
+  final DueBucket overdue;
+
+  const MemberDueBreakdown({
+    this.upcoming = const DueBucket(),
+    this.attendedInPlan = const DueBucket(),
+    this.overdue = const DueBucket(),
+  });
+
+  DueBucket of(DueUrgency urgency) => switch (urgency) {
+        DueUrgency.upcoming => upcoming,
+        DueUrgency.attendedInPlan => attendedInPlan,
+        DueUrgency.overdue => overdue,
+      };
+
+  int get totalCount => upcoming.count + attendedInPlan.count + overdue.count;
+  double get totalAmount =>
+      upcoming.amount + attendedInPlan.amount + overdue.amount;
 }
 
 class MonthPendingItem {

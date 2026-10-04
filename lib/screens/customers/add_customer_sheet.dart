@@ -222,6 +222,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           name: _nameController.text.trim(),
           phone: _phoneController.text.trim(),
           imagePath: _selectedImagePath,
+          clearImagePath: _selectedImagePath == null,
           joinDate: _joinDate,
           notes: _notesController.text.trim(),
           planType: _selectedPlan,
@@ -343,7 +344,13 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               // Avatar / Photo Selector
               AvatarSelector(
                 initialImagePath: _selectedImagePath,
+                initialImageBase64:
+                    _selectedImagePath == widget.customerToEdit?.imagePath
+                        ? widget.customerToEdit?.imageBase64
+                        : null,
                 customerName: _nameController.text,
+                storageKey:
+                    'avatar_${widget.customerToEdit?.id ?? _registrationOperationId}',
                 onImageSelected: (newPath) {
                   setState(() => _selectedImagePath = newPath);
                 },
@@ -771,8 +778,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         const SizedBox(height: 8),
         ...packages.map((pkg) {
           final isSelected = effectiveSelected == pkg.months;
-          final regularPrice = oneMonthPkg.price * pkg.months;
-          final savings = (pkg.months > 1 && regularPrice > pkg.price) ? (regularPrice - pkg.price).toInt() : 0;
+          final payablePrice = settings.totalForConfiguredPrice(pkg.price);
+          final regularPrice = settings.totalForConfiguredPrice(oneMonthPkg.price * pkg.months);
+          final savings = (pkg.months > 1 && regularPrice > payablePrice) ? (regularPrice - payablePrice).toInt() : 0;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -850,7 +858,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       ),
                     ),
                     Text(
-                      '$currency${pkg.price.toInt()}',
+                      GymDateUtils.formatCurrency(payablePrice, symbol: currency),
                       style: TextStyle(
                         color: isSelected ? accentColor : AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
@@ -869,7 +877,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
   Widget _buildUpfrontPaymentCard(String currency) {
     final settings = GymService().settings;
-    final fee = settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths);
+    final fee = settings.totalForConfiguredPrice(
+      settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths),
+    );
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -1070,7 +1080,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   ),
                   Text(
                     GymDateUtils.formatCurrency(fee, symbol: currency),
-                    style: const TextStyle(color: AppColors.paid, fontSize: 18, fontWeight: FontWeight.w900),
+                    style: TextStyle(color: AppColors.paid, fontSize: 18, fontWeight: FontWeight.w900),
                   ),
                 ],
               ),

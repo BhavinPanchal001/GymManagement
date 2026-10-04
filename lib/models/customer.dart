@@ -41,6 +41,7 @@ class Customer {
   final String name;
   final String phone;
   final String? imagePath;
+  final String? imageBase64;
   final DateTime joinDate;
   final bool isActive;
   final String notes;
@@ -59,6 +60,7 @@ class Customer {
     required this.name,
     required this.phone,
     this.imagePath,
+    this.imageBase64,
     required this.joinDate,
     this.isActive = true,
     this.notes = '',
@@ -81,6 +83,9 @@ class Customer {
     String? name,
     String? phone,
     String? imagePath,
+    String? imageBase64,
+    bool clearImagePath = false,
+    bool clearImageBase64 = false,
     DateTime? joinDate,
     bool? isActive,
     String? notes,
@@ -98,7 +103,9 @@ class Customer {
       id: id ?? this.id,
       name: name ?? this.name,
       phone: phone ?? this.phone,
-      imagePath: imagePath ?? this.imagePath,
+      imagePath: clearImagePath ? null : (imagePath ?? this.imagePath),
+      imageBase64:
+          clearImageBase64 ? null : (imageBase64 ?? this.imageBase64),
       joinDate: joinDate ?? this.joinDate,
       isActive: isActive ?? this.isActive,
       notes: notes ?? this.notes,
@@ -120,6 +127,7 @@ class Customer {
       'name': name,
       'phone': phone,
       'imagePath': imagePath,
+      'imageBase64': imageBase64,
       'joinDate': joinDate.toIso8601String(),
       'isActive': isActive,
       'notes': notes,
@@ -141,6 +149,7 @@ class Customer {
       name: map['name'] as String? ?? '',
       phone: map['phone'] as String? ?? '',
       imagePath: map['imagePath'] as String?,
+      imageBase64: map['imageBase64'] as String?,
       joinDate: map['joinDate'] != null
           ? DateTime.tryParse(map['joinDate'] as String) ?? DateTime.now()
           : DateTime.now(),

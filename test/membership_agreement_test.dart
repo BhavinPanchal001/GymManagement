@@ -70,6 +70,28 @@ void main() {
     },
   );
 
+  test('same-day pay-later registration remains available for welcome onboarding',
+      () async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final customer = await gym.addCustomer(
+      name: 'New member',
+      phone: '9876543212',
+      joinDate: today,
+      membershipStartDate: now,
+      membershipFee: 600.75,
+      operationId: 'new-member-registration',
+    );
+
+    expect(
+      gym.getMemberLifecycleStage(
+        customer,
+        '${today.year}-${today.month.toString().padLeft(2, '0')}',
+      ),
+      MemberLifecycleStage.newMember,
+    );
+  });
+
   test(
     'multi-month credit package is charged once in its start month',
     () async {
@@ -84,6 +106,51 @@ void main() {
       expect(groups, hasLength(1));
       expect(groups.single.monthKey, '2024-01');
       expect(groups.single.totalAmount, 1500.75);
+      expect(gym.getCustomerPaymentHistory(c.id), hasLength(1));
+    },
+  );
+
+  test(
+    'correcting pre-membership attendance removes its inferred agreement',
+    () async {
+      final c = await gym.addCustomer(
+        name: 'Corrected attendance member',
+        phone: '9876543219',
+        joinDate: DateTime(2024, 8, 15),
+        planDurationMonths: 3,
+        membershipStartDate: DateTime(2024, 8, 15),
+        membershipFee: 1500,
+        operationId: 'corrected-attendance-registration',
+      );
+
+      await gym.toggleAttendance(
+        c.id,
+        '2024-06-15',
+        AttendanceStatus.present,
+      );
+      expect(gym.getAllPendingDues().single.totalPendingAmount, 3000);
+      expect(gym.getCustomerPaymentHistory(c.id), hasLength(2));
+
+      await gym.toggleAttendance(
+        c.id,
+        '2024-06-15',
+        AttendanceStatus.absent,
+      );
+      await gym.toggleAttendance(
+        c.id,
+        '2024-08-15',
+        AttendanceStatus.present,
+      );
+      await gym.toggleAttendance(
+        c.id,
+        '2024-09-15',
+        AttendanceStatus.present,
+      );
+
+      final pending = gym.getAllPendingDues().single;
+      expect(pending.totalPendingAmount, 1500);
+      expect(pending.pendingRecords, hasLength(1));
+      expect(pending.pendingRecords.single.monthYear, '2024-08');
       expect(gym.getCustomerPaymentHistory(c.id), hasLength(1));
     },
   );

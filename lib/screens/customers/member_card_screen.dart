@@ -6,6 +6,7 @@ import '../../services/member_card_pdf_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
+import '../../utils/image_storage_utils.dart';
 import '../../widgets/gym_logo_widget.dart';
 
 class MemberCardScreen extends StatefulWidget {
@@ -40,6 +41,40 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   void initState() {
     super.initState();
     _selectedYear = DateTime.now().year;
+  }
+
+  Widget _buildCustomerPhoto() {
+    final imagePath = widget.customer.imagePath;
+    if (imagePath != null && imagePath.isNotEmpty) {
+      final file = File(ImageStorageUtils.normalizeFilePath(imagePath));
+      if (file.existsSync()) {
+        return Image.file(file, fit: BoxFit.cover);
+      }
+    }
+
+    final bytes =
+        ImageStorageUtils.decodeBase64Image(widget.customer.imageBase64);
+    if (bytes != null) {
+      return Image.memory(bytes, fit: BoxFit.cover);
+    }
+
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.person, color: cardRed, size: 28),
+          SizedBox(height: 2),
+          Text(
+            'PHOTO',
+            style: TextStyle(
+              color: cardRed,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handlePrint() async {
@@ -121,10 +156,10 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
         '${widget.customer.joinDate.day}, ${widget.customer.joinDate.month}, ${widget.customer.joinDate.year}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1E222D),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Member Entry Card'),
-        backgroundColor: const Color(0xFF1E222D),
+        backgroundColor: AppColors.background,
         elevation: 0,
         actions: [
           // Year Selector
@@ -132,17 +167,17 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: AppColors.surfaceElevated,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              border: Border.all(color: AppColors.surfaceBorder),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _selectedYear,
-                dropdownColor: const Color(0xFF2A2E3D),
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                style: const TextStyle(
-                  color: Colors.white,
+                dropdownColor: AppColors.surfaceElevated,
+                icon: Icon(Icons.arrow_drop_down, color: AppColors.textPrimary),
+                style: TextStyle(
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -151,7 +186,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                   DateTime.now().year - 1,
                   DateTime.now().year,
                   DateTime.now().year + 1,
-                ].map((y) => DropdownMenuItem(value: y, child: Text('$y'))).toList(),
+                ].map((y) => DropdownMenuItem(value: y, child: Text('$y', style: TextStyle(color: AppColors.textPrimary)))).toList(),
                 onChanged: (y) {
                   if (y != null) setState(() => _selectedYear = y);
                 },
@@ -159,12 +194,12 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.print_rounded, color: Colors.white),
+            icon: Icon(Icons.print_rounded, color: AppColors.textPrimary),
             tooltip: 'Print Card',
             onPressed: _isGeneratingPdf ? null : _handlePrint,
           ),
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
+            icon: Icon(Icons.picture_as_pdf_rounded, color: AppColors.textPrimary),
             tooltip: 'Download / Share PDF',
             onPressed: _isGeneratingPdf ? null : _handleSharePdf,
           ),
@@ -225,29 +260,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                     border: Border.all(color: cardRed, width: 1.2),
                                     color: Colors.grey.shade50,
                                   ),
-                                  child: widget.customer.imagePath != null &&
-                                          File(widget.customer.imagePath!).existsSync()
-                                      ? Image.file(
-                                          File(widget.customer.imagePath!),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : const Center(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.person, color: cardRed, size: 28),
-                                              SizedBox(height: 2),
-                                              Text(
-                                                'PHOTO',
-                                                style: TextStyle(
-                                                  color: cardRed,
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                  child: _buildCustomerPhoto(),
                                 ),
                                 const SizedBox(width: 10),
 
@@ -281,6 +294,8 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                       // Circular Gym Logo
                                       GymLogoWidget(
                                         logoPath: gymLogoPath,
+                                        logoBase64:
+                                            gymSettings.gymLogoBase64,
                                         gymName: gymName,
                                         size: 40,
                                         shape: BoxShape.circle,

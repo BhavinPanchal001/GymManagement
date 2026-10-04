@@ -385,6 +385,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
 
   Widget _buildKpiSection(double totalPending, int unpaidMembersCount, int pendingRecordsCount, String currency) {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -523,6 +524,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                             )
                           : null,
                       contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                      filled: true,
                       fillColor: AppColors.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -531,6 +533,10 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(color: AppColors.surfaceBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: AppColors.primary, width: 1.2),
                       ),
                     ),
                   ),
@@ -588,8 +594,12 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
             children: [
               Expanded(
                 child: Text(
-                  'Showing $totalCount members with pending dues',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                  totalCount == 1 ? '1 member with dues' : '$totalCount members with dues',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -597,6 +607,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
               const SizedBox(width: 8),
               Container(
                 height: 32,
+                padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(8),
@@ -621,11 +632,12 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     final isSelected = _viewMode == mode;
     return GestureDetector(
       onTap: () => setState(() => _viewMode = mode),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
           children: [
@@ -680,6 +692,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                 children: [
                   CustomerAvatar(
                     imagePath: customer.imagePath,
+                    imageBase64: customer.imageBase64,
                     name: customer.name,
                     radius: 22,
                   ),
@@ -695,6 +708,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         InkWell(
@@ -709,10 +724,14 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                             children: [
                               Icon(Icons.phone_rounded, color: AppColors.primary, size: 12),
                               const SizedBox(width: 4),
-                              Flexible(child: Text(
-                                customer.phone,
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                              )),
+                              Flexible(
+                                child: Text(
+                                  customer.phone,
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -743,7 +762,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Pending months pills
               Wrap(
@@ -774,6 +793,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 10,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -781,67 +801,91 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 12),
 
-              // Action Buttons Row
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
+              const SizedBox(height: 12),
+              Divider(color: AppColors.surfaceBorder.withValues(alpha: 0.6), height: 1),
+              const SizedBox(height: 10),
+
+              // Action Buttons Row (Unified & Aligned)
+              Row(
                 children: [
-                  // Call Member Button
-                  IconButton(
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                      foregroundColor: AppColors.primary,
-                      padding: const EdgeInsets.all(8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                  // Call Quick Button
+                  Tooltip(
+                    message: 'Call Member',
+                    child: InkWell(
+                      onTap: () => PhoneService().makeCall(
+                        customer.phone,
+                        context: context,
+                        memberName: customer.name,
                       ),
-                    ),
-                    icon: const Icon(Icons.call_rounded, size: 16),
-                    tooltip: 'Call Member',
-                    onPressed: () => PhoneService().makeCall(
-                      customer.phone,
-                      context: context,
-                      memberName: customer.name,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+                        ),
+                        child: Icon(Icons.call_rounded, size: 17, color: AppColors.primary),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
 
                   // WhatsApp Reminder Button
-                  OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.whatsapp,
-                        side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.5)),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  Expanded(
+                    flex: 4,
+                    child: SizedBox(
+                      height: 38,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openWhatsAppReminder(
+                          customer,
+                          latestRecord.monthYear,
+                          item.totalPendingAmount,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: AppColors.whatsapp.withValues(alpha: 0.1),
+                          foregroundColor: AppColors.whatsapp,
+                          side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.35)),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.chat_rounded, size: 15, color: AppColors.whatsapp),
+                        label: const Text(
+                          'WhatsApp',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      icon: const Icon(Icons.chat_rounded, size: 15, color: AppColors.whatsapp),
-                      label: const Text('WhatsApp', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      onPressed: () => _openWhatsAppReminder(
-                        customer,
-                        latestRecord.monthYear,
-                        item.totalPendingAmount,
-                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
 
-                  // Mark as Paid Button
-                  ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.primaryOn,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
+                  // Record Payment Button
+                  Expanded(
+                    flex: 5,
+                    child: SizedBox(
+                      height: 38,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openMarkPaid(customer, item.pendingRecords.first),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.primaryOn,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.check_circle_rounded, size: 15),
+                        label: Text(
+                          item.pendingRecords.first.isPaid ? 'Collect Balance' : 'Record Payment',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 15),
-                      label: Text(
-                        item.pendingRecords.first.isPaid ? 'Collect Balance' : 'Record Payment',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      onPressed: () => _openMarkPaid(customer, item.pendingRecords.first),
+                    ),
                   ),
                 ],
               ),
@@ -883,24 +927,19 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                   border: Border(bottom: BorderSide(color: AppColors.surfaceBorder)),
                 ),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          formattedMonth,
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      formattedMonth,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
+                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -932,18 +971,17 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   final customer = item.customer;
                   final payment = item.payment;
 
-                  return Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 6,
+                  return Row(
                     children: [
                       CustomerAvatar(
                         imagePath: customer.imagePath,
+                        imageBase64: customer.imageBase64,
                         name: customer.name,
                         radius: 18,
                       ),
                       const SizedBox(width: 10),
-                      Column(
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -953,13 +991,19 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               customer.phone,
                               style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         GymDateUtils.formatCurrency(GymService().pendingAmountOf(payment), symbol: currency),
                         style: const TextStyle(
@@ -968,13 +1012,15 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                           fontSize: 13,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
 
                       // Quick Call Icon
                       IconButton(
                         icon: Icon(Icons.call_rounded, color: AppColors.primary, size: 18),
                         tooltip: 'Call Member',
                         visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                         onPressed: () => PhoneService().makeCall(
                           customer.phone,
                           context: context,
@@ -987,6 +1033,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         icon: const Icon(Icons.chat_rounded, color: AppColors.whatsapp, size: 18),
                         tooltip: 'WhatsApp Reminder',
                         visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                         onPressed: () => _openWhatsAppReminder(
                           customer,
                           group.monthKey,
@@ -999,6 +1047,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         icon: Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
                         tooltip: payment.isPaid ? 'Collect Balance' : 'Record Payment',
                         visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                         onPressed: () => _openMarkPaid(customer, payment),
                       ),
                     ],
@@ -1013,38 +1063,58 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.paid.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+    final isSearching = _searchQuery.trim().isNotEmpty;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight > 0 ? constraints.maxHeight : 0,
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: (isSearching ? AppColors.textMuted : AppColors.paid).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isSearching ? Icons.search_off_rounded : Icons.verified_rounded,
+                        color: isSearching ? AppColors.textSecondary : AppColors.paid,
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      isSearching ? 'No Matching Members' : 'All Clear!',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isSearching
+                          ? 'No pending dues found matching "$_searchQuery".'
+                          : 'No pending payments found for this selected date range.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
-              child: const Icon(Icons.verified_rounded, color: AppColors.paid, size: 48),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'All Clear!',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'No pending payments found for this selected date range or query.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -87,6 +87,10 @@ void main() {
           'payment',
           'balance',
         ].contains(screen);
+        // Tabs with a search field are also checked with the on-screen keyboard
+        // open inside a simulated home navigation shell.
+        final inHomeShell = ['billing', 'attendance'].contains(screen);
+        final keyboardOpen = keyboard || inHomeShell;
         final content = switch (screen) {
           'billing' => const BillingTab(),
           'member' => CustomerDetailScreen(customerId: member.id),
@@ -119,13 +123,17 @@ void main() {
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
                 textScaler: const TextScaler.linear(1.3),
-                viewInsets: keyboard
+                viewInsets: keyboardOpen
                     ? const EdgeInsets.only(bottom: 240)
                     : EdgeInsets.zero,
               ),
               child: child!,
             ),
-            home: Scaffold(body: content),
+            home: Scaffold(
+              bottomNavigationBar:
+                  inHomeShell ? const SizedBox(height: 68) : null,
+              body: content,
+            ),
           ),
         );
         if (keyboard) await tester.tap(find.text('Open'));
