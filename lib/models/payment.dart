@@ -280,6 +280,53 @@ class MemberPendingSummary {
       pendingRecords.map((r) => r.monthYear).toList();
 }
 
+enum DueUrgency {
+  /// Plan still running and not attended yet: can be paid by the plan end.
+  upcoming,
+  /// Plan still running but already attended: should be paid now.
+  attendedInPlan,
+  /// Plan period has ended and the fee is still unpaid.
+  overdue,
+}
+
+class DueBucket {
+  final List<PaymentRecord> records;
+  final double amount;
+
+  const DueBucket({this.records = const [], this.amount = 0});
+
+  int get count => records.length;
+  bool get isEmpty => records.isEmpty;
+
+  DateTime? get earliestEndDate => records.isEmpty
+      ? null
+      : records
+          .map((r) => r.effectiveEndDate)
+          .reduce((a, b) => a.isBefore(b) ? a : b);
+}
+
+class MemberDueBreakdown {
+  final DueBucket upcoming;
+  final DueBucket attendedInPlan;
+  final DueBucket overdue;
+
+  const MemberDueBreakdown({
+    this.upcoming = const DueBucket(),
+    this.attendedInPlan = const DueBucket(),
+    this.overdue = const DueBucket(),
+  });
+
+  DueBucket of(DueUrgency urgency) => switch (urgency) {
+        DueUrgency.upcoming => upcoming,
+        DueUrgency.attendedInPlan => attendedInPlan,
+        DueUrgency.overdue => overdue,
+      };
+
+  int get totalCount => upcoming.count + attendedInPlan.count + overdue.count;
+  double get totalAmount =>
+      upcoming.amount + attendedInPlan.amount + overdue.amount;
+}
+
 class MonthPendingItem {
   final Customer customer;
   final PaymentRecord payment;

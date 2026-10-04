@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/customer.dart';
 import '../../models/attendance.dart';
@@ -29,16 +30,19 @@ class CustomerDetailScreen extends StatefulWidget {
 }
 
 class _CustomerDetailScreenState extends State<CustomerDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late DateTime _displayedMonth;
   late TabController _tabController;
   bool _isCustomRangeMode = false;
   DateTime? _customStartDate;
   DateTime? _customEndDate;
+  Timer? _midnightTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleMidnightRefresh();
     final now = DateTime.now();
     final customer = GymService().getCustomerById(widget.customerId);
     if (customer != null && widget.initialTabIndex == 1) {
@@ -61,8 +65,30 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
+  // Due urgency depends on today's date, so rebuild when the day changes.
+  void _scheduleMidnightRefresh() {
+    _midnightTimer?.cancel();
+    final now = DateTime.now();
+    final nextDay = DateTime(now.year, now.month, now.day + 1);
+    _midnightTimer = Timer(nextDay.difference(now) + const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleMidnightRefresh();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() {});
+      _scheduleMidnightRefresh();
+    }
+  }
+
   @override
   void dispose() {
+    _midnightTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
   }
@@ -333,6 +359,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         children: [
                           // Profile Overview Banner
                           _buildProfileCard(customer),
+                          const SizedBox(height: 16),
+
+                          _buildDueBreakdownCard(customer, currency),
                           const SizedBox(height: 16),
 
                           // Unpaid Attended Dues Alert Card (if any)
@@ -1316,6 +1345,143 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDueBreakdownCard(Customer customer, String currency) {
+    final dues = GymService().getMemberDueBreakdown(customer.id);
+    const overdueColor = Color(0xFFD50000);
+    final rows = [
+      (
+        DueUrgency.upcoming,
+        'Can Pay Later',
+        'Plan running, not attended yet',
+        Icons.schedule_rounded,
+        AppColors.secondary,
+      ),
+      (
+        DueUrgency.attendedInPlan,
+        'Pay Now',
+        'Attended during current plan',
+        Icons.directions_run_rounded,
+        AppColors.pending,
+      ),
+      (
+        DueUrgency.overdue,
+        'Overdue',
+        'Plan period ended, still unpaid',
+        Icons.error_outline_rounded,
+        overdueColor,
+      ),
+    ];
+
+    return Container(
+      key: const ValueKey('due-breakdown-card'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Current Dues',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Text(
+                GymDateUtils.formatCurrency(dues.totalAmount, symbol: currency),
+                style: TextStyle(
+                  color: dues.totalCount == 0 ? AppColors.paid : AppColors.textPrimary,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final (urgency, title, hint, icon, color) in rows)
+            Builder(builder: (context) {
+              final bucket = dues.of(urgency);
+              final active = !bucket.isEmpty;
+              final tone = active ? color : AppColors.textMuted;
+              final earliestEnd = bucket.earliestEndDate;
+              final detail = earliestEnd == null
+                  ? hint
+                  : urgency == DueUrgency.overdue
+                      ? 'Plan ended ${GymDateUtils.formatShortDate(earliestEnd)}'
+                      : '$hint • by ${GymDateUtils.formatShortDate(earliestEnd)}';
+              return Container(
+                key: ValueKey('due-${urgency.name}'),
+                margin: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: tone.withValues(alpha: active ? 0.1 : 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: tone.withValues(alpha: active ? 0.4 : 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, color: tone, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              color: active ? tone : AppColors.textSecondary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                          Text(
+                            detail,
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 10.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${bucket.count}',
+                          style: TextStyle(
+                            color: tone,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          GymDateUtils.formatCurrency(bucket.amount, symbol: currency),
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
