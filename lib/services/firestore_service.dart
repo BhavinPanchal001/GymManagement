@@ -8,6 +8,7 @@ import '../models/bill.dart';
 import '../models/expense.dart';
 import '../models/gym_settings.dart';
 import 'cloud_sync_queue.dart';
+import 'member_cloud_store.dart';
 
 /// Callback typedef for when Firestore snapshot data arrives.
 typedef FirestoreDataCallback = void Function({
@@ -250,6 +251,13 @@ class FirestoreService {
 
   // ==================== WRITE OPERATIONS ====================
 
+  Future<void> deleteCustomerIfEmpty(String ownerId, String customerId) async {
+    if (!_isAttached || _firestore == null || _userId != ownerId) {
+      throw StateError('Connect and sync your account before deleting permanently.');
+    }
+    await MemberCloudStore(_firestore!, ownerId).deleteEmptyCustomer(customerId);
+  }
+
   /// Owner checks prevent a delayed retry from writing to another account.
   Future<void> commitChanges(String ownerId, List<CloudChange> changes) async {
     if (!_isAttached || _firestore == null || _userId != ownerId) {
@@ -263,31 +271,20 @@ class FirestoreService {
       'expenses',
       'settings',
     };
-    final batch = _firestore!.batch();
     for (final change in changes) {
       if (!allowed.contains(change.collection) ||
           change.documentId.isEmpty ||
           change.documentId.contains('/')) {
         throw ArgumentError('Invalid document change.');
       }
-      final ref = _firestore!
-          .collection('gyms')
-          .doc(ownerId)
-          .collection(change.collection)
-          .doc(change.documentId);
-      if (change.data == null) {
-        batch.delete(ref);
-      } else {
-        batch.set(ref, change.data!);
-      }
     }
-    await batch.commit();
+    await MemberCloudStore(_firestore!, ownerId).commit(changes);
   }
 
   /// Upsert a single customer document.
   Future<void> upsertCustomer(Customer customer) async {
     try {
-      await _customersCol?.doc(customer.id).set(customer.toMap());
+      await commitChanges(_userId!, [CloudChange('customers', customer.id, customer.toMap())]);
     } catch (e) {
       debugPrint('FirestoreService: upsertCustomer error: $e');
       rethrow;
@@ -298,7 +295,7 @@ class FirestoreService {
   Future<void> upsertAttendance(AttendanceRecord record) async {
     try {
       final docId = "${record.customerId}_${record.dateKey}";
-      await _attendanceCol?.doc(docId).set(record.toMap());
+      await commitChanges(_userId!, [CloudChange('attendance', docId, record.toMap())]);
     } catch (e) {
       debugPrint('FirestoreService: upsertAttendance error: $e');
       rethrow;
@@ -309,15 +306,11 @@ class FirestoreService {
   Future<void> batchUpsertAttendance(List<AttendanceRecord> records) async {
     if (records.isEmpty) return;
     try {
-      // Firestore batches are limited to 500 writes
-      final chunks = _chunkList(records, 450);
-      for (final chunk in chunks) {
-        final batch = _firestore!.batch();
-        for (final record in chunk) {
-          final docId = "${record.customerId}_${record.dateKey}";
-          batch.set(_attendanceCol!.doc(docId), record.toMap());
-        }
-        await batch.commit();
+      for (final chunk in partitionCloudChanges([
+        for (final record in records)
+          CloudChange('attendance', '${record.customerId}_${record.dateKey}', record.toMap()),
+      ])) {
+        await commitChanges(_userId!, chunk);
       }
     } catch (e) {
       debugPrint('FirestoreService: batchUpsertAttendance error: $e');
@@ -328,7 +321,7 @@ class FirestoreService {
   /// Upsert a single payment record.
   Future<void> upsertPayment(PaymentRecord record) async {
     try {
-      await _paymentsCol?.doc(record.id).set(record.toMap());
+      await commitChanges(_userId!, [CloudChange('payments', record.id, record.toMap())]);
     } catch (e) {
       debugPrint('FirestoreService: upsertPayment error: $e');
       rethrow;
@@ -339,13 +332,10 @@ class FirestoreService {
   Future<void> batchUpsertPayments(List<PaymentRecord> records) async {
     if (records.isEmpty) return;
     try {
-      final chunks = _chunkList(records, 450);
-      for (final chunk in chunks) {
-        final batch = _firestore!.batch();
-        for (final record in chunk) {
-          batch.set(_paymentsCol!.doc(record.id), record.toMap());
-        }
-        await batch.commit();
+      for (final chunk in partitionCloudChanges([
+        for (final record in records) CloudChange('payments', record.id, record.toMap()),
+      ])) {
+        await commitChanges(_userId!, chunk);
       }
     } catch (e) {
       debugPrint('FirestoreService: batchUpsertPayments error: $e');
@@ -366,7 +356,7 @@ class FirestoreService {
   /// Upsert a single bill record.
   Future<void> upsertBill(BillRecord record) async {
     try {
-      await _billsCol?.doc(record.id).set(record.toMap());
+      await commitChanges(_userId!, [CloudChange('bills', record.id, record.toMap())]);
     } catch (e) {
       debugPrint('FirestoreService: upsertBill error: $e');
       rethrow;
@@ -377,13 +367,10 @@ class FirestoreService {
   Future<void> batchUpsertBills(List<BillRecord> records) async {
     if (records.isEmpty) return;
     try {
-      final chunks = _chunkList(records, 450);
-      for (final chunk in chunks) {
-        final batch = _firestore!.batch();
-        for (final record in chunk) {
-          batch.set(_billsCol!.doc(record.id), record.toMap());
-        }
-        await batch.commit();
+      for (final chunk in partitionCloudChanges([
+        for (final record in records) CloudChange('bills', record.id, record.toMap()),
+      ])) {
+        await commitChanges(_userId!, chunk);
       }
     } catch (e) {
       debugPrint('FirestoreService: batchUpsertBills error: $e');
@@ -459,13 +446,10 @@ class FirestoreService {
       await upsertSettings(settings);
 
       // 2. Migrate customers in batches
-      final customerChunks = _chunkList(customers, 450);
-      for (final chunk in customerChunks) {
-        final batch = _firestore!.batch();
-        for (final customer in chunk) {
-          batch.set(_customersCol!.doc(customer.id), customer.toMap());
-        }
-        await batch.commit();
+      for (final chunk in partitionCloudChanges([
+        for (final customer in customers) CloudChange('customers', customer.id, customer.toMap()),
+      ])) {
+        await commitChanges(_userId!, chunk);
       }
 
       // 3. Migrate attendance in batches

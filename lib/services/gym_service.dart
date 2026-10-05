@@ -387,9 +387,9 @@ class GymService extends ChangeNotifier {
       throw StateError('Please wait for your account to finish loading.');
     }
     final writes = <Future<void>>[];
-    for (var i = 0; i < changes.length; i += 450) {
+    for (final chunk in partitionCloudChanges(changes)) {
       writes.add(queue.enqueue(
-        changes.sublist(i, (i + 450).clamp(0, changes.length)),
+        chunk,
         autoFlush: autoFlush,
       ));
     }
@@ -502,10 +502,11 @@ class GymService extends ChangeNotifier {
     List<PaymentRecord> payments = const [],
     List<BillRecord> bills = const [],
     List<Customer> customers = const [],
+    List<String> deletedCustomerIds = const [],
   }) async {
     final nextPayments = {..._paymentMap, for (final p in payments) p.id: p};
     final nextBills = {..._billsMap, for (final b in bills) b.id: b};
-    final changedIds = customers.map((c) => c.id).toSet();
+    final changedIds = {...customers.map((c) => c.id), ...deletedCustomerIds};
     final nextCustomers = [
       ...customers, ..._customers.where((c) => !changedIds.contains(c.id)),
     ];
@@ -516,6 +517,7 @@ class GymService extends ChangeNotifier {
     } else {
       await _queueChanges([
         ...customers.map((c) => CloudChange('customers', c.id, c.toMap())),
+        ...deletedCustomerIds.map((id) => CloudChange('customers', id, null)),
         ...payments.map((p) => CloudChange('payments', p.id, p.toMap())),
         ...bills.map((b) => CloudChange('bills', b.id, b.toMap())),
       ], autoFlush: false);
@@ -524,7 +526,7 @@ class GymService extends ChangeNotifier {
     _billsMap = nextBills;
     _customers = nextCustomers;
     await _refreshFinancialCache();
-    if (customers.isNotEmpty) {
+    if (customers.isNotEmpty || deletedCustomerIds.isNotEmpty) {
       try {
         await _saveCustomers();
       } catch (_) {
@@ -1399,6 +1401,41 @@ class GymService extends ChangeNotifier {
     await archiveCustomer(customerId);
   }
 
+  String? customerDeletionBlockReason(String customerId) {
+    if (getCustomerById(customerId) == null) return 'Member not found.';
+    if (_attendanceMap.values.any((a) => a.customerId == customerId) ||
+        _paymentMap.values.any((p) => p.customerId == customerId) ||
+        _billsMap.values.any((b) => b.customerId == customerId)) {
+      return 'This member has attendance, payments, membership dues or receipts. '
+          'Archive instead to preserve their history.';
+    }
+    if (_currentUserId != null && (!_isCloudAttached || _cloudReadError != null)) {
+      return 'Connect and sync your account before deleting permanently. '
+          'You can archive the member offline.';
+    }
+    return null;
+  }
+
+  Future<void> permanentlyDeleteCustomer(String customerId) =>
+      _serializeFinancialSave(() async {
+        final reason = customerDeletionBlockReason(customerId);
+        if (reason != null) throw StateError(reason);
+        final customer = getCustomerById(customerId)!;
+        final owner = _currentUserId;
+        if (owner != null) {
+          await FirestoreService().deleteCustomerIfEmpty(owner, customerId);
+          if (_currentUserId != owner) {
+            throw StateError('This account is no longer connected.');
+          }
+        }
+        await _commitFinancialRecords(deletedCustomerIds: [customerId]);
+        try {
+          await ImageStorageUtils.deleteManagedImage(customer.imagePath);
+        } catch (_) {
+          // Photo cleanup must not turn a saved deletion into a failed action.
+        }
+      });
+
   /// Keep receipts and attendance when a member leaves the gym.
   Future<void> archiveCustomer(String customerId) async {
     final customer = getCustomerById(customerId);
@@ -1465,7 +1502,7 @@ class GymService extends ChangeNotifier {
 
   Future<void> toggleAttendance(String customerId, String dateKey, AttendanceStatus status, {
     bool toggle = true,
-  }) async {
+  }) => _serializeAttendanceSave(() async {
     final date = DateTime.tryParse(dateKey);
     if (date == null ||
         !_canRecordAttendance(customerId, date, allowBeforeJoin: true)) {
@@ -1503,10 +1540,9 @@ class GymService extends ChangeNotifier {
     await _cloudSaveAttendance(_attendanceMap[key]!);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance(attendanceChanged: true);
-  }
+  });
 
-  Future<void> markAllPresentForDate(String dateKey) async {
+  Future<void> markAllPresentForDate(String dateKey) => _serializeAttendanceSave(() async {
     final date = DateTime.tryParse(dateKey);
     if (date == null) throw ArgumentError('Choose a valid attendance date.');
     final records = <AttendanceRecord>[];
@@ -1526,8 +1562,7 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(records);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance(attendanceChanged: true);
-  }
+  });
 
   Future<void> markTodayQuickAttendance(String customerId, bool present) async {
     final todayKey = GymDateUtils.toDateKey(DateTime.now());
@@ -1547,7 +1582,7 @@ class GymService extends ChangeNotifier {
     bool excludeSundays = false,
     AttendanceStatus sundayStatus = AttendanceStatus.rest,
     bool upToTodayOnly = false,
-  }) async {
+  }) => _serializeAttendanceSave(() async {
     final now = DateTime.now();
     final monthStart = DateTime(year, month, 1);
     final currentMonthStart = DateTime(now.year, now.month, 1);
@@ -1603,8 +1638,7 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(modifiedRecords);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance(attendanceChanged: true);
-  }
+  });
 
   Future<void> setMonthAttendanceForMultiple({
     required List<String> customerIds,
@@ -1614,7 +1648,7 @@ class GymService extends ChangeNotifier {
     bool excludeSundays = false,
     AttendanceStatus sundayStatus = AttendanceStatus.rest,
     bool upToTodayOnly = false,
-  }) async {
+  }) => _serializeAttendanceSave(() async {
     final now = DateTime.now();
     final monthStart = DateTime(year, month, 1);
     final currentMonthStart = DateTime(now.year, now.month, 1);
@@ -1673,6 +1707,11 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(modifiedRecords);
     await _saveAttendance();
     notifyListeners();
+  });
+
+  Future<void> _serializeAttendanceSave(Future<void> Function() save) async {
+    await _serializeFinancialSave(save);
+    // Freezing agreements itself joins the financial queue; do it outside it.
     await _freezeUnagreedAttendance(attendanceChanged: true);
   }
 

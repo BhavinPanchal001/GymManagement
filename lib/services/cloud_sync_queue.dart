@@ -11,6 +11,19 @@ class CloudChange {
 
   const CloudChange(this.collection, this.documentId, this.data);
 
+  String? get memberId {
+    if (collection == 'customers') return documentId;
+    if (const {'attendance', 'payments', 'bills'}.contains(collection) &&
+        data != null) {
+      final id = data!['customerId'];
+      if (id is! String || id.isEmpty || id.contains('/')) {
+        throw ArgumentError('Invalid member history change.');
+      }
+      return id;
+    }
+    return null;
+  }
+
   Map<String, dynamic> toMap() => {
     'collection': collection,
     'documentId': documentId,
@@ -22,6 +35,36 @@ class CloudChange {
     map['documentId'] as String,
     map['data'] == null ? null : Map<String, dynamic>.from(map['data'] as Map),
   );
+}
+
+/// Keep a member's payment/receipt together and stay within rules read limits.
+List<List<CloudChange>> partitionCloudChanges(List<CloudChange> changes) {
+  final groups = <String?, List<CloudChange>>{};
+  for (final change in changes) {
+    groups.putIfAbsent(change.memberId, () => []).add(change);
+  }
+  final batches = <List<CloudChange>>[];
+  var batch = <CloudChange>[];
+  var members = 0;
+  for (final entry in groups.entries) {
+    if (batch.isNotEmpty &&
+        (members >= 4 || batch.length + entry.value.length > 450)) {
+      batches.add(batch);
+      batch = [];
+      members = 0;
+    }
+    if (entry.key != null) members++;
+    for (final change in entry.value) {
+      if (batch.length == 450) {
+        batches.add(batch);
+        batch = [];
+        members = entry.key == null ? 0 : 1;
+      }
+      batch.add(change);
+    }
+  }
+  if (batch.isNotEmpty) batches.add(batch);
+  return batches;
 }
 
 class _PendingBatch {

@@ -18,6 +18,8 @@ import '../../widgets/animations/animated_fade_slide.dart';
 import 'add_customer_sheet.dart';
 import 'member_card_screen.dart';
 
+enum _MemberRemovalAction { archiveOrRestore, deletePermanently }
+
 class CustomerDetailScreen extends StatefulWidget {
   final String customerId;
   final int initialTabIndex;
@@ -41,6 +43,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   DateTime? _customStartDate;
   DateTime? _customEndDate;
   Timer? _midnightTimer;
+  bool _isRemovingMember = false;
 
   @override
   void initState() {
@@ -160,7 +163,113 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     }
   }
 
-  void _archiveCustomer(Customer customer) async {
+  Future<void> _showRemovalMenu(Customer customer) async {
+    final action = await showModalBottomSheet<_MemberRemovalAction>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: ListenableBuilder(
+          listenable: GymService(),
+          builder: (context, _) {
+            final current = GymService().getCustomerById(customer.id);
+            final reason = GymService().customerDeletionBlockReason(customer.id);
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Remove Member',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    ListTile(
+                      enabled: current != null,
+                      leading: Icon(current?.isActive == true
+                          ? Icons.archive_outlined : Icons.unarchive_outlined),
+                      title: Text(current?.isActive == true ? 'Archive member' : 'Restore member'),
+                      subtitle: Text(current?.isActive == true
+                          ? 'Remove from the active list. Keep all history.'
+                          : 'Return to the active list with all history.'),
+                      onTap: () => Navigator.pop(ctx, _MemberRemovalAction.archiveOrRestore),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.delete_forever_outlined),
+                      title: const Text('Delete permanently'),
+                      subtitle: Text(reason ??
+                          'Only for mistaken entries with no history. Cannot be undone.'),
+                      enabled: reason == null,
+                      onTap: () => Navigator.pop(ctx, _MemberRemovalAction.deletePermanently),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    final current = GymService().getCustomerById(customer.id);
+    if (current == null) return;
+    if (action == _MemberRemovalAction.archiveOrRestore) {
+      await _archiveCustomer(current);
+    } else {
+      await _deleteCustomerPermanently(current);
+    }
+  }
+
+  Future<void> _deleteCustomerPermanently(Customer customer) async {
+    if (_isRemovingMember) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete member permanently?'),
+        content: Text('Delete ${customer.name} (Card #${customer.cardNumber})? '
+            'Their profile and saved photo will be removed. This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete permanently'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true || _isRemovingMember) return;
+    setState(() => _isRemovingMember = true);
+    try {
+      await GymService().permanentlyDeleteCustomer(customer.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Member permanently deleted.')),
+      );
+      Navigator.pop(context);
+    } on StateError catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not verify or delete this member. Check your connection and try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRemovingMember = false);
+    }
+  }
+
+  Future<void> _archiveCustomer(Customer customer) async {
+    if (_isRemovingMember) return;
     final archive = customer.isActive;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -183,18 +292,29 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (!mounted || confirmed != true || _isRemovingMember) return;
+    setState(() => _isRemovingMember = true);
     try {
+      final current = GymService().getCustomerById(customer.id);
+      if (current == null || current.isActive != archive) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Member changed. Please reopen Remove Member.')),
+        );
+        return;
+      }
       if (archive) {
         await GymService().archiveCustomer(customer.id);
       } else {
         await GymService().restoreCustomer(customer.id);
       }
       if (mounted) {
+        final saved = GymService().getCustomerById(customer.id);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              archive
+              saved == null || saved.isActive == archive
+                  ? 'Member changed. Please reopen Remove Member.'
+                  : archive
                   ? 'Member archived. History preserved.'
                   : 'Member restored.',
             ),
@@ -207,6 +327,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           const SnackBar(content: Text('Could not save. Please try again.')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isRemovingMember = false);
     }
   }
 
@@ -257,21 +379,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 tooltip: 'Edit Profile',
                 onPressed: () => _editCustomer(customer),
               ),
-              IconButton(
-                icon: Icon(
-                  customer.isActive
-                      ? Icons.archive_outlined
-                      : Icons.unarchive_outlined,
-                ),
-                tooltip: customer.isActive
-                    ? 'Archive Member'
-                    : 'Restore Member',
-                onPressed: () => _archiveCustomer(customer),
-              ),
             ],
           ),
           body: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.person_remove_outlined),
+                    label: Text(_isRemovingMember ? 'Saving...' : 'Remove Member'),
+                    onPressed: _isRemovingMember ? null : () => _showRemovalMenu(customer),
+                  ),
+                ),
+              ),
               if (!customer.isActive)
                 const Padding(
                   padding: EdgeInsets.all(8),
