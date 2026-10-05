@@ -502,10 +502,11 @@ class GymService extends ChangeNotifier {
     List<PaymentRecord> payments = const [],
     List<BillRecord> bills = const [],
     List<Customer> customers = const [],
+    List<String> deletedCustomerIds = const [],
   }) async {
     final nextPayments = {..._paymentMap, for (final p in payments) p.id: p};
     final nextBills = {..._billsMap, for (final b in bills) b.id: b};
-    final changedIds = customers.map((c) => c.id).toSet();
+    final changedIds = {...customers.map((c) => c.id), ...deletedCustomerIds};
     final nextCustomers = [
       ...customers, ..._customers.where((c) => !changedIds.contains(c.id)),
     ];
@@ -516,6 +517,7 @@ class GymService extends ChangeNotifier {
     } else {
       await _queueChanges([
         ...customers.map((c) => CloudChange('customers', c.id, c.toMap())),
+        ...deletedCustomerIds.map((id) => CloudChange('customers', id, null)),
         ...payments.map((p) => CloudChange('payments', p.id, p.toMap())),
         ...bills.map((b) => CloudChange('bills', b.id, b.toMap())),
       ], autoFlush: false);
@@ -524,7 +526,7 @@ class GymService extends ChangeNotifier {
     _billsMap = nextBills;
     _customers = nextCustomers;
     await _refreshFinancialCache();
-    if (customers.isNotEmpty) {
+    if (customers.isNotEmpty || deletedCustomerIds.isNotEmpty) {
       try {
         await _saveCustomers();
       } catch (_) {
@@ -1398,6 +1400,43 @@ class GymService extends ChangeNotifier {
   Future<void> deleteCustomer(String customerId) async {
     await archiveCustomer(customerId);
   }
+
+  String? customerDeletionBlockReason(String customerId) {
+    if (getCustomerById(customerId) == null) return 'Member not found.';
+    if (_attendanceMap.values.any((a) => a.customerId == customerId) ||
+        _paymentMap.values.any((p) => p.customerId == customerId) ||
+        _billsMap.values.any((b) => b.customerId == customerId)) {
+      return 'This member has attendance, payments, membership dues or receipts. '
+          'Archive instead to preserve their history.';
+    }
+    if (_currentUserId != null && (!_isCloudAttached || _cloudReadError != null)) {
+      return 'Connect and sync your account before deleting permanently. '
+          'You can archive the member offline.';
+    }
+    return null;
+  }
+
+  Future<void> permanentlyDeleteCustomer(String customerId) =>
+      _serializeFinancialSave(() async {
+        var reason = customerDeletionBlockReason(customerId);
+        if (reason != null) throw StateError(reason);
+        final customer = getCustomerById(customerId)!;
+        final owner = _currentUserId;
+        if (owner != null) {
+          await FirestoreService().ensureCustomerHasNoHistory(owner, customerId);
+          if (_currentUserId != owner) {
+            throw StateError('This account is no longer connected.');
+          }
+          reason = customerDeletionBlockReason(customerId);
+          if (reason != null) throw StateError(reason);
+        }
+        await _commitFinancialRecords(deletedCustomerIds: [customerId]);
+        try {
+          await ImageStorageUtils.deleteManagedImage(customer.imagePath);
+        } catch (_) {
+          // Photo cleanup must not turn a saved deletion into a failed action.
+        }
+      });
 
   /// Keep receipts and attendance when a member leaves the gym.
   Future<void> archiveCustomer(String customerId) async {

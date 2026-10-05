@@ -250,6 +250,27 @@ class FirestoreService {
 
   // ==================== WRITE OPERATIONS ====================
 
+  Future<void> ensureCustomerHasNoHistory(String ownerId, String customerId) async {
+    if (!_isAttached || _firestore == null || _userId != ownerId) {
+      throw StateError('Connect and sync your account before deleting permanently.');
+    }
+    final gym = _firestore!.collection('gyms').doc(ownerId);
+    // Server reads prevent an incomplete offline cache from authorizing deletion.
+    final snapshots = await Future.wait([
+      for (final collection in ['attendance', 'payments', 'bills'])
+        gym.collection(collection)
+            .where('customerId', isEqualTo: customerId)
+            .limit(1)
+            .get(const GetOptions(source: Source.server)),
+    ]).timeout(const Duration(seconds: 15));
+    if (snapshots.any((snapshot) => snapshot.docs.isNotEmpty)) {
+      throw StateError(
+        'This member has attendance, payments, membership dues or receipts. '
+        'Archive instead to preserve their history.',
+      );
+    }
+  }
+
   /// Owner checks prevent a delayed retry from writing to another account.
   Future<void> commitChanges(String ownerId, List<CloudChange> changes) async {
     if (!_isAttached || _firestore == null || _userId != ownerId) {
