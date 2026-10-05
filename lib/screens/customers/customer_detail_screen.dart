@@ -166,37 +166,47 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   Future<void> _showRemovalMenu(Customer customer) async {
     final action = await showModalBottomSheet<_MemberRemovalAction>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
         child: ListenableBuilder(
           listenable: GymService(),
           builder: (context, _) {
+            final current = GymService().getCustomerById(customer.id);
             final reason = GymService().customerDeletionBlockReason(customer.id);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Remove Member', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  ListTile(
-                    leading: Icon(customer.isActive ? Icons.archive_outlined : Icons.unarchive_outlined),
-                    title: Text(customer.isActive ? 'Archive member' : 'Restore member'),
-                    subtitle: Text(customer.isActive
-                        ? 'Remove from the active list. Keep all history.'
-                        : 'Return to the active list with all history.'),
-                    onTap: () => Navigator.pop(ctx, _MemberRemovalAction.archiveOrRestore),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.delete_forever_outlined),
-                    title: const Text('Delete permanently'),
-                    subtitle: Text(reason ?? 'Only for mistaken entries with no history. Cannot be undone.'),
-                    enabled: reason == null,
-                    onTap: () => Navigator.pop(ctx, _MemberRemovalAction.deletePermanently),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Cancel'),
-                  ),
-                ],
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Remove Member',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    ListTile(
+                      enabled: current != null,
+                      leading: Icon(current?.isActive == true
+                          ? Icons.archive_outlined : Icons.unarchive_outlined),
+                      title: Text(current?.isActive == true ? 'Archive member' : 'Restore member'),
+                      subtitle: Text(current?.isActive == true
+                          ? 'Remove from the active list. Keep all history.'
+                          : 'Return to the active list with all history.'),
+                      onTap: () => Navigator.pop(ctx, _MemberRemovalAction.archiveOrRestore),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.delete_forever_outlined),
+                      title: const Text('Delete permanently'),
+                      subtitle: Text(reason ??
+                          'Only for mistaken entries with no history. Cannot be undone.'),
+                      enabled: reason == null,
+                      onTap: () => Navigator.pop(ctx, _MemberRemovalAction.deletePermanently),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -204,10 +214,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       ),
     );
     if (!mounted || action == null) return;
+    final current = GymService().getCustomerById(customer.id);
+    if (current == null) return;
     if (action == _MemberRemovalAction.archiveOrRestore) {
-      await _archiveCustomer(customer);
+      await _archiveCustomer(current);
     } else {
-      await _deleteCustomerPermanently(customer);
+      await _deleteCustomerPermanently(current);
     }
   }
 
@@ -283,16 +295,26 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     if (!mounted || confirmed != true || _isRemovingMember) return;
     setState(() => _isRemovingMember = true);
     try {
+      final current = GymService().getCustomerById(customer.id);
+      if (current == null || current.isActive != archive) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Member changed. Please reopen Remove Member.')),
+        );
+        return;
+      }
       if (archive) {
         await GymService().archiveCustomer(customer.id);
       } else {
         await GymService().restoreCustomer(customer.id);
       }
       if (mounted) {
+        final saved = GymService().getCustomerById(customer.id);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              archive
+              saved == null || saved.isActive == archive
+                  ? 'Member changed. Please reopen Remove Member.'
+                  : archive
                   ? 'Member archived. History preserved.'
                   : 'Member restored.',
             ),

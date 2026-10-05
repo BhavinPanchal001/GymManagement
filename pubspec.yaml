@@ -63,6 +63,8 @@ dev_dependencies:
   shared_preferences_platform_interface: 2.4.1
   firebase_auth_platform_interface: ^7.7.3
   firebase_core_platform_interface: ^6.0.3
+  fake_cloud_firestore: 3.1.0
+  mock_exceptions: 0.8.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /gyms/{owner} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == owner;
+      }
+      function guardPath(id) {
+        return /databases/$(database)/documents/gyms/$(owner)/memberGuards/$(id);
+      }
+      function customerPath(id) {
+        return /databases/$(database)/documents/gyms/$(owner)/customers/$(id);
+      }
+      function activeAfter(id) {
+        return getAfter(guardPath(id)).data.deleted == false;
+      }
+      function historyAllowed(id) {
+        return activeAfter(id) && getAfter(guardPath(id)).data.hasHistory == true
+            && existsAfter(customerPath(id));
+      }
+
+      match /memberGuards/{id} {
+        allow read: if isOwner();
+        allow create: if isOwner()
+            && request.resource.data.keys().hasOnly(['hasHistory', 'deleted'])
+            && request.resource.data.hasHistory is bool
+            && request.resource.data.deleted == false
+            && existsAfter(customerPath(id));
+        allow update: if isOwner()
+            && request.resource.data.keys().hasOnly(['hasHistory', 'deleted'])
+            && request.resource.data.hasHistory is bool
+            && request.resource.data.deleted is bool
+            && resource.data.deleted == false
+            && (!resource.data.hasHistory || request.resource.data.hasHistory)
+            && (request.resource.data.deleted == false ||
+                (resource.data.hasHistory == false
+                 && request.resource.data.hasHistory == false
+                 && exists(customerPath(id)) && !existsAfter(customerPath(id))));
+        allow delete: if false;
+      }
+      match /customers/{id} {
+        allow read: if isOwner();
+        allow create, update: if isOwner() && activeAfter(id);
+        allow delete: if isOwner()
+            && get(guardPath(id)).data.hasHistory == false
+            && getAfter(guardPath(id)).data.hasHistory == false
+            && getAfter(guardPath(id)).data.deleted == true;
+      }
+      match /{collection}/{id} {
+        allow read: if isOwner() && collection in ['attendance', 'payments', 'bills'];
+        allow create: if isOwner() && collection in ['attendance', 'payments', 'bills']
+            && historyAllowed(request.resource.data.customerId);
+        allow update: if isOwner() && collection in ['attendance', 'payments', 'bills']
+            && request.resource.data.customerId == resource.data.customerId
+            && historyAllowed(request.resource.data.customerId);
+        allow delete: if isOwner() && collection in ['attendance', 'payments', 'bills'];
+      }
+      match /expenses/{id} {
+        allow read, write: if isOwner();
+      }
+      match /settings/config {
+        allow read, write: if isOwner();
+      }
+      match /settings/memberRemoval {
+        allow read: if isOwner();
+        // Only an administrator may activate the protocol after backfill/deploy.
+        allow write: if false;
+      }
+    }
+  }
+}

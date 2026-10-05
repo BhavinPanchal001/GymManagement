@@ -387,9 +387,9 @@ class GymService extends ChangeNotifier {
       throw StateError('Please wait for your account to finish loading.');
     }
     final writes = <Future<void>>[];
-    for (var i = 0; i < changes.length; i += 450) {
+    for (final chunk in partitionCloudChanges(changes)) {
       writes.add(queue.enqueue(
-        changes.sublist(i, (i + 450).clamp(0, changes.length)),
+        chunk,
         autoFlush: autoFlush,
       ));
     }
@@ -1418,17 +1418,15 @@ class GymService extends ChangeNotifier {
 
   Future<void> permanentlyDeleteCustomer(String customerId) =>
       _serializeFinancialSave(() async {
-        var reason = customerDeletionBlockReason(customerId);
+        final reason = customerDeletionBlockReason(customerId);
         if (reason != null) throw StateError(reason);
         final customer = getCustomerById(customerId)!;
         final owner = _currentUserId;
         if (owner != null) {
-          await FirestoreService().ensureCustomerHasNoHistory(owner, customerId);
+          await FirestoreService().deleteCustomerIfEmpty(owner, customerId);
           if (_currentUserId != owner) {
             throw StateError('This account is no longer connected.');
           }
-          reason = customerDeletionBlockReason(customerId);
-          if (reason != null) throw StateError(reason);
         }
         await _commitFinancialRecords(deletedCustomerIds: [customerId]);
         try {
@@ -1504,7 +1502,7 @@ class GymService extends ChangeNotifier {
 
   Future<void> toggleAttendance(String customerId, String dateKey, AttendanceStatus status, {
     bool toggle = true,
-  }) async {
+  }) => _serializeAttendanceSave(() async {
     final date = DateTime.tryParse(dateKey);
     if (date == null ||
         !_canRecordAttendance(customerId, date, allowBeforeJoin: true)) {
@@ -1542,10 +1540,9 @@ class GymService extends ChangeNotifier {
     await _cloudSaveAttendance(_attendanceMap[key]!);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance(attendanceChanged: true);
-  }
+  });
 
-  Future<void> markAllPresentForDate(String dateKey) async {
+  Future<void> markAllPresentForDate(String dateKey) => _serializeAttendanceSave(() async {
     final date = DateTime.tryParse(dateKey);
     if (date == null) throw ArgumentError('Choose a valid attendance date.');
     final records = <AttendanceRecord>[];
@@ -1565,8 +1562,7 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(records);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance(attendanceChanged: true);
-  }
+  });
 
   Future<void> markTodayQuickAttendance(String customerId, bool present) async {
     final todayKey = GymDateUtils.toDateKey(DateTime.now());
@@ -1586,7 +1582,7 @@ class GymService extends ChangeNotifier {
     bool excludeSundays = false,
     AttendanceStatus sundayStatus = AttendanceStatus.rest,
     bool upToTodayOnly = false,
-  }) async {
+  }) => _serializeAttendanceSave(() async {
     final now = DateTime.now();
     final monthStart = DateTime(year, month, 1);
     final currentMonthStart = DateTime(now.year, now.month, 1);
@@ -1642,8 +1638,7 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(modifiedRecords);
     await _saveAttendance();
     notifyListeners();
-    await _freezeUnagreedAttendance(attendanceChanged: true);
-  }
+  });
 
   Future<void> setMonthAttendanceForMultiple({
     required List<String> customerIds,
@@ -1653,7 +1648,7 @@ class GymService extends ChangeNotifier {
     bool excludeSundays = false,
     AttendanceStatus sundayStatus = AttendanceStatus.rest,
     bool upToTodayOnly = false,
-  }) async {
+  }) => _serializeAttendanceSave(() async {
     final now = DateTime.now();
     final monthStart = DateTime(year, month, 1);
     final currentMonthStart = DateTime(now.year, now.month, 1);
@@ -1712,6 +1707,11 @@ class GymService extends ChangeNotifier {
     await _cloudBatchSaveAttendance(modifiedRecords);
     await _saveAttendance();
     notifyListeners();
+  });
+
+  Future<void> _serializeAttendanceSave(Future<void> Function() save) async {
+    await _serializeFinancialSave(save);
+    // Freezing agreements itself joins the financial queue; do it outside it.
     await _freezeUnagreedAttendance(attendanceChanged: true);
   }
 

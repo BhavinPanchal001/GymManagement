@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,6 +21,22 @@ class _FailingStore extends InMemorySharedPreferencesStore {
   @override
   Future<bool> setValue(String valueType, String key, Object value) async {
     if (key.endsWith('gym_financial_v1')) return false;
+    return super.setValue(valueType, key, value);
+  }
+}
+
+class _BlockingStore extends InMemorySharedPreferencesStore {
+  _BlockingStore(super.data) : super.withData();
+
+  final started = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key.endsWith('gym_financial_v1') && !started.isCompleted) {
+      started.complete();
+      await release.future;
+    }
     return super.setValue(valueType, key, value);
   }
 }
@@ -231,6 +248,80 @@ void main() {
   });
 
   test(
+    'concurrent single and bulk attendance cannot outlive removal',
+    () async {
+      final customer = await member();
+      final deletion = gym.permanentlyDeleteCustomer(customer.id);
+      final attendance = [
+        gym.toggleAttendance(
+          customer.id,
+          '2024-01-20',
+          AttendanceStatus.present,
+        ),
+        gym.markAllPresentForDate('2024-01-21'),
+        gym.setMonthAttendance(
+          customerId: customer.id,
+          year: 2024,
+          month: 1,
+          status: AttendanceStatus.absent,
+        ),
+        gym.setMonthAttendanceForMultiple(
+          customerIds: [customer.id],
+          year: 2024,
+          month: 1,
+          status: AttendanceStatus.rest,
+        ),
+      ];
+      await deletion;
+      await Future.wait(attendance);
+      expect(gym.getCustomerById(customer.id), isNull);
+      expect(
+        gym.attendanceMap.values.where((a) => a.customerId == customer.id),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
+    'attendance arriving during the durable deletion write waits for removal',
+    () async {
+      final customer = await member();
+      final blocking = _BlockingStore(
+        await SharedPreferencesStorePlatform.instance.getAll(),
+      );
+      SharedPreferencesStorePlatform.instance = blocking;
+      final deletion = gym.permanentlyDeleteCustomer(customer.id);
+      await blocking.started.future;
+      final attendance = gym.toggleAttendance(
+        customer.id,
+        '2024-01-20',
+        AttendanceStatus.present,
+      );
+      expect(gym.getAttendance(customer.id, '2024-01-20'), isNull);
+      blocking.release.complete();
+      await Future.wait([deletion, attendance]);
+      expect(gym.getCustomerById(customer.id), isNull);
+      expect(gym.getAttendance(customer.id, '2024-01-20'), isNull);
+    },
+  );
+
+  test('attendance queued first blocks concurrent removal', () async {
+    final customer = await member();
+    final attendance = gym.toggleAttendance(
+      customer.id,
+      '2024-01-20',
+      AttendanceStatus.absent,
+    );
+    await expectLater(
+      gym.permanentlyDeleteCustomer(customer.id),
+      throwsStateError,
+    );
+    await attendance;
+    expect(gym.getCustomerById(customer.id), isNotNull);
+    expect(gym.getAttendance(customer.id, '2024-01-20'), isNotNull);
+  });
+
+  test(
     'customer tombstones survive outbox reload and overlay stale snapshots',
     () async {
       final prefs = await SharedPreferences.getInstance();
@@ -382,4 +473,56 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('open menu follows the latest archive state', (tester) async {
+    final customer = await member();
+    await openProfile(tester, customer);
+    await openRemovalMenu(tester);
+    await gym.archiveCustomer(customer.id);
+    await tester.pumpAndSettle();
+    expect(find.text('Archive member'), findsNothing);
+    expect(find.text('Restore member'), findsOneWidget);
+    await tester.tap(find.text('Restore member'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Restore'));
+    await tester.pumpAndSettle();
+    expect(gym.getCustomerById(customer.id)?.isActive, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('actions are disabled if member disappears with the menu open', (
+    tester,
+  ) async {
+    final customer = await member();
+    await openProfile(tester, customer);
+    await openRemovalMenu(tester);
+    await gym.permanentlyDeleteCustomer(customer.id);
+    await tester.pumpAndSettle();
+    for (final title in ['Restore member', 'Delete permanently']) {
+      expect(
+        tester.widget<ListTile>(find.widgetWithText(ListTile, title)).enabled,
+        isFalse,
+      );
+    }
+    expect(find.text('Member not found.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('archive confirmation detects a changed member', (tester) async {
+    final customer = await member();
+    await openProfile(tester, customer);
+    await openRemovalMenu(tester);
+    await tester.tap(find.text('Archive member'));
+    await tester.pumpAndSettle();
+    await gym.archiveCustomer(customer.id);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Archive'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Member changed. Please reopen Remove Member.'),
+      findsOneWidget,
+    );
+    expect(find.text('Member archived. History preserved.'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
