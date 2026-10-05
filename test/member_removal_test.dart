@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym/models/attendance.dart';
 import 'package:gym/models/bill.dart';
@@ -17,7 +19,7 @@ class _FailingStore extends InMemorySharedPreferencesStore {
 
   @override
   Future<bool> setValue(String valueType, String key, Object value) async {
-    if (key == 'gym_financial_v1') return false;
+    if (key.endsWith('gym_financial_v1')) return false;
     return super.setValue(valueType, key, value);
   }
 }
@@ -25,6 +27,22 @@ class _FailingStore extends InMemorySharedPreferencesStore {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final gym = GymService();
+
+  setUpAll(() async {
+    var directory = File(Platform.resolvedExecutable).parent;
+    while (!Directory('${directory.path}/material_fonts').existsSync() &&
+        directory.parent.path != directory.path) {
+      directory = directory.parent;
+    }
+    final loader = FontLoader('Roboto');
+    for (final weight in ['Regular', 'Bold']) {
+      final bytes = await File(
+        '${directory.path}/material_fonts/Roboto-$weight.ttf',
+      ).readAsBytes();
+      loader.addFont(Future.value(ByteData.sublistView(bytes)));
+    }
+    await loader.load();
+  });
 
   setUp(() async {
     await gym.detachUser();
@@ -98,7 +116,7 @@ void main() {
       final customer = await member();
       await gym.toggleAttendance(customer.id, '2024-01-20', status);
       final attendance = gym.attendanceMap;
-        expect(attendance, isNotEmpty);
+      expect(attendance, isNotEmpty);
       await expectLater(
         gym.permanentlyDeleteCustomer(customer.id),
         throwsStateError,
