@@ -167,43 +167,229 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     final action = await showModalBottomSheet<_MemberRemovalAction>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => SafeArea(
         child: ListenableBuilder(
           listenable: GymService(),
           builder: (context, _) {
             final current = GymService().getCustomerById(customer.id);
             final reason = GymService().customerDeletionBlockReason(customer.id);
-            return SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            final isArchived = current?.isActive == false;
+            final archiveColor = isArchived ? AppColors.paid : AppColors.pending;
+            final deleteColor = AppColors.absent;
+            final isDeleteEnabled = reason == null;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border(
+                  top: BorderSide(color: AppColors.surfaceBorder, width: 1.5),
+                  left: BorderSide(color: AppColors.surfaceBorder, width: 1.5),
+                  right: BorderSide(color: AppColors.surfaceBorder, width: 1.5),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                top: 12,
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Remove Member',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    // Drag Handle
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceBorder,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
-                    ListTile(
-                      enabled: current != null,
-                      leading: Icon(current?.isActive == true
-                          ? Icons.archive_outlined : Icons.unarchive_outlined),
-                      title: Text(current?.isActive == true ? 'Archive member' : 'Restore member'),
-                      subtitle: Text(current?.isActive == true
-                          ? 'Remove from the active list. Keep all history.'
-                          : 'Return to the active list with all history.'),
-                      onTap: () => Navigator.pop(ctx, _MemberRemovalAction.archiveOrRestore),
+                    const SizedBox(height: 16),
+
+                    // Header Row
+                    Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppColors.absent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.absent.withValues(alpha: 0.3)),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.person_remove_rounded, color: AppColors.absent, size: 22),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Remove Member',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${customer.name} (Card #${customer.cardNumber})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.delete_forever_outlined),
-                      title: const Text('Delete permanently'),
-                      subtitle: Text(reason ??
-                          'Only for mistaken entries with no history. Cannot be undone.'),
-                      enabled: reason == null,
-                      onTap: () => Navigator.pop(ctx, _MemberRemovalAction.deletePermanently),
+                    const SizedBox(height: 20),
+
+                    // Archive / Restore Action Card
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: (current != null ? archiveColor : AppColors.textMuted).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: (current != null ? archiveColor : AppColors.surfaceBorder).withValues(alpha: 0.35),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: ListTile(
+                        enabled: current != null,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: (current != null ? archiveColor : AppColors.surfaceBorder).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            current?.isActive == true
+                                ? Icons.archive_outlined
+                                : Icons.unarchive_outlined,
+                            color: current != null ? archiveColor : AppColors.textMuted,
+                            size: 22,
+                          ),
+                        ),
+                        title: Text(
+                          current?.isActive == true ? 'Archive member' : 'Restore member',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: current != null ? archiveColor : AppColors.textMuted,
+                          ),
+                        ),
+                        subtitle: Text(
+                          current?.isActive == true
+                              ? 'Remove from the active list. Keep all history.'
+                              : 'Return to the active list with all history.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: current != null ? AppColors.textSecondary : AppColors.textMuted,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 14,
+                          color: (current != null ? archiveColor : AppColors.textMuted).withValues(alpha: 0.7),
+                        ),
+                        onTap: () => Navigator.pop(ctx, _MemberRemovalAction.archiveOrRestore),
+                      ),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
+
+                    // Delete Action Card
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: isDeleteEnabled
+                            ? deleteColor.withValues(alpha: 0.08)
+                            : AppColors.surfaceElevated.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDeleteEnabled
+                              ? deleteColor.withValues(alpha: 0.35)
+                              : AppColors.surfaceBorder.withValues(alpha: 0.4),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: ListTile(
+                        enabled: isDeleteEnabled,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isDeleteEnabled
+                                ? deleteColor.withValues(alpha: 0.15)
+                                : AppColors.surfaceBorder.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.delete_forever_outlined,
+                            color: isDeleteEnabled ? deleteColor : AppColors.textMuted,
+                            size: 22,
+                          ),
+                        ),
+                        title: Text(
+                          'Delete permanently',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: isDeleteEnabled ? deleteColor : AppColors.textMuted,
+                          ),
+                        ),
+                        subtitle: Text(
+                          reason ?? 'Permanently delete member and all payment and attendance history.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDeleteEnabled ? AppColors.textSecondary : AppColors.textMuted,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 14,
+                          color: isDeleteEnabled
+                              ? deleteColor.withValues(alpha: 0.7)
+                              : AppColors.textMuted,
+                        ),
+                        onTap: () => Navigator.pop(ctx, _MemberRemovalAction.deletePermanently),
+                      ),
+                    ),
+
+                    // Cancel Action
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textSecondary,
+                          side: BorderSide(color: AppColors.surfaceBorder),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -229,8 +415,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete member permanently?'),
-        content: Text('Delete ${customer.name} (Card #${customer.cardNumber})? '
-            'Their profile and saved photo will be removed. This cannot be undone.'),
+        content: Text('Delete ${customer.name} (Card #${customer.cardNumber})?\n\n'
+            'WARNING: Their profile, photo, and ALL associated attendance records, payment history, and bills will be permanently deleted. This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -527,7 +713,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                             index: 3,
                             child: _buildPaymentHistorySection(customer, currency),
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 12),
                         ],
                       ),
                     ),
@@ -558,7 +744,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                             index: 2,
                             child: _buildInteractiveCalendar(customer, monthKey),
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 12),
                         ],
                       ),
                     ),

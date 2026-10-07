@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'firebase_options.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/auth_service.dart';
@@ -38,6 +39,19 @@ class GymManagerApp extends StatelessWidget {
       listenable: ThemeService(),
       builder: (context, _) {
         final theme = ThemeService();
+        final isDark = theme.isDarkMode;
+        final navBarBg = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+
+        SystemChrome.setSystemUIOverlayStyle(
+          SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+            systemNavigationBarColor: navBarBg,
+            systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+            systemNavigationBarDividerColor: Colors.transparent,
+          ),
+        );
+
         return MaterialApp(
           navigatorKey: rootNavigatorKey,
           scaffoldMessengerKey: rootScaffoldMessengerKey,
@@ -46,6 +60,22 @@ class GymManagerApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: theme.themeMode,
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            return Container(
+              color: navBarBg,
+              child: SafeArea(
+                top: false,
+                bottom: true,
+                child: MediaQuery(
+                  data: mediaQuery.copyWith(
+                    viewPadding: mediaQuery.viewPadding.copyWith(bottom: 0),
+                  ),
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
+            );
+          },
           home: const SplashScreen(),
         );
       },

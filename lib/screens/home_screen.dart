@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 backgroundColor: AppColors.surface,
                 indicatorColor: AppColors.primary.withValues(alpha: 0.2),
                 elevation: 0,
-                height: 68,
+                height: 72,
                 destinations: [
                   NavigationDestination(
                     icon: Icon(

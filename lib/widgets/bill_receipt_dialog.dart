@@ -23,6 +23,7 @@ class BillReceiptDialog extends StatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => BillReceiptDialog(bill: bill),
     );
@@ -147,7 +148,9 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
         left: 20,
         right: 20,
         top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).viewPadding.bottom +
+            24,
       ),
       decoration: BoxDecoration(
         color: AppColors.dynamicSurface(),

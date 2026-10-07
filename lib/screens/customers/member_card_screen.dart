@@ -119,6 +119,24 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
     final paidCount = yearly.where((m) => m.isPaid).length;
     final totalPres = yearly.fold<int>(0, (sum, m) => sum + m.presentDays);
 
+    // Calculate total due for WhatsApp message
+    final now = DateTime.now();
+    final joinDate = widget.customer.joinDate;
+    final monthlyFee = gym.settings.getFeeForPlan(widget.customer.planType);
+    final currency = gym.settings.currencySymbol;
+    double totalDue = 0;
+    for (final m in yearly) {
+      final monthDate = DateTime(_selectedYear, m.month);
+      if (monthDate.isBefore(DateTime(joinDate.year, joinDate.month))) continue;
+      if (_selectedYear == now.year && m.month > now.month) continue;
+      if (_selectedYear > now.year) continue;
+      if (!m.isPaid) {
+        totalDue += monthlyFee;
+      } else if (m.balanceDue > 0) {
+        totalDue += m.balanceDue;
+      }
+    }
+
     final message = '🏋️ *${gym.settings.gymName} - Member Ledger Card ($_selectedYear)*\n\n'
         '👤 *Member:* ${widget.customer.name}\n'
         '💳 *Card No:* ${widget.customer.cardNumber.isNotEmpty ? widget.customer.cardNumber : widget.customer.id}\n'
@@ -126,7 +144,8 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
         '📞 *Phone:* ${widget.customer.phone}\n\n'
         '📊 *Summary for $_selectedYear:*\n'
         '• Fees Paid: *$paidCount / 12 Months*\n'
-        '• Total Gym Attendance: *$totalPres Days*\n\n'
+        '• Total Gym Attendance: *$totalPres Days*\n'
+        '${totalDue > 0 ? '• 💰 Total Due: *${GymDateUtils.formatCurrency(totalDue, symbol: currency)}*\n' : ''}\n'
         'For complete ledger details or full card PDF, visit the gym desk!\n'
         '— *Management, ${gym.settings.gymName}*';
 
@@ -211,15 +230,17 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
           const SizedBox(width: 6),
         ],
       ),
-      body: _isGeneratingPdf
-          ? const Center(child: CircularProgressIndicator())
-          : InteractiveViewer(
-              minScale: 0.8,
-              maxScale: 2.5,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: Container(
+      body: SafeArea(
+        top: false,
+        child: _isGeneratingPdf
+            ? const Center(child: CircularProgressIndicator())
+            : InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 2.5,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                  child: Center(
+                    child: Container(
                     constraints: const BoxConstraints(maxWidth: 480),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -408,6 +429,80 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
 
                             const SizedBox(height: 12),
 
+                            // ================= DUE PAYMENT SUMMARY =================
+                            Builder(
+                              builder: (context) {
+                                final now = DateTime.now();
+                                final joinDate = widget.customer.joinDate;
+                                final monthlyFee = gymSettings.getFeeForPlan(widget.customer.planType);
+                                double totalDue = 0;
+                                int dueMonthCount = 0;
+                                int partialCount = 0;
+                                for (final m in yearlyData) {
+                                  final monthDate = DateTime(_selectedYear, m.month);
+                                  if (monthDate.isBefore(DateTime(joinDate.year, joinDate.month))) continue;
+                                  if (_selectedYear == now.year && m.month > now.month) continue;
+                                  if (_selectedYear > now.year) continue;
+                                  if (!m.isPaid) {
+                                    totalDue += monthlyFee;
+                                    dueMonthCount++;
+                                  } else if (m.balanceDue > 0) {
+                                    totalDue += m.balanceDue;
+                                    partialCount++;
+                                  }
+                                }
+                                if (totalDue <= 0) return const SizedBox.shrink();
+                                return Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF3E0),
+                                    border: Border.all(color: const Color(0xFFE65100), width: 1.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.warning_amber_rounded, color: Color(0xFFE65100), size: 16),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text.rich(
+                                          TextSpan(
+                                            children: [
+                                              const TextSpan(
+                                                text: 'Total Due: ',
+                                                style: TextStyle(
+                                                  color: Color(0xFFE65100),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: GymDateUtils.formatCurrency(totalDue, symbol: gymSettings.currencySymbol),
+                                                style: const TextStyle(
+                                                  color: Color(0xFFBF360C),
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: '  ($dueMonthCount unpaid${partialCount > 0 ? ', $partialCount partial' : ''})',
+                                                style: const TextStyle(
+                                                  color: Color(0xFFE65100),
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+
                             // Year indicator
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -442,6 +537,9 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                   child: _buildScreenMonthSubTable(
                                     yearlyData.sublist(0, 6),
                                     currency: gymSettings.currencySymbol,
+                                    monthlyFee: gymSettings.getFeeForPlan(widget.customer.planType),
+                                    joinDate: widget.customer.joinDate,
+                                    selectedYear: _selectedYear,
                                   ),
                                 ),
                                 // Months 7 - 12
@@ -449,6 +547,9 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                   child: _buildScreenMonthSubTable(
                                     yearlyData.sublist(6, 12),
                                     currency: gymSettings.currencySymbol,
+                                    monthlyFee: gymSettings.getFeeForPlan(widget.customer.planType),
+                                    joinDate: widget.customer.joinDate,
+                                    selectedYear: _selectedYear,
                                   ),
                                 ),
                               ],
@@ -504,6 +605,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                 ),
               ),
             ),
+          ),
     );
   }
 
@@ -578,7 +680,11 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   Widget _buildScreenMonthSubTable(
     List<MonthCardData> months, {
     required String currency,
+    required double monthlyFee,
+    required DateTime joinDate,
+    required int selectedYear,
   }) {
+    final now = DateTime.now();
     return Table(
       border: TableBorder.all(color: cardRed, width: 1.0),
       columnWidths: const {
@@ -587,6 +693,12 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
         2: FlexColumnWidth(),
       },
       children: months.map((m) {
+        final monthDate = DateTime(selectedYear, m.month);
+        final isAfterJoin = !monthDate.isBefore(DateTime(joinDate.year, joinDate.month));
+        final isPastOrCurrent = selectedYear < now.year || (selectedYear == now.year && m.month <= now.month);
+        final isDue = !m.isPaid && isAfterJoin && isPastOrCurrent;
+        final hasBalance = m.isPaid && m.balanceDue > 0;
+
         return TableRow(
           children: [
             // Month Index
@@ -618,7 +730,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // Paid status, Date Range & Attendance
+            // Paid / Due status, Date Range & Attendance
             Container(
               height: 36,
               alignment: Alignment.centerLeft,
@@ -634,10 +746,12 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                               child: Text(
                                 m.isCoveredInPackage
                                     ? 'PAID (Pkg)'
-                                    : 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)})',
-                                style: const TextStyle(
-                                  color: paidGreen,
-                                  fontSize: 8.5,
+                                    : (hasBalance
+                                        ? 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)}) BAL (${GymDateUtils.formatCurrency(m.balanceDue, symbol: currency)})'
+                                        : 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)})'),
+                                style: TextStyle(
+                                  color: hasBalance ? const Color(0xFFE65100) : paidGreen,
+                                  fontSize: hasBalance ? 7.5 : 8.5,
                                   fontWeight: FontWeight.w900,
                                 ),
                                 maxLines: 1,
@@ -673,19 +787,47 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                         ],
                       ],
                     )
-                  : (m.presentDays > 0
-                      ? Text(
-                          '${m.presentDays} Pres',
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  : (isDue
+                      ? Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'DUE (${GymDateUtils.formatCurrency(monthlyFee, symbol: currency)})',
+                                style: const TextStyle(
+                                  color: Color(0xFFD32F2F),
+                                  fontSize: 8.0,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (m.presentDays > 0) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '${m.presentDays} Pres',
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 7.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ],
                         )
-                      : const Text(
-                          '-',
-                          style: TextStyle(color: Colors.black26, fontSize: 10),
-                        )),
+                      : (m.presentDays > 0
+                          ? Text(
+                              '${m.presentDays} Pres',
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : const Text(
+                              '-',
+                              style: TextStyle(color: Colors.black26, fontSize: 10),
+                            ))),
             ),
           ],
         );

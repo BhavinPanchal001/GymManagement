@@ -64,6 +64,57 @@ class MemberCloudStore {
     });
   }
 
+  /// Permanently deletes a customer and cascades deletion to all their attendance,
+  /// payments, and billing records in Firestore.
+  Future<void> deleteCustomerCascade(String customerId) async {
+    final guarded = await _enabled();
+    if (!guarded) {
+      final collections = ['attendance', 'payments', 'bills'];
+      final batch = firestore.batch();
+      for (final coll in collections) {
+        final snap = await firestore
+            .collection('gyms')
+            .doc(ownerId)
+            .collection(coll)
+            .where('customerId', isEqualTo: customerId)
+            .get();
+        for (final doc in snap.docs) {
+          batch.delete(doc.reference);
+        }
+      }
+      batch.delete(_ref('customers', customerId));
+      await batch.commit();
+      return;
+    }
+
+    await firestore.runTransaction((transaction) async {
+      final guardRef = _ref('memberGuards', customerId);
+      final customerRef = _ref('customers', customerId);
+      final customer = await transaction.get(customerRef);
+
+      final historySnapshots = await Future.wait([
+        for (final collection in ['attendance', 'payments', 'bills'])
+          firestore
+              .collection('gyms')
+              .doc(ownerId)
+              .collection(collection)
+              .where('customerId', isEqualTo: customerId)
+              .get(const GetOptions(source: Source.server)),
+      ]);
+
+      for (final snapshot in historySnapshots) {
+        for (final doc in snapshot.docs) {
+          transaction.delete(doc.reference);
+        }
+      }
+
+      transaction.set(guardRef, {'hasHistory': false, 'deleted': true});
+      if (customer.exists) {
+        transaction.delete(customerRef);
+      }
+    });
+  }
+
   StateError _historyError() => StateError(
     'This member has attendance, payments, membership dues or receipts. '
     'Archive instead to preserve their history.',
@@ -73,7 +124,15 @@ class MemberCloudStore {
     final guarded = await _enabled();
     if (!guarded) {
       if (changes.any((c) => c.collection == 'customers' && c.data == null)) {
-        throw StateError('Safe cloud deletion has not been activated.');
+        final customerDeletions = changes.where(
+          (c) => c.collection == 'customers' && c.data == null,
+        );
+        for (final c in customerDeletions) {
+          final doc = await _ref('customers', c.documentId).get();
+          if (doc.exists) {
+            throw StateError('Safe cloud deletion has not been activated.');
+          }
+        }
       }
       final batch = firestore.batch();
       for (final change in changes) {
@@ -126,7 +185,10 @@ class MemberCloudStore {
             .every((c) => c.collection == 'customers' && c.data == null);
         if (onlyDeletion) {
           if (guard?['deleted'] != true || guard?['hasHistory'] != false) {
-            throw StateError('Member deletion must be confirmed online first.');
+            final doc = await transaction.get(_ref('customers', id));
+            if (doc.exists) {
+              throw StateError('Member deletion must be confirmed online first.');
+            }
           }
         } else {
           if (guard?['deleted'] == true) {

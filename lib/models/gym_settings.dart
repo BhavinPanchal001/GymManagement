@@ -143,6 +143,9 @@ class GymSettings {
     }
   }
 
+  /// Alias for [getFeeForPlan]
+  double feeForPlan(String? planType) => getFeeForPlan(planType);
+
   GymSettings copyWith({
     String? gymName,
     String? gymTagline,

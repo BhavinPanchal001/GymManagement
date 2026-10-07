@@ -344,7 +344,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                       )
                     : ListView.separated(
                         physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                         itemCount: filteredCustomers.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 10),
                         itemBuilder: (context, i) {

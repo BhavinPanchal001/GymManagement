@@ -529,7 +529,7 @@ class _BillingTabState extends State<BillingTab> {
                         )
                       else
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                           sliver: SliverList.separated(
                             itemCount: customers.length,
                             separatorBuilder: (context, index) => const SizedBox(height: 10),

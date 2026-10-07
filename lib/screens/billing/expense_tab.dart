@@ -279,7 +279,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
                         itemCount: filteredExpenses.length,
                         itemBuilder: (context, index) {
                           final expense = filteredExpenses[index];

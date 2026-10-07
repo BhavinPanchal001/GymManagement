@@ -39,6 +39,7 @@ class AddCustomerSheet extends StatefulWidget {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => AddCustomerSheet(
         customerToEdit: customerToEdit,
@@ -399,7 +400,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     final gymService = GymService();
     final currency = gymService.settings.currencySymbol;
     return Container(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).viewPadding.bottom +
+            24,
+      ),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),

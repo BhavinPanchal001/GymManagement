@@ -46,6 +46,7 @@ class MonthCardData {
   final String monthKey; // e.g. "2026-01"
   final bool isPaid;
   final double amount;
+  final double balanceDue;
   final PaymentMethod? method;
   final DateTime? paidAt;
   final int presentDays;
@@ -61,6 +62,7 @@ class MonthCardData {
     required this.monthKey,
     required this.isPaid,
     required this.amount,
+    this.balanceDue = 0.0,
     this.method,
     this.paidAt,
     required this.presentDays,
@@ -503,14 +505,31 @@ class GymService extends ChangeNotifier {
     List<BillRecord> bills = const [],
     List<Customer> customers = const [],
     List<String> deletedCustomerIds = const [],
+    List<String> deletedPaymentIds = const [],
+    List<String> deletedBillIds = const [],
+    bool queueCloudChanges = true,
   }) async {
-    final nextPayments = {..._paymentMap, for (final p in payments) p.id: p};
-    final nextBills = {..._billsMap, for (final b in bills) b.id: b};
+    final nextPayments = Map<String, PaymentRecord>.from(_paymentMap);
+    for (final p in payments) {
+      nextPayments[p.id] = p;
+    }
+    for (final id in deletedPaymentIds) {
+      nextPayments.remove(id);
+    }
+
+    final nextBills = Map<String, BillRecord>.from(_billsMap);
+    for (final b in bills) {
+      nextBills[b.id] = b;
+    }
+    for (final id in deletedBillIds) {
+      nextBills.remove(id);
+    }
+
     final changedIds = {...customers.map((c) => c.id), ...deletedCustomerIds};
     final nextCustomers = [
       ...customers, ..._customers.where((c) => !changedIds.contains(c.id)),
     ];
-    if (_currentUserId == null) {
+    if (_currentUserId == null || !queueCloudChanges) {
       await _saveFinancialSnapshot(
         nextPayments, nextBills, customers: nextCustomers,
       );
@@ -520,6 +539,8 @@ class GymService extends ChangeNotifier {
         ...deletedCustomerIds.map((id) => CloudChange('customers', id, null)),
         ...payments.map((p) => CloudChange('payments', p.id, p.toMap())),
         ...bills.map((b) => CloudChange('bills', b.id, b.toMap())),
+        ...deletedPaymentIds.map((id) => CloudChange('payments', id, null)),
+        ...deletedBillIds.map((id) => CloudChange('bills', id, null)),
       ], autoFlush: false);
     }
     _paymentMap = nextPayments;
@@ -532,6 +553,16 @@ class GymService extends ChangeNotifier {
       } catch (_) {
         _financialCacheError = 'Member saved. Local history refresh needs a retry.';
       }
+    }
+    if (payments.isNotEmpty || deletedPaymentIds.isNotEmpty) {
+      try {
+        await _savePayments();
+      } catch (_) {}
+    }
+    if (bills.isNotEmpty || deletedBillIds.isNotEmpty) {
+      try {
+        await _saveBills();
+      } catch (_) {}
     }
     notifyListeners();
     unawaited(_syncQueue?.flush() ?? Future.value());
@@ -1039,7 +1070,8 @@ class GymService extends ChangeNotifier {
         monthName: monthNames[m - 1],
         monthKey: monthKey,
         isPaid: isPaidForMonth,
-        amount: isPaidForMonth ? payment.amount : 0.0,
+        amount: (isPaidForMonth && !isCovered) ? payment.amount : 0.0,
+        balanceDue: (isPaidForMonth && !isCovered) ? payment.balanceDue : 0.0,
         method: isPaidForMonth ? payment.method : null,
         paidAt: isPaidForMonth ? payment.paidAt : null,
         presentDays: present,
@@ -1403,12 +1435,6 @@ class GymService extends ChangeNotifier {
 
   String? customerDeletionBlockReason(String customerId) {
     if (getCustomerById(customerId) == null) return 'Member not found.';
-    if (_attendanceMap.values.any((a) => a.customerId == customerId) ||
-        _paymentMap.values.any((p) => p.customerId == customerId) ||
-        _billsMap.values.any((b) => b.customerId == customerId)) {
-      return 'This member has attendance, payments, membership dues or receipts. '
-          'Archive instead to preserve their history.';
-    }
     if (_currentUserId != null && (!_isCloudAttached || _cloudReadError != null)) {
       return 'Connect and sync your account before deleting permanently. '
           'You can archive the member offline.';
@@ -1423,17 +1449,48 @@ class GymService extends ChangeNotifier {
         final customer = getCustomerById(customerId)!;
         final owner = _currentUserId;
         if (owner != null) {
-          await FirestoreService().deleteCustomerIfEmpty(owner, customerId);
+          await FirestoreService().deleteCustomerCascade(owner, customerId);
           if (_currentUserId != owner) {
             throw StateError('This account is no longer connected.');
           }
         }
-        await _commitFinancialRecords(deletedCustomerIds: [customerId]);
+
+        // 1. Gather all financial records (payments & bills) for this member to delete
+        final paymentsToDelete = _paymentMap.values
+            .where((p) => p.customerId == customerId)
+            .map((p) => p.id)
+            .toList();
+        final billsToDelete = _billsMap.values
+            .where((b) => b.customerId == customerId)
+            .map((b) => b.id)
+            .toList();
+
+        // 2. Commit financial and customer deletion locally (cloud already handled by deleteCustomerCascade)
+        await _commitFinancialRecords(
+          deletedCustomerIds: [customerId],
+          deletedPaymentIds: paymentsToDelete,
+          deletedBillIds: billsToDelete,
+          queueCloudChanges: owner == null,
+        );
+
+        // 3. Remove all attendance records for this customer
+        final attendanceKeysToRemove = _attendanceMap.entries
+            .where((e) => e.value.customerId == customerId)
+            .map((e) => e.key)
+            .toList();
+        for (final key in attendanceKeysToRemove) {
+          _attendanceMap.remove(key);
+        }
+        await _saveAttendance();
+
+        // 4. Remove managed photo file
         try {
           await ImageStorageUtils.deleteManagedImage(customer.imagePath);
         } catch (_) {
           // Photo cleanup must not turn a saved deletion into a failed action.
         }
+
+        notifyListeners();
       });
 
   /// Keep receipts and attendance when a member leaves the gym.
@@ -3174,6 +3231,69 @@ class GymService extends ChangeNotifier {
           totalAmount: byMonth[month]!.fold<double>(
             0,
             (sum, item) => sum + pendingAmountOf(item.payment),
+          ),
+        ),
+    ];
+  }
+
+  // ==================== COLLECTION HISTORY OPERATIONS ====================
+
+  /// Returns collected (paid) payments grouped by member within [start, end].
+  /// Only includes payments where paidAt falls within the date range.
+  List<MemberCollectionSummary> getCollectionsByMember(DateTime start, DateTime end) {
+    final startDay = DateTime(start.year, start.month, start.day);
+    final endDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
+
+    final byMember = <String, List<PaymentRecord>>{};
+
+    for (final payment in _paymentMap.values) {
+      if (!payment.isPaid) continue;
+      if (payment.paidAt == null) continue;
+      if (payment.paidAt!.isBefore(startDay) || payment.paidAt!.isAfter(endDay)) continue;
+      (byMember[payment.customerId] ??= []).add(payment);
+    }
+
+    final summaries = <MemberCollectionSummary>[];
+    for (final entry in byMember.entries) {
+      final customer = _customers.cast<Customer?>().firstWhere(
+        (c) => c?.id == entry.key,
+        orElse: () => null,
+      );
+      if (customer == null) continue;
+
+      final records = entry.value..sort((a, b) => b.paidAt!.compareTo(a.paidAt!));
+      final totalCollected = records.fold<double>(0.0, (sum, r) => sum + r.amount);
+
+      summaries.add(MemberCollectionSummary(
+        customer: customer,
+        paidRecords: records,
+        totalCollectedAmount: totalCollected,
+      ));
+    }
+
+    return summaries;
+  }
+
+  /// Returns collected payments grouped by month (based on paidAt) within [start, end].
+  List<MonthCollectionGroup> getCollectionsByMonth(DateTime start, DateTime end) {
+    final byMonth = <String, List<MonthCollectionItem>>{};
+    for (final member in getCollectionsByMember(start, end)) {
+      for (final payment in member.paidRecords) {
+        final monthKey = GymDateUtils.toMonthKey(payment.paidAt!);
+        (byMonth[monthKey] ??= []).add(
+          MonthCollectionItem(customer: member.customer, payment: payment),
+        );
+      }
+    }
+    final months = byMonth.keys.toList()..sort((a, b) => b.compareTo(a));
+    return [
+      for (final month in months)
+        MonthCollectionGroup(
+          monthKey: month,
+          items: List.unmodifiable(byMonth[month]!),
+          totalAmount: byMonth[month]!.fold<double>(
+            0,
+            (sum, item) => sum + item.payment.amount,
           ),
         ),
     ];

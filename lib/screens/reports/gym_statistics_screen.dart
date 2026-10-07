@@ -9,6 +9,7 @@ import '../../widgets/charts/expense_category_chart.dart';
 import '../../widgets/charts/financial_trends_chart.dart';
 import '../../widgets/charts/membership_donut_chart.dart';
 import '../customers/expiring_members_sheet.dart';
+import 'collection_history_report_screen.dart';
 import 'pending_payments_report_screen.dart';
 import '../../utils/animation_utils.dart';
 import '../../widgets/animations/animated_counter.dart';
@@ -200,6 +201,27 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  AnimatedPressable(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CollectionHistoryReportScreen(),
+                        ),
+                      );
+                    },
+                    child: _buildFinancialMetricBox(
+                      title: 'Collection History',
+                      subtitle: 'Tap to view full report',
+                      amount: currentMonthIncome,
+                      currency: currency,
+                      color: AppColors.paid,
+                      icon: Icons.receipt_long_rounded,
+                      showArrow: true,
+                    ),
                   ),
 
                   const SizedBox(height: 14),

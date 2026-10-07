@@ -23,6 +23,7 @@ class MarkMonthAttendanceDialog extends StatefulWidget {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => MarkMonthAttendanceDialog(
         customer: customer,
@@ -161,7 +162,9 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
         left: 20,
         right: 20,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).viewPadding.bottom +
+            24,
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,

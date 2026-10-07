@@ -292,7 +292,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Form(
           key: _formKey,
           child: Column(

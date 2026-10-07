@@ -215,4 +215,23 @@ void main() {
       }
     },
   );
+
+  test('deleteCustomerCascade removes member and all associated history', () async {
+    await store.commit([
+      const CloudChange('attendance', 'att_1', {'customerId': 'member'}),
+      const CloudChange('payments', 'pay_1', {'customerId': 'member'}),
+      const CloudChange('bills', 'bill_1', {'customerId': 'member'}),
+    ]);
+    expect((await db.doc('gyms/owner/customers/member').get()).exists, isTrue);
+    expect((await db.doc('gyms/owner/attendance/att_1').get()).exists, isTrue);
+    expect((await db.doc('gyms/owner/payments/pay_1').get()).exists, isTrue);
+    expect((await db.doc('gyms/owner/bills/bill_1').get()).exists, isTrue);
+
+    await store.deleteCustomerCascade('member');
+
+    expect((await db.doc('gyms/owner/customers/member').get()).exists, isFalse);
+    expect((await db.doc('gyms/owner/attendance/att_1').get()).exists, isFalse);
+    expect((await db.doc('gyms/owner/payments/pay_1').get()).exists, isFalse);
+    expect((await db.doc('gyms/owner/bills/bill_1').get()).exists, isFalse);
+  });
 }

@@ -258,6 +258,13 @@ class FirestoreService {
     await MemberCloudStore(_firestore!, ownerId).deleteEmptyCustomer(customerId);
   }
 
+  Future<void> deleteCustomerCascade(String ownerId, String customerId) async {
+    if (!_isAttached || _firestore == null || _userId != ownerId) {
+      throw StateError('Connect and sync your account before deleting permanently.');
+    }
+    await MemberCloudStore(_firestore!, ownerId).deleteCustomerCascade(customerId);
+  }
+
   /// Owner checks prevent a delayed retry from writing to another account.
   Future<void> commitChanges(String ownerId, List<CloudChange> changes) async {
     if (!_isAttached || _firestore == null || _userId != ownerId) {

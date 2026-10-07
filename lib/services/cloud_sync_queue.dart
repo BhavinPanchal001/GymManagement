@@ -215,8 +215,9 @@ class CloudSyncQueue extends ChangeNotifier {
         lastError = null;
         notifyListeners();
       }
-    } catch (_) {
+    } catch (e, stack) {
       if (_closed) return;
+      debugPrint('CloudSyncQueue upload error: $e\n$stack');
       lastError = 'Changes are saved on this phone, but could not be uploaded.';
       notifyListeners();
       _retryTimer = Timer(retryDelay, () => unawaited(flush()));

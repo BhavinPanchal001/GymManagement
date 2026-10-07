@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym/models/attendance.dart';
-import 'package:gym/models/bill.dart';
 import 'package:gym/models/customer.dart';
 import 'package:gym/models/payment.dart';
 import 'package:gym/screens/customers/customer_detail_screen.dart';
@@ -129,22 +128,18 @@ void main() {
   });
 
   for (final status in AttendanceStatus.values) {
-    test('any recorded attendance blocks deletion: ${status.name}', () async {
+    test('permanent deletion cascades and removes attendance: ${status.name}', () async {
       final customer = await member();
       await gym.toggleAttendance(customer.id, '2024-01-20', status);
-      final attendance = gym.attendanceMap;
-      expect(attendance, isNotEmpty);
-      await expectLater(
-        gym.permanentlyDeleteCustomer(customer.id),
-        throwsStateError,
-      );
-      expect(gym.getCustomerById(customer.id), isNotNull);
-      expect(gym.attendanceMap, attendance);
+      expect(gym.attendanceMap, isNotEmpty);
+      await gym.permanentlyDeleteCustomer(customer.id);
+      expect(gym.getCustomerById(customer.id), isNull);
+      expect(gym.attendanceMap, isEmpty);
     });
   }
 
   test(
-    'unpaid membership agreements and paid receipts block deletion',
+    'permanent deletion cascades and removes unpaid agreements and paid receipts',
     () async {
       final unpaid = await gym.addCustomer(
         name: 'Unpaid Member',
@@ -152,11 +147,10 @@ void main() {
         membershipStartDate: DateTime(2024, 1, 1),
         membershipFee: 600,
       );
-      await expectLater(
-        gym.permanentlyDeleteCustomer(unpaid.id),
-        throwsStateError,
-      );
-      expect(gym.getCustomerById(unpaid.id), isNotNull);
+      expect(gym.paymentMap.values.any((p) => p.customerId == unpaid.id), isTrue);
+      await gym.permanentlyDeleteCustomer(unpaid.id);
+      expect(gym.getCustomerById(unpaid.id), isNull);
+      expect(gym.paymentMap.values.any((p) => p.customerId == unpaid.id), isFalse);
 
       final paid = await member();
       await gym.markPaymentAsPaid(
@@ -167,52 +161,31 @@ void main() {
         method: PaymentMethod.cash,
         startDate: DateTime(2024, 1, 1),
       );
-      final payments = gym.paymentMap;
-      final receipts = gym.billsMap;
-      await expectLater(
-        gym.permanentlyDeleteCustomer(paid.id),
-        throwsStateError,
-      );
-      expect(gym.paymentMap, payments);
-      expect(gym.billsMap, receipts);
-      await gym.archiveCustomer(paid.id);
-      await expectLater(
-        gym.permanentlyDeleteCustomer(paid.id),
-        throwsStateError,
-      );
+      expect(gym.paymentMap.values.any((p) => p.customerId == paid.id), isTrue);
+      expect(gym.billsMap.values.any((b) => b.customerId == paid.id), isTrue);
+      await gym.permanentlyDeleteCustomer(paid.id);
+      expect(gym.getCustomerById(paid.id), isNull);
+      expect(gym.paymentMap.values.any((p) => p.customerId == paid.id), isFalse);
+      expect(gym.billsMap.values.any((b) => b.customerId == paid.id), isFalse);
     },
   );
 
-  test('cancelled standalone receipts still block deletion', () async {
+  test('permanent deletion cascades and removes cancelled standalone receipts', () async {
     final customer = await member();
-    final receipt = BillRecord(
-      id: 'legacy-receipt',
-      billNumber: 'LEGACY-1',
+    await gym.markPaymentAsPaid(
       customerId: customer.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
       monthYear: '2024-01',
       amount: 600,
-      paymentId: '',
+      totalDue: 600,
       method: PaymentMethod.cash,
-      paidAt: DateTime(2024, 1, 1),
-      gymName: 'Gym',
-      issuedAt: DateTime(2024, 1, 1),
-      status: 'CANCELLED',
+      startDate: DateTime(2024, 1, 1),
     );
-    await gym.detachUser();
-    SharedPreferences.setMockInitialValues({
-      'gym_receipt-owner_customers_v1': json.encode([customer.toMap()]),
-      'gym_receipt-owner_bills_v1': json.encode([receipt.toMap()]),
-      'payments_schema_v2': true,
-    });
-    await gym.attachUser('receipt-owner');
-    expect(gym.customerDeletionBlockReason(customer.id), contains('receipts'));
-    await expectLater(
-      gym.permanentlyDeleteCustomer(customer.id),
-      throwsStateError,
-    );
-    expect(gym.billsMap[receipt.id]?.status, 'CANCELLED');
+    final payment = gym.paymentMap.values.firstWhere((p) => p.customerId == customer.id);
+    await gym.revertPayment(payment.id);
+    expect(gym.billsMap.values.any((b) => b.customerId == customer.id && b.status == 'CANCELLED'), isTrue);
+    await gym.permanentlyDeleteCustomer(customer.id);
+    expect(gym.getCustomerById(customer.id), isNull);
+    expect(gym.billsMap.values.any((b) => b.customerId == customer.id), isFalse);
   });
 
   test(
@@ -305,20 +278,18 @@ void main() {
     },
   );
 
-  test('attendance queued first blocks concurrent removal', () async {
+  test('attendance queued first is cleaned up by removal', () async {
     final customer = await member();
     final attendance = gym.toggleAttendance(
       customer.id,
       '2024-01-20',
       AttendanceStatus.absent,
     );
-    await expectLater(
-      gym.permanentlyDeleteCustomer(customer.id),
-      throwsStateError,
-    );
     await attendance;
-    expect(gym.getCustomerById(customer.id), isNotNull);
     expect(gym.getAttendance(customer.id, '2024-01-20'), isNotNull);
+    await gym.permanentlyDeleteCustomer(customer.id);
+    expect(gym.getCustomerById(customer.id), isNull);
+    expect(gym.getAttendance(customer.id, '2024-01-20'), isNull);
   });
 
   test(
@@ -426,8 +397,7 @@ void main() {
     final deleteTile = tester.widget<ListTile>(
       find.widgetWithText(ListTile, 'Delete permanently'),
     );
-    expect(deleteTile.enabled, isFalse);
-    expect(find.textContaining('Archive instead'), findsOneWidget);
+    expect(deleteTile.enabled, isTrue);
     await tester.tap(find.text('Archive member'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));
@@ -453,7 +423,7 @@ void main() {
   });
 
   testWidgets(
-    'history added during confirmation is rechecked before deletion',
+    'history added during confirmation is cascade-deleted on permanent deletion',
     (tester) async {
       final customer = await member();
       await openProfile(tester, customer);
@@ -467,9 +437,9 @@ void main() {
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Delete permanently'));
       await tester.pumpAndSettle();
-      expect(gym.getCustomerById(customer.id), isNotNull);
-      expect(find.textContaining('Archive instead'), findsOneWidget);
-      expect(find.byType(CustomerDetailScreen), findsOneWidget);
+      expect(gym.getCustomerById(customer.id), isNull);
+      expect(gym.attendanceMap, isEmpty);
+      expect(find.text('Member permanently deleted.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

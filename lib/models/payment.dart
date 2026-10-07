@@ -384,3 +384,42 @@ class MonthPendingGroup {
     required this.totalAmount,
   });
 }
+
+// ==================== COLLECTION HISTORY MODELS ====================
+
+class MemberCollectionSummary {
+  final Customer customer;
+  final List<PaymentRecord> paidRecords;
+  final double totalCollectedAmount;
+
+  const MemberCollectionSummary({
+    required this.customer,
+    required this.paidRecords,
+    required this.totalCollectedAmount,
+  });
+
+  List<String> get paidMonths =>
+      paidRecords.map((r) => r.monthYear).toList();
+}
+
+class MonthCollectionItem {
+  final Customer customer;
+  final PaymentRecord payment;
+
+  const MonthCollectionItem({
+    required this.customer,
+    required this.payment,
+  });
+}
+
+class MonthCollectionGroup {
+  final String monthKey;
+  final List<MonthCollectionItem> items;
+  final double totalAmount;
+
+  const MonthCollectionGroup({
+    required this.monthKey,
+    required this.items,
+    required this.totalAmount,
+  });
+}

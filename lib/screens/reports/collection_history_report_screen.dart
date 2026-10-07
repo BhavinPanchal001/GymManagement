@@ -7,55 +7,45 @@ import '../../services/theme_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
-import '../../widgets/mark_payment_dialog.dart';
-import '../../widgets/collect_balance_dialog.dart';
 import '../../widgets/bill_receipt_dialog.dart';
-import '../../widgets/whatsapp_reminder_sheet.dart';
-import 'export_report_dialog.dart';
 import '../../widgets/voice_search_suffix.dart';
 
-enum DateRangePreset {
-  allOutstanding('All Outstanding'),
+enum CollectionDatePreset {
   thisMonth('This Month'),
   last3Months('Last 3 Months'),
   last6Months('Last 6 Months'),
   thisYear('This Year'),
+  allTime('All Time'),
   custom('Custom');
 
   final String label;
-  const DateRangePreset(this.label);
+  const CollectionDatePreset(this.label);
 }
 
-enum ReportViewMode { byMember, byMonth }
+enum CollectionViewMode { byMember, byMonth }
 
-enum ReportSortOrder {
-  highestDue('Highest Dues'),
+enum CollectionSortOrder {
+  highestCollection('Highest Collection'),
   nameAZ('Name (A-Z)'),
-  oldestDue('Oldest Dues');
+  mostRecent('Most Recent');
 
   final String label;
-  const ReportSortOrder(this.label);
+  const CollectionSortOrder(this.label);
 }
 
-class PendingPaymentsReportScreen extends StatefulWidget {
-  const PendingPaymentsReportScreen({super.key});
+class CollectionHistoryReportScreen extends StatefulWidget {
+  const CollectionHistoryReportScreen({super.key});
 
   @override
-  State<PendingPaymentsReportScreen> createState() => _PendingPaymentsReportScreenState();
+  State<CollectionHistoryReportScreen> createState() => _CollectionHistoryReportScreenState();
 }
 
-class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScreen> {
-  DateRangePreset _selectedPreset = DateRangePreset.allOutstanding;
+class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportScreen> {
+  CollectionDatePreset _selectedPreset = CollectionDatePreset.thisMonth;
   late DateTime _startDate;
   late DateTime _endDate;
-  DateTime get _rangeStart => _selectedPreset == DateRangePreset.allOutstanding
-      ? GymService().outstandingStartDate
-      : _startDate;
-  DateTime get _rangeEnd => _selectedPreset == DateRangePreset.allOutstanding
-      ? GymService().outstandingEndDate
-      : _endDate;
-  ReportViewMode _viewMode = ReportViewMode.byMember;
-  ReportSortOrder _sortOrder = ReportSortOrder.highestDue;
+  CollectionViewMode _viewMode = CollectionViewMode.byMember;
+  CollectionSortOrder _sortOrder = CollectionSortOrder.highestCollection;
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -63,7 +53,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   @override
   void initState() {
     super.initState();
-    _applyPreset(DateRangePreset.allOutstanding);
+    _applyPreset(CollectionDatePreset.thisMonth);
   }
 
   @override
@@ -72,30 +62,28 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     super.dispose();
   }
 
-  void _applyPreset(DateRangePreset preset) {
+  void _applyPreset(CollectionDatePreset preset) {
     final now = DateTime.now();
     DateTime start;
-    DateTime end = DateTime(now.year, now.month + 1, 0); // end of current month
+    DateTime end = DateTime(now.year, now.month, now.day);
 
     switch (preset) {
-      case DateRangePreset.allOutstanding:
-        start = GymService().outstandingStartDate;
-        end = GymService().outstandingEndDate;
-        break;
-      case DateRangePreset.thisMonth:
+      case CollectionDatePreset.thisMonth:
         start = DateTime(now.year, now.month, 1);
         break;
-      case DateRangePreset.last3Months:
+      case CollectionDatePreset.last3Months:
         start = DateTime(now.year, now.month - 2, 1);
         break;
-      case DateRangePreset.last6Months:
+      case CollectionDatePreset.last6Months:
         start = DateTime(now.year, now.month - 5, 1);
         break;
-      case DateRangePreset.thisYear:
+      case CollectionDatePreset.thisYear:
         start = DateTime(now.year, 1, 1);
-        end = DateTime(now.year, 12, 31);
         break;
-      case DateRangePreset.custom:
+      case CollectionDatePreset.allTime:
+        start = DateTime(2022, 1, 1);
+        break;
+      case CollectionDatePreset.custom:
         return;
     }
 
@@ -109,9 +97,9 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   Future<void> _pickCustomDateRange() async {
     final picked = await showDateRangePicker(
       context: context,
-      initialDateRange: DateTimeRange(start: _rangeStart, end: _rangeEnd),
+      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
       firstDate: DateTime(2022),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -129,14 +117,14 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
 
     if (picked != null) {
       setState(() {
-        _selectedPreset = DateRangePreset.custom;
+        _selectedPreset = CollectionDatePreset.custom;
         _startDate = picked.start;
         _endDate = picked.end;
       });
     }
   }
 
-  List<MemberPendingSummary> _filterAndSortMembers(List<MemberPendingSummary> original) {
+  List<MemberCollectionSummary> _filterAndSortMembers(List<MemberCollectionSummary> original) {
     var list = original;
 
     // Search query filter
@@ -149,17 +137,17 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
 
     // Sort
     switch (_sortOrder) {
-      case ReportSortOrder.highestDue:
-        list.sort((a, b) => b.totalPendingAmount.compareTo(a.totalPendingAmount));
+      case CollectionSortOrder.highestCollection:
+        list.sort((a, b) => b.totalCollectedAmount.compareTo(a.totalCollectedAmount));
         break;
-      case ReportSortOrder.nameAZ:
+      case CollectionSortOrder.nameAZ:
         list.sort((a, b) => a.customer.name.toLowerCase().compareTo(b.customer.name.toLowerCase()));
         break;
-      case ReportSortOrder.oldestDue:
+      case CollectionSortOrder.mostRecent:
         list.sort((a, b) {
-          final firstMonthA = a.pendingMonths.isNotEmpty ? a.pendingMonths.first : '';
-          final firstMonthB = b.pendingMonths.isNotEmpty ? b.pendingMonths.first : '';
-          return firstMonthA.compareTo(firstMonthB);
+          final latestA = a.paidRecords.isNotEmpty ? a.paidRecords.first.paidAt ?? DateTime(2000) : DateTime(2000);
+          final latestB = b.paidRecords.isNotEmpty ? b.paidRecords.first.paidAt ?? DateTime(2000) : DateTime(2000);
+          return latestB.compareTo(latestA);
         });
         break;
     }
@@ -167,19 +155,19 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     return list;
   }
 
-  List<MonthPendingGroup> _filterMonthGroups(List<MonthPendingGroup> original) {
+  List<MonthCollectionGroup> _filterMonthGroups(List<MonthCollectionGroup> original) {
     if (_searchQuery.trim().isEmpty) return original;
     final q = _searchQuery.toLowerCase().trim();
 
-    final filteredGroups = <MonthPendingGroup>[];
+    final filteredGroups = <MonthCollectionGroup>[];
     for (final group in original) {
       final matchingItems = group.items.where((it) {
         return it.customer.name.toLowerCase().contains(q) || it.customer.phone.contains(q);
       }).toList();
 
       if (matchingItems.isNotEmpty) {
-        final groupTotal = matchingItems.fold<double>(0.0, (s, it) => s + GymService().pendingAmountOf(it.payment));
-        filteredGroups.add(MonthPendingGroup(
+        final groupTotal = matchingItems.fold<double>(0.0, (s, it) => s + it.payment.amount);
+        filteredGroups.add(MonthCollectionGroup(
           monthKey: group.monthKey,
           items: matchingItems,
           totalAmount: groupTotal,
@@ -189,37 +177,19 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     return filteredGroups;
   }
 
-  void _openWhatsAppReminder(Customer customer, String monthYear, double amount) {
-    WhatsAppReminderSheet.show(
-      context,
-      customer: customer,
-      monthYear: monthYear,
-      amount: amount,
-    );
-  }
+  void _viewReceipt(Customer customer, PaymentRecord payment) {
+    // Find the bill for this payment
+    final gym = GymService();
+    final bills = gym.billsMap.values.where((b) =>
+        b.paymentId == payment.id && b.isPaid).toList();
 
-  Future<void> _openMarkPaid(Customer customer, PaymentRecord record) async {
-    if (record.isPaid) {
-      final current = GymService().getPaymentById(record.id);
-      if (current == null || current.balanceDue <= 0) return;
-      final bill = await CollectBalanceDialog.show(context, current);
-      if (bill != null && mounted) {
-        await BillReceiptDialog.show(context, bill: bill);
-      }
-      return;
-    }
-    final success = await MarkPaymentDialog.show(
-      context,
-      customer: customer,
-      monthYear: record.monthYear,
-      currentRecord: record,
-    );
-
-    if (success == true && mounted) {
+    if (bills.isNotEmpty) {
+      BillReceiptDialog.show(context, bill: bills.first);
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Payment recorded for ${customer.name}!'),
-          backgroundColor: AppColors.paid,
+          content: Text('No bill receipt found for this payment.'),
+          backgroundColor: AppColors.textSecondary,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -234,13 +204,11 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
         final gym = GymService();
         final currency = gym.settings.currencySymbol;
 
-        final start = _rangeStart;
-        final end = _rangeEnd;
-        final rawMemberSummaries = gym.getPendingDuesByMember(start, end);
-        final rawMonthGroups = gym.getPendingDuesByMonth(start, end);
+        final rawMemberSummaries = gym.getCollectionsByMember(_startDate, _endDate);
+        final rawMonthGroups = gym.getCollectionsByMonth(_startDate, _endDate);
 
-        final totalPending = rawMemberSummaries.fold<double>(0.0, (s, m) => s + m.totalPendingAmount);
-        final totalPendingRecords = rawMemberSummaries.fold<int>(0, (s, m) => s + m.pendingRecords.length);
+        final totalCollected = rawMemberSummaries.fold<double>(0.0, (s, m) => s + m.totalCollectedAmount);
+        final totalPayments = rawMemberSummaries.fold<int>(0, (s, m) => s + m.paidRecords.length);
 
         final memberSummaries = _filterAndSortMembers(rawMemberSummaries);
         final monthGroups = _filterMonthGroups(rawMonthGroups);
@@ -248,22 +216,9 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
         return Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
-            title: const Text('Pending Dues Report'),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.share_outlined, color: AppColors.primary),
-                tooltip: 'Export & Share Report',
-                onPressed: () {
-                  ExportReportDialog.show(
-                    context,
-                    startDate: start,
-                    endDate: end,
-                    memberSummaries: rawMemberSummaries,
-                    totalPending: totalPending,
-                  );
-                },
-              ),
-              const SizedBox(width: 4),
+            title: const Text('Collection History'),
+            actions: const [
+              SizedBox(width: 4),
             ],
           ),
           body: Column(
@@ -275,14 +230,14 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                 _buildDateRangeHeader(),
 
                 // Top KPI Summary Cards
-                _buildKpiSection(totalPending, rawMemberSummaries.length, totalPendingRecords, currency),
+                _buildKpiSection(totalCollected, rawMemberSummaries.length, totalPayments, currency),
 
                 // Search, Sort & View Mode Bar
                 _buildFilterAndModeBar(rawMemberSummaries.length),
 
                 // Main Content List
                 Expanded(
-                  child: _viewMode == ReportViewMode.byMember
+                  child: _viewMode == CollectionViewMode.byMember
                       ? _buildByMemberView(memberSummaries, currency)
                       : _buildByMonthView(monthGroups, currency),
                 ),
@@ -298,7 +253,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
-        children: DateRangePreset.values.map((preset) {
+        children: CollectionDatePreset.values.map((preset) {
           final isSelected = _selectedPreset == preset;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -306,7 +261,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
               label: Text(preset.label),
               selected: isSelected,
               onSelected: (selected) {
-                if (preset == DateRangePreset.custom) {
+                if (preset == CollectionDatePreset.custom) {
                   _pickCustomDateRange();
                 } else if (selected) {
                   _applyPreset(preset);
@@ -335,8 +290,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   }
 
   Widget _buildDateRangeHeader() {
-    final startStr = GymDateUtils.formatDate(_rangeStart);
-    final endStr = GymDateUtils.formatDate(_rangeEnd);
+    final startStr = GymDateUtils.formatDate(_startDate);
+    final endStr = GymDateUtils.formatDate(_endDate);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -384,7 +339,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     );
   }
 
-  Widget _buildKpiSection(double totalPending, int unpaidMembersCount, int pendingRecordsCount, String currency) {
+  Widget _buildKpiSection(double totalCollected, int membersCount, int paymentsCount, String currency) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -395,7 +350,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
       ),
       child: Row(
         children: [
-          // Total pending amount
+          // Total collected amount
           Expanded(
             flex: 5,
             child: Column(
@@ -407,13 +362,13 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       width: 7,
                       height: 7,
                       decoration: const BoxDecoration(
-                        color: AppColors.pending,
+                        color: AppColors.paid,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'TOTAL PENDING',
+                      'TOTAL COLLECTED',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 10,
@@ -425,9 +380,9 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  GymDateUtils.formatCurrency(totalPending, symbol: currency),
+                  GymDateUtils.formatCurrency(totalCollected, symbol: currency),
                   style: const TextStyle(
-                    color: AppColors.pending,
+                    color: AppColors.paid,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
@@ -453,7 +408,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$unpaidMembersCount',
+                  '$membersCount',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 18,
@@ -471,7 +426,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'MONTHS DUE',
+                  'PAYMENTS',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 10,
@@ -481,7 +436,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$pendingRecordsCount',
+                  '$paymentsCount',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 18,
@@ -544,7 +499,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
               const SizedBox(width: 8),
 
               // Sort Menu Button
-              PopupMenuButton<ReportSortOrder>(
+              PopupMenuButton<CollectionSortOrder>(
                 initialValue: _sortOrder,
                 tooltip: 'Sort By',
                 onSelected: (order) => setState(() => _sortOrder = order),
@@ -553,7 +508,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: AppColors.surfaceBorder),
                 ),
-                itemBuilder: (ctx) => ReportSortOrder.values.map((order) {
+                itemBuilder: (ctx) => CollectionSortOrder.values.map((order) {
                   return PopupMenuItem(
                     value: order,
                     child: Row(
@@ -593,7 +548,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
             children: [
               Expanded(
                 child: Text(
-                  totalCount == 1 ? '1 member with dues' : '$totalCount members with dues',
+                  totalCount == 1 ? '1 member paid' : '$totalCount members paid',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -615,8 +570,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildViewToggleButton('By Member', ReportViewMode.byMember, Icons.person_rounded),
-                    _buildViewToggleButton('By Month', ReportViewMode.byMonth, Icons.calendar_view_month_rounded),
+                    _buildViewToggleButton('By Member', CollectionViewMode.byMember, Icons.person_rounded),
+                    _buildViewToggleButton('By Month', CollectionViewMode.byMonth, Icons.calendar_view_month_rounded),
                   ],
                 ),
               ),
@@ -627,7 +582,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     );
   }
 
-  Widget _buildViewToggleButton(String title, ReportViewMode mode, IconData icon) {
+  Widget _buildViewToggleButton(String title, CollectionViewMode mode, IconData icon) {
     final isSelected = _viewMode == mode;
     return GestureDetector(
       onTap: () => setState(() => _viewMode = mode),
@@ -660,7 +615,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     );
   }
 
-  Widget _buildByMemberView(List<MemberPendingSummary> list, String currency) {
+  Widget _buildByMemberView(List<MemberCollectionSummary> list, String currency) {
     if (list.isEmpty) {
       return _buildEmptyState();
     }
@@ -673,7 +628,6 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
       itemBuilder: (context, i) {
         final item = list[i];
         final customer = item.customer;
-        final latestRecord = item.pendingRecords.last;
 
         return Container(
           padding: const EdgeInsets.all(14),
@@ -738,20 +692,20 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                     ),
                   ),
 
-                  // Total Due Badge
+                  // Total Collected Badge
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        GymDateUtils.formatCurrency(item.totalPendingAmount, symbol: currency),
+                        GymDateUtils.formatCurrency(item.totalCollectedAmount, symbol: currency),
                         style: const TextStyle(
-                          color: AppColors.pending,
+                          color: AppColors.paid,
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                       Text(
-                        '${item.pendingRecords.length} ${item.pendingRecords.length == 1 ? 'period' : 'periods'} due',
+                        '${item.paidRecords.length} ${item.paidRecords.length == 1 ? 'payment' : 'payments'}',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
@@ -763,39 +717,50 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
               ),
               const SizedBox(height: 10),
 
-              // Pending months pills
+              // Paid period pills
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: item.pendingRecords.map((rec) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.pending.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.pending.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          GymDateUtils.formatMonthYearKey(rec.monthYear),
-                          style: const TextStyle(
-                            color: AppColors.pending,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                children: item.paidRecords.map((rec) {
+                  return GestureDetector(
+                    onTap: () => _viewReceipt(customer, rec),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.paid.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.paid.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            GymDateUtils.formatMonthYearKey(rec.monthYear),
+                            style: const TextStyle(
+                              color: AppColors.paid,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          GymDateUtils.formatCurrency(GymService().pendingAmountOf(rec), symbol: currency),
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
+                          const SizedBox(width: 4),
+                          Text(
+                            GymDateUtils.formatCurrency(rec.amount, symbol: currency),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
+                          if (rec.method != null) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              _paymentMethodIcon(rec.method),
+                              size: 10,
+                              color: AppColors.textMuted,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   );
                 }).toList(),
@@ -805,7 +770,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
               Divider(color: AppColors.surfaceBorder.withValues(alpha: 0.6), height: 1),
               const SizedBox(height: 10),
 
-              // Action Buttons Row (Unified & Aligned)
+              // Action Buttons Row
               Row(
                 children: [
                   // Call Quick Button
@@ -832,27 +797,22 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                   ),
                   const SizedBox(width: 8),
 
-                  // WhatsApp Reminder Button
+                  // View Latest Receipt Button
                   Expanded(
-                    flex: 4,
                     child: SizedBox(
                       height: 38,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _openWhatsAppReminder(
-                          customer,
-                          latestRecord.monthYear,
-                          item.totalPendingAmount,
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: AppColors.whatsapp.withValues(alpha: 0.1),
-                          foregroundColor: AppColors.whatsapp,
-                          side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.35)),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _viewReceipt(customer, item.paidRecords.first),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.paid,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        icon: const Icon(Icons.chat_rounded, size: 15, color: AppColors.whatsapp),
+                        icon: const Icon(Icons.receipt_long_rounded, size: 15),
                         label: const Text(
-                          'WhatsApp',
+                          'View Receipt',
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -860,60 +820,6 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-
-                  // Record Payment Button
-                  Expanded(
-                    flex: 5,
-                    child: SizedBox(
-                      height: 38,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _openMarkPaid(customer, item.pendingRecords.first),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: item.pendingRecords.first.isPaid ? AppColors.pending : AppColors.primary,
-                          foregroundColor: item.pendingRecords.first.isPaid ? Colors.white : AppColors.primaryOn,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: Icon(
-                          item.pendingRecords.first.isPaid ? Icons.payments_rounded : Icons.check_circle_rounded,
-                          size: 15,
-                        ),
-                        label: Text(
-                          item.pendingRecords.first.isPaid
-                              ? 'Collect Balance ${GymDateUtils.formatCurrency(item.pendingRecords.first.balanceDue, symbol: currency)}'
-                              : 'Record Payment',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (item.pendingRecords.first.isPaid) ...[
-                    const SizedBox(width: 6),
-                    IconButton(
-                      icon: const Icon(Icons.edit_note_rounded, size: 16),
-                      tooltip: 'Payment Corrections (Edit)',
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.surfaceElevated,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: AppColors.surfaceBorder),
-                        ),
-                      ),
-                      onPressed: () => MarkPaymentDialog.show(
-                        context,
-                        customer: customer,
-                        monthYear: item.pendingRecords.first.monthYear,
-                        currentRecord: item.pendingRecords.first,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ],
@@ -923,7 +829,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     );
   }
 
-  Widget _buildByMonthView(List<MonthPendingGroup> groups, String currency) {
+  Widget _buildByMonthView(List<MonthCollectionGroup> groups, String currency) {
     if (groups.isEmpty) {
       return _buildEmptyState();
     }
@@ -970,13 +876,13 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.pending.withValues(alpha: 0.15),
+                        color: AppColors.paid.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '${GymDateUtils.formatCurrency(group.totalAmount, symbol: currency)} due (${group.items.length})',
+                        '${GymDateUtils.formatCurrency(group.totalAmount, symbol: currency)} collected (${group.items.length})',
                         style: const TextStyle(
-                          color: AppColors.pending,
+                          color: AppColors.paid,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1021,20 +927,37 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            Text(
-                              customer.phone,
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                Text(
+                                  customer.phone,
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (payment.method != null) ...[
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    _paymentMethodIcon(payment.method),
+                                    size: 11,
+                                    color: AppColors.textMuted,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    PaymentRecord.methodLabel(payment.method),
+                                    style: TextStyle(color: AppColors.textMuted, fontSize: 10),
+                                  ),
+                                ],
+                              ],
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        GymDateUtils.formatCurrency(GymService().pendingAmountOf(payment), symbol: currency),
+                        GymDateUtils.formatCurrency(payment.amount, symbol: currency),
                         style: const TextStyle(
-                          color: AppColors.pending,
+                          color: AppColors.paid,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -1055,28 +978,14 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         ),
                       ),
 
-                      // Quick WhatsApp Icon
+                      // View Receipt Icon
                       IconButton(
-                        icon: const Icon(Icons.chat_rounded, color: AppColors.whatsapp, size: 18),
-                        tooltip: 'WhatsApp Reminder',
+                        icon: Icon(Icons.receipt_long_rounded, color: AppColors.paid, size: 18),
+                        tooltip: 'View Receipt',
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.all(6),
                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        onPressed: () => _openWhatsAppReminder(
-                          customer,
-                          group.monthKey,
-                          GymService().pendingAmountOf(payment),
-                        ),
-                      ),
-
-                      // Quick Pay Icon
-                      IconButton(
-                        icon: Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
-                        tooltip: payment.isPaid ? 'Collect Balance' : 'Record Payment',
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        onPressed: () => _openMarkPaid(customer, payment),
+                        onPressed: () => _viewReceipt(customer, payment),
                       ),
                     ],
                   );
@@ -1087,6 +996,24 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
         );
       },
     );
+  }
+
+  IconData _paymentMethodIcon(PaymentMethod? method) {
+    switch (method) {
+      case PaymentMethod.cash:
+        return Icons.payments_rounded;
+      case PaymentMethod.gpay:
+      case PaymentMethod.phonepe:
+      case PaymentMethod.paytm:
+      case PaymentMethod.upi:
+        return Icons.phone_android_rounded;
+      case PaymentMethod.card:
+        return Icons.credit_card_rounded;
+      case PaymentMethod.netBanking:
+        return Icons.account_balance_rounded;
+      case null:
+        return Icons.payments_rounded;
+    }
   }
 
   Widget _buildEmptyState() {
@@ -1109,18 +1036,18 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: (isSearching ? AppColors.textMuted : AppColors.paid).withValues(alpha: 0.15),
+                        color: (isSearching ? AppColors.textMuted : AppColors.textSecondary).withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isSearching ? Icons.search_off_rounded : Icons.verified_rounded,
-                        color: isSearching ? AppColors.textSecondary : AppColors.paid,
+                        isSearching ? Icons.search_off_rounded : Icons.receipt_long_rounded,
+                        color: isSearching ? AppColors.textSecondary : AppColors.textMuted,
                         size: 40,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      isSearching ? 'No Matching Members' : 'All Clear!',
+                      isSearching ? 'No Matching Members' : 'No Collections Found',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
@@ -1130,8 +1057,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                     const SizedBox(height: 4),
                     Text(
                       isSearching
-                          ? 'No pending dues found matching "$_searchQuery".'
-                          : 'No pending payments found for this selected date range.',
+                          ? 'No payments found matching "$_searchQuery".'
+                          : 'No payment collections found for this selected date range.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                     ),

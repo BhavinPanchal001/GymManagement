@@ -298,7 +298,72 @@ class MemberCardPdfService {
                     ],
                   ),
 
-                  pw.SizedBox(height: 12),
+                  pw.SizedBox(height: 8),
+
+                  // ================= DUE PAYMENT SUMMARY =================
+                  () {
+                    final now = DateTime.now();
+                    final joinDate = customer.joinDate;
+                    final monthlyFee = gymSettings.getFeeForPlan(customer.planType);
+                    double totalDue = 0;
+                    int dueMonthCount = 0;
+                    int partialCount = 0;
+                    for (final m in yearlyData) {
+                      final monthDate = DateTime(year, m.month);
+                      if (monthDate.isBefore(DateTime(joinDate.year, joinDate.month))) continue;
+                      if (year == now.year && m.month > now.month) continue;
+                      if (year > now.year) continue;
+                      if (!m.isPaid) {
+                        totalDue += monthlyFee;
+                        dueMonthCount++;
+                      } else if (m.balanceDue > 0) {
+                        totalDue += m.balanceDue;
+                        partialCount++;
+                      }
+                    }
+
+                    if (totalDue <= 0) return pw.SizedBox.shrink();
+
+                    return pw.Container(
+                      margin: const pw.EdgeInsets.only(bottom: 6),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: pw.BoxDecoration(
+                        color: const PdfColor(1.0, 0.95, 0.88),
+                        border: pw.Border.all(color: const PdfColor(0.9, 0.32, 0.0), width: 1.0),
+                        borderRadius: pw.BorderRadius.circular(3),
+                      ),
+                      child: pw.Row(
+                        children: [
+                          pw.Text(
+                            'Total Due: ',
+                            style: pw.TextStyle(
+                              color: const PdfColor(0.8, 0.25, 0.0),
+                              fontSize: 10,
+                              fontWeight: pw.FontWeight.bold,
+                              font: effectiveBold,
+                            ),
+                          ),
+                          pw.Text(
+                            GymDateUtils.formatCurrency(totalDue, symbol: gymSettings.currencySymbol),
+                            style: pw.TextStyle(
+                              color: const PdfColor(0.75, 0.15, 0.0),
+                              fontSize: 11,
+                              fontWeight: pw.FontWeight.bold,
+                              font: effectiveBold,
+                            ),
+                          ),
+                          pw.Text(
+                            '  ($dueMonthCount unpaid${partialCount > 0 ? ', $partialCount partial' : ''})',
+                            style: pw.TextStyle(
+                              color: const PdfColor(0.8, 0.25, 0.0),
+                              fontSize: 8.5,
+                              font: effectiveRegular,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }(),
 
                   // ================= YEAR HEADER =================
                   pw.Container(
@@ -328,6 +393,9 @@ class MemberCardPdfService {
                             effectiveBold,
                             effectiveRegular,
                             currency: gymSettings.currencySymbol,
+                            monthlyFee: gymSettings.getFeeForPlan(customer.planType),
+                            joinDate: customer.joinDate,
+                            selectedYear: year,
                           ),
                         ),
                         // Right Column (Months 7 - 12)
@@ -337,6 +405,9 @@ class MemberCardPdfService {
                             effectiveBold,
                             effectiveRegular,
                             currency: gymSettings.currencySymbol,
+                            monthlyFee: gymSettings.getFeeForPlan(customer.planType),
+                            joinDate: customer.joinDate,
+                            selectedYear: year,
                           ),
                         ),
                       ],
@@ -476,7 +547,11 @@ class MemberCardPdfService {
     pw.Font boldFont,
     pw.Font regularFont, {
     required String currency,
+    required double monthlyFee,
+    required DateTime joinDate,
+    required int selectedYear,
   }) {
+    final now = DateTime.now();
     return pw.Table(
       border: pw.TableBorder.all(color: cardRed, width: 1.0),
       columnWidths: const {
@@ -485,14 +560,34 @@ class MemberCardPdfService {
         2: pw.FlexColumnWidth(),
       },
       children: months.map((m) {
+        final monthDate = DateTime(selectedYear, m.month);
+        final isAfterJoin = !monthDate.isBefore(DateTime(joinDate.year, joinDate.month));
+        final isPastOrCurrent = selectedYear < now.year || (selectedYear == now.year && m.month <= now.month);
+        final isDue = !m.isPaid && isAfterJoin && isPastOrCurrent;
+        final hasBalance = m.isPaid && m.balanceDue > 0;
+
         String feeText = '';
         PdfColor feeColor = PdfColors.grey700;
+        pw.Font textFont = regularFont;
 
         if (m.isPaid) {
-          feeText = m.isCoveredInPackage
-              ? 'PAID (Pkg)'
-              : 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)})';
-          feeColor = paidGreen;
+          if (m.isCoveredInPackage) {
+            feeText = 'PAID (Pkg)';
+            feeColor = paidGreen;
+            textFont = boldFont;
+          } else if (hasBalance) {
+            feeText = 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)}) BAL (${GymDateUtils.formatCurrency(m.balanceDue, symbol: currency)})';
+            feeColor = const PdfColor(0.85, 0.35, 0.0);
+            textFont = boldFont;
+          } else {
+            feeText = 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)})';
+            feeColor = paidGreen;
+            textFont = boldFont;
+          }
+        } else if (isDue) {
+          feeText = 'DUE (${GymDateUtils.formatCurrency(monthlyFee, symbol: currency)})';
+          feeColor = const PdfColor(0.8, 0.1, 0.1);
+          textFont = boldFont;
         } else {
           feeText = '-';
         }
@@ -546,13 +641,16 @@ class MemberCardPdfService {
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Text(
-                              feeText,
-                              style: pw.TextStyle(
-                                color: feeColor,
-                                fontSize: 8.5,
-                                fontWeight: pw.FontWeight.bold,
-                                font: boldFont,
+                            pw.Expanded(
+                              child: pw.Text(
+                                feeText,
+                                style: pw.TextStyle(
+                                  color: feeColor,
+                                  fontSize: hasBalance ? 7.0 : 8.0,
+                                  fontWeight: pw.FontWeight.bold,
+                                  font: textFont,
+                                ),
+                                maxLines: 1,
                               ),
                             ),
                             if (attendanceText.isNotEmpty)
@@ -560,7 +658,7 @@ class MemberCardPdfService {
                                 attendanceText,
                                 style: pw.TextStyle(
                                   color: cardRed,
-                                  fontSize: 8,
+                                  fontSize: 7.5,
                                   font: regularFont,
                                 ),
                               ),
@@ -572,7 +670,7 @@ class MemberCardPdfService {
                             m.formattedDateRange!,
                             style: pw.TextStyle(
                               color: PdfColors.grey800,
-                              fontSize: 7.5,
+                              fontSize: 7.0,
                               font: regularFont,
                             ),
                           ),
@@ -582,12 +680,16 @@ class MemberCardPdfService {
                   : pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text(
-                          feeText,
-                          style: pw.TextStyle(
-                            color: feeColor,
-                            fontSize: 8.5,
-                            font: regularFont,
+                        pw.Expanded(
+                          child: pw.Text(
+                            feeText,
+                            style: pw.TextStyle(
+                              color: feeColor,
+                              fontSize: isDue ? 7.5 : 8.5,
+                              fontWeight: isDue ? pw.FontWeight.bold : pw.FontWeight.normal,
+                              font: textFont,
+                            ),
+                            maxLines: 1,
                           ),
                         ),
                         if (attendanceText.isNotEmpty)
@@ -595,7 +697,7 @@ class MemberCardPdfService {
                             attendanceText,
                             style: pw.TextStyle(
                               color: cardRed,
-                              fontSize: 8,
+                              fontSize: 7.5,
                               font: regularFont,
                             ),
                           ),

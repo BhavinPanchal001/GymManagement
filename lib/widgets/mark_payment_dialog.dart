@@ -35,6 +35,7 @@ class MarkPaymentDialog extends StatefulWidget {
     final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => MarkPaymentDialog(
         customer: customer,
@@ -458,7 +459,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         left: 20,
         right: 20,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).viewPadding.bottom +
+            24,
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,
