@@ -1044,7 +1044,6 @@ class GymService extends ChangeNotifier {
 
     final now = asOf ?? DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final todayKey = GymDateUtils.toDateKey(today);
     final periods = _duesIndex.membershipRecords(customerId);
     final customer = getCustomerById(customerId);
     // Legacy profiles may have no recorded membership yet. Display the
@@ -1061,57 +1060,104 @@ class GymService extends ChangeNotifier {
         startDate: customer.joinDate,
       ));
     }
-    final attendance = _attendanceMap.values.where((record) =>
-        record.customerId == customerId &&
-        record.status == AttendanceStatus.present &&
-        record.dateKey.compareTo(todayKey) <= 0).toList();
     final result = <MonthCardData>[];
     for (int m = 1; m <= 12; m++) {
       final monthKey = '$year-${m.toString().padLeft(2, '0')}';
-      // Attribute an unpaid cycle only to its start month, even when it
-      // continues into another calendar month or year.
+      final monthStart = DateTime(year, m, 1);
+      final monthEnd = DateTime(year, m, GymDateUtils.daysInMonth(year, m));
+
       final startingPeriods = periods.where((record) =>
           GymDateUtils.toMonthKey(record.effectiveStartDate) == monthKey).toList();
-      final unpaidPeriods = startingPeriods.where((record) => !record.isPaid).toList();
-      final payment = unpaidPeriods.isNotEmpty
-          ? unpaidPeriods.first
-          : getPaymentRecord(customerId, monthKey);
+
       final attSummary = getMonthlyAttendanceSummary(customerId, monthKey);
       final present = attSummary['present'] ?? 0;
       final absent = attSummary['absent'] ?? 0;
       final total = attSummary['total'] ?? 0;
 
-      // Determine true isPaid for this specific calendar month:
-      bool isPaidForMonth = payment.isPaid;
-      if (isPaidForMonth && payment.endDate != null) {
-        final monthStart = DateTime(year, m, 1);
-        if (payment.endDate!.isBefore(monthStart)) {
-          isPaidForMonth = false;
-        }
-      }
-
+      bool isPaidForMonth = false;
+      double paidAmount = 0.0;
+      double balanceDue = 0.0;
+      double dueAmount = 0.0;
+      bool isDue = false;
+      bool isCovered = false;
       DateTime? effStart;
       DateTime? effEnd;
-      double dueAmount = 0;
-      bool isDue = false;
-      // Carry paid coverage into later months without counting the fee or
-      // remaining balance again.
-      final bool isCovered = isPaidForMonth &&
-          GymDateUtils.toMonthKey(payment.effectiveStartDate) != monthKey;
-      if (isPaidForMonth) {
-        effStart = payment.effectiveStartDate;
-        effEnd = payment.effectiveEndDate;
-      } else if (unpaidPeriods.isNotEmpty) {
-        effStart = payment.effectiveStartDate;
-        effEnd = payment.effectiveEndDate;
-        final startKey = GymDateUtils.toDateKey(effStart);
-        final endKey = GymDateUtils.toDateKey(effEnd);
-        final hasAttendance = attendance.any((record) =>
-            record.dateKey.compareTo(startKey) >= 0 &&
-            record.dateKey.compareTo(endKey) <= 0);
-        // The end date is inclusive; an active cycle is not overdue.
-        isDue = hasAttendance && today.isAfter(effEnd);
-        if (isDue) dueAmount = payment.balanceDue;
+      PaymentMethod? method;
+      DateTime? paidAt;
+
+      if (startingPeriods.isNotEmpty) {
+        final period = startingPeriods.first;
+        effStart = period.effectiveStartDate;
+        effEnd = period.effectiveEndDate;
+        if (period.isPaid) {
+          isPaidForMonth = true;
+          paidAmount = period.amount;
+          balanceDue = period.balanceDue;
+          method = period.method;
+          paidAt = period.paidAt;
+        } else {
+          isDue = true;
+          dueAmount = period.balanceDue > 0
+              ? period.balanceDue
+              : (period.totalDue > 0 ? period.totalDue : _feeForCustomer(customer));
+        }
+      } else {
+        final covering = getPaymentCoveringMonth(customerId, monthKey);
+        if (covering != null && covering.isPaid) {
+          isPaidForMonth = true;
+          isCovered = true;
+          effStart = covering.effectiveStartDate;
+          effEnd = covering.effectiveEndDate;
+        } else {
+          // Find the latest cycle (paid or unpaid) that ended before or
+          // overlaps with this month, to chain forward from:
+          final previousCycles = periods.where((p) => p.effectiveStartDate.isBefore(monthStart)).toList();
+          previousCycles.sort((a, b) => b.effectiveEndDate.compareTo(a.effectiveEndDate));
+          final latestPrevCycle = previousCycles.isNotEmpty ? previousCycles.first : null;
+
+          if (latestPrevCycle != null) {
+            // Chain forward from the end of the latest previous cycle through
+            // hypothetical due cycles until we find one covering month `m`.
+            final duration = customer?.planDurationMonths ?? 1;
+            var chainStart = DateTime(
+              latestPrevCycle.effectiveEndDate.year,
+              latestPrevCycle.effectiveEndDate.month,
+              latestPrevCycle.effectiveEndDate.day + 1,
+            );
+            // Walk through chained cycles until we either find one that
+            // covers this calendar month or pass beyond it / beyond today.
+            while (!chainStart.isAfter(monthEnd) && !today.isBefore(chainStart)) {
+              final chainEnd = GymDateUtils.computeAnniversaryEndDate(chainStart, duration);
+              // Check if this chained cycle starts in calendar month m
+              if (chainStart.year == year && chainStart.month == m) {
+                effStart = chainStart;
+                effEnd = chainEnd;
+                dueAmount = _feeForCustomer(customer);
+                isDue = true;
+                break;
+              }
+              // Advance to the next hypothetical cycle
+              chainStart = DateTime(chainEnd.year, chainEnd.month, chainEnd.day + 1);
+            }
+          } else if (customer != null) {
+            final joinMonthKey = GymDateUtils.toMonthKey(customer.joinDate);
+            if (monthKey.compareTo(joinMonthKey) >= 0) {
+              final joinDay = customer.joinDate.day;
+              final maxDays = GymDateUtils.daysInMonth(year, m);
+              final startDay = joinDay <= maxDays ? joinDay : maxDays;
+              final calculatedStart = DateTime(year, m, startDay);
+              if (!today.isBefore(calculatedStart)) {
+                effStart = calculatedStart;
+                effEnd = GymDateUtils.computeAnniversaryEndDate(
+                  calculatedStart,
+                  customer.planDurationMonths,
+                );
+                dueAmount = _feeForCustomer(customer);
+                isDue = true;
+              }
+            }
+          }
+        }
       }
 
       result.add(MonthCardData(
@@ -1119,12 +1165,12 @@ class GymService extends ChangeNotifier {
         monthName: monthNames[m - 1],
         monthKey: monthKey,
         isPaid: isPaidForMonth,
-        amount: (isPaidForMonth && !isCovered) ? payment.amount : 0.0,
-        balanceDue: (isPaidForMonth && !isCovered) ? payment.balanceDue : 0.0,
+        amount: paidAmount,
+        balanceDue: balanceDue,
         dueAmount: dueAmount,
         isDue: isDue,
-        method: isPaidForMonth ? payment.method : null,
-        paidAt: isPaidForMonth ? payment.paidAt : null,
+        method: method,
+        paidAt: paidAt,
         presentDays: present,
         absentDays: absent,
         totalRecorded: total,
@@ -1473,6 +1519,44 @@ class GymService extends ChangeNotifier {
         await _commitFinancialRecords(
           customers: [prepared.copyWith(cardNumber: assignedCardNumber)],
         );
+        // When the plan type or duration changes, update any unpaid membership
+        // agreement records so the card/ledger reflects the current plan fee,
+        // duration and end date rather than the stale original values.
+        final planChanged = existingCustomer.planType != updated.planType ||
+            existingCustomer.planDurationMonths != updated.planDurationMonths;
+        if (planChanged) {
+          final updatedPayments = <PaymentRecord>[];
+          for (final payment in _paymentMap.values) {
+            if (payment.customerId == updated.id &&
+                payment.isMembershipAgreement &&
+                !payment.isPaid) {
+              final newFee = _feeForCustomer(
+                updated,
+                durationMonths: updated.planDurationMonths,
+              );
+              final taxAmount = _settings.taxAmountFromTotal(newFee);
+              final newEnd = GymDateUtils.computeAnniversaryEndDate(
+                payment.effectiveStartDate,
+                updated.planDurationMonths,
+              );
+              updatedPayments.add(payment.copyWith(
+                durationMonths: updated.planDurationMonths,
+                totalDue: newFee,
+                endDate: newEnd,
+                planType: updated.planType,
+                isTaxEnabled: _settings.isTaxEnabled,
+                taxLabel: _settings.taxLabel,
+                taxRatePercent: _settings.taxRatePercent,
+                isTaxInclusive: _settings.isTaxInclusive,
+                taxableAmount: newFee - taxAmount,
+                taxAmount: taxAmount,
+              ));
+            }
+          }
+          if (updatedPayments.isNotEmpty) {
+            await _commitFinancialRecords(payments: updatedPayments);
+          }
+        }
       });
       if (imageChanged) {
         await ImageStorageUtils.deleteManagedImage(previous.imagePath);

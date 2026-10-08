@@ -60,22 +60,6 @@ class GymManagerApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: theme.themeMode,
-          builder: (context, child) {
-            final mediaQuery = MediaQuery.of(context);
-            return Container(
-              color: navBarBg,
-              child: SafeArea(
-                top: false,
-                bottom: true,
-                child: MediaQuery(
-                  data: mediaQuery.copyWith(
-                    viewPadding: mediaQuery.viewPadding.copyWith(bottom: 0),
-                  ),
-                  child: child ?? const SizedBox.shrink(),
-                ),
-              ),
-            );
-          },
           home: const SplashScreen(),
         );
       },

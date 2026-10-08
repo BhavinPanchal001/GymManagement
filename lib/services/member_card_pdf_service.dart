@@ -17,10 +17,7 @@ class MemberCardPdfService {
   static const PdfColor paidGreen = PdfColor.fromInt(0xFF1B5E20);
 
   /// Generates the Member Entry Form / Ledger Card as a high-resolution vector PDF
-  Future<Uint8List> generateCardPdf({
-    required Customer customer,
-    required int year,
-  }) async {
+  Future<Uint8List> generateCardPdf({required Customer customer, required int year}) async {
     final pdf = pw.Document();
     final gym = GymService();
     final gymSettings = gym.settings;
@@ -30,10 +27,7 @@ class MemberCardPdfService {
     pw.MemoryImage? gymLogoImage;
     final logoPath = gymSettings.gymLogoPath ?? gym.gymLogoPath;
     try {
-      final bytes = await ImageStorageUtils.loadImageBytes(
-        logoPath,
-        gymSettings.gymLogoBase64,
-      );
+      final bytes = await ImageStorageUtils.loadImageBytes(logoPath, gymSettings.gymLogoBase64);
       if (bytes != null && bytes.isNotEmpty) {
         gymLogoImage = pw.MemoryImage(bytes);
       }
@@ -44,10 +38,7 @@ class MemberCardPdfService {
     // Load Customer Photo Image
     pw.MemoryImage? customerPhotoImage;
     try {
-      final bytes = await ImageStorageUtils.loadImageBytes(
-        customer.imagePath,
-        customer.imageBase64,
-      );
+      final bytes = await ImageStorageUtils.loadImageBytes(customer.imagePath, customer.imageBase64);
       if (bytes != null && bytes.isNotEmpty) {
         customerPhotoImage = pw.MemoryImage(bytes);
       }
@@ -72,16 +63,13 @@ class MemberCardPdfService {
     final effectiveBold = boldFont ?? pw.Font.helveticaBold();
     final effectiveGujarati = gujaratiFont ?? effectiveRegular;
 
-    final gymName = gymSettings.gymName.trim().isNotEmpty
-        ? gymSettings.gymName.trim().toUpperCase()
-        : 'TITAN GYM';
+    final gymName = gymSettings.gymName.trim().isNotEmpty ? gymSettings.gymName.trim().toUpperCase() : 'TITAN GYM';
 
     final cardNumber = customer.cardNumber.trim().isNotEmpty
         ? customer.cardNumber.trim()
         : customer.id.replaceAll(RegExp(r'\D'), '').padLeft(3, '0');
 
-    final joinDateFormatted =
-        '${customer.joinDate.day}, ${customer.joinDate.month}, ${customer.joinDate.year}';
+    final joinDateFormatted = '${customer.joinDate.day}, ${customer.joinDate.month}, ${customer.joinDate.year}';
 
     pdf.addPage(
       pw.Page(
@@ -90,14 +78,10 @@ class MemberCardPdfService {
         build: (pw.Context context) {
           return pw.Container(
             padding: const pw.EdgeInsets.all(6),
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: cardRed, width: 2.5),
-            ),
+            decoration: pw.BoxDecoration(border: pw.Border.all(color: cardRed, width: 2.5)),
             child: pw.Container(
               padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: cardRed, width: 1.0),
-              ),
+              decoration: pw.BoxDecoration(border: pw.Border.all(color: cardRed, width: 1.0)),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
@@ -110,9 +94,7 @@ class MemberCardPdfService {
                       pw.Container(
                         width: 72,
                         height: 84,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(color: cardRed, width: 1.2),
-                        ),
+                        decoration: pw.BoxDecoration(border: pw.Border.all(color: cardRed, width: 1.2)),
                         child: customerPhotoImage != null
                             ? pw.Image(customerPhotoImage, fit: pw.BoxFit.cover)
                             : pw.Center(
@@ -135,14 +117,8 @@ class MemberCardPdfService {
                           children: [
                             // ENTRY FORM badge
                             pw.Container(
-                              padding: const pw.EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 3,
-                              ),
-                              decoration: pw.BoxDecoration(
-                                color: cardRed,
-                                borderRadius: pw.BorderRadius.circular(3),
-                              ),
+                              padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+                              decoration: pw.BoxDecoration(color: cardRed, borderRadius: pw.BorderRadius.circular(3)),
                               child: pw.Text(
                                 'ENTRY FORM',
                                 style: pw.TextStyle(
@@ -165,12 +141,7 @@ class MemberCardPdfService {
                                       shape: pw.BoxShape.circle,
                                       border: pw.Border.all(color: cardRed, width: 1.5),
                                     ),
-                                    child: pw.ClipOval(
-                                      child: pw.Image(
-                                        gymLogoImage,
-                                        fit: pw.BoxFit.cover,
-                                      ),
-                                    ),
+                                    child: pw.ClipOval(child: pw.Image(gymLogoImage, fit: pw.BoxFit.cover)),
                                   )
                                 : pw.Container(
                                     width: 38,
@@ -212,9 +183,7 @@ class MemberCardPdfService {
                       pw.Container(
                         width: 80,
                         height: 38,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(color: cardRed, width: 1.5),
-                        ),
+                        decoration: pw.BoxDecoration(border: pw.Border.all(color: cardRed, width: 1.5)),
                         child: pw.Center(
                           child: pw.Text(
                             cardNumber,
@@ -248,22 +217,12 @@ class MemberCardPdfService {
                     children: [
                       pw.Expanded(
                         flex: 5,
-                        child: _buildRuledField(
-                          'Enter Date :',
-                          joinDateFormatted,
-                          effectiveBold,
-                          effectiveRegular,
-                        ),
+                        child: _buildRuledField('Enter Date :', joinDateFormatted, effectiveBold, effectiveRegular),
                       ),
                       pw.SizedBox(width: 16),
                       pw.Expanded(
                         flex: 6,
-                        child: _buildRuledField(
-                          'Mobile No.:',
-                          customer.phone,
-                          effectiveBold,
-                          effectiveRegular,
-                        ),
+                        child: _buildRuledField('Mobile No.:', customer.phone, effectiveBold, effectiveRegular),
                       ),
                     ],
                   ),
@@ -424,20 +383,12 @@ class MemberCardPdfService {
                         pw.SizedBox(height: 3),
                         pw.Text(
                           '• ભરેલી ફી કોઈપણ સંજોગોમાં પરત મળશે નહીં. (Fee once paid is non-refundable)',
-                          style: pw.TextStyle(
-                            color: cardRed,
-                            fontSize: 8.5,
-                            font: effectiveGujarati,
-                          ),
+                          style: pw.TextStyle(color: cardRed, fontSize: 8.5, font: effectiveGujarati),
                         ),
                         pw.SizedBox(height: 2),
                         pw.Text(
                           '• જીમના દરેક સભ્યો સાથે સભ્યતાથી વર્તન કરવું. તકરાર કરવી નહીં. (Maintain gym etiquette & discipline)',
-                          style: pw.TextStyle(
-                            color: cardRed,
-                            fontSize: 8.5,
-                            font: effectiveGujarati,
-                          ),
+                          style: pw.TextStyle(color: cardRed, fontSize: 8.5, font: effectiveGujarati),
                         ),
                       ],
                     ),
@@ -454,40 +405,24 @@ class MemberCardPdfService {
   }
 
   /// Builds a ruled single-line field (e.g. Name : _________)
-  static pw.Widget _buildRuledField(
-    String label,
-    String value,
-    pw.Font boldFont,
-    pw.Font regularFont,
-  ) {
+  static pw.Widget _buildRuledField(String label, String value, pw.Font boldFont, pw.Font regularFont) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
         pw.Text(
           label,
-          style: pw.TextStyle(
-            color: cardRed,
-            fontSize: 11,
-            fontWeight: pw.FontWeight.bold,
-            font: boldFont,
-          ),
+          style: pw.TextStyle(color: cardRed, fontSize: 11, fontWeight: pw.FontWeight.bold, font: boldFont),
         ),
         pw.SizedBox(width: 8),
         pw.Expanded(
           child: pw.Container(
             padding: const pw.EdgeInsets.only(bottom: 2, left: 4),
             decoration: const pw.BoxDecoration(
-              border: pw.Border(
-                bottom: pw.BorderSide(color: cardRed, width: 1.0),
-              ),
+              border: pw.Border(bottom: pw.BorderSide(color: cardRed, width: 1.0)),
             ),
             child: pw.Text(
               value,
-              style: pw.TextStyle(
-                color: PdfColors.black,
-                fontSize: 11,
-                font: regularFont,
-              ),
+              style: pw.TextStyle(color: PdfColors.black, fontSize: 11, font: regularFont),
             ),
           ),
         ),
@@ -502,12 +437,7 @@ class MemberCardPdfService {
       alignment: pw.Alignment.center,
       child: pw.Text(
         title,
-        style: pw.TextStyle(
-          color: cardRed,
-          fontSize: 10,
-          fontWeight: pw.FontWeight.bold,
-          font: font,
-        ),
+        style: pw.TextStyle(color: cardRed, fontSize: 10, fontWeight: pw.FontWeight.bold, font: font),
       ),
     );
   }
@@ -519,11 +449,7 @@ class MemberCardPdfService {
       alignment: pw.Alignment.center,
       child: pw.Text(
         value.isNotEmpty ? value : '-',
-        style: pw.TextStyle(
-          color: PdfColors.black,
-          fontSize: 10,
-          font: font,
-        ),
+        style: pw.TextStyle(color: PdfColors.black, fontSize: 10, font: font),
       ),
     );
   }
@@ -537,16 +463,12 @@ class MemberCardPdfService {
   }) {
     return pw.Table(
       border: pw.TableBorder.all(color: cardRed, width: 1.0),
-      columnWidths: const {
-        0: pw.FixedColumnWidth(24),
-        1: pw.FixedColumnWidth(64),
-        2: pw.FlexColumnWidth(),
-      },
+      columnWidths: const {0: pw.FixedColumnWidth(24), 1: pw.FixedColumnWidth(64), 2: pw.FlexColumnWidth()},
       children: months.map((m) {
         final isDue = m.isDue;
         final hasBalance = m.isPaid && m.balanceDue > 0;
 
-        String feeText = '';
+        String feeText = '-';
         PdfColor feeColor = PdfColors.grey700;
         pw.Font textFont = regularFont;
 
@@ -556,7 +478,8 @@ class MemberCardPdfService {
             feeColor = paidGreen;
             textFont = boldFont;
           } else if (hasBalance) {
-            feeText = 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)}) BAL (${GymDateUtils.formatCurrency(m.balanceDue, symbol: currency)})';
+            feeText =
+                'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)}) BAL (${GymDateUtils.formatCurrency(m.balanceDue, symbol: currency)})';
             feeColor = const PdfColor(0.85, 0.35, 0.0);
             textFont = boldFont;
           } else {
@@ -568,8 +491,6 @@ class MemberCardPdfService {
           feeText = 'DUE (${GymDateUtils.formatCurrency(m.dueAmount, symbol: currency)})';
           feeColor = const PdfColor(0.8, 0.1, 0.1);
           textFont = boldFont;
-        } else {
-          feeText = '-';
         }
 
         String attendanceText = '';
@@ -585,12 +506,7 @@ class MemberCardPdfService {
               alignment: pw.Alignment.center,
               child: pw.Text(
                 '${m.month}',
-                style: pw.TextStyle(
-                  color: cardRed,
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                  font: boldFont,
-                ),
+                style: pw.TextStyle(color: cardRed, fontSize: 10, fontWeight: pw.FontWeight.bold, font: boldFont),
               ),
             ),
             // Month Name
@@ -600,12 +516,7 @@ class MemberCardPdfService {
               padding: const pw.EdgeInsets.only(left: 6),
               child: pw.Text(
                 m.monthName,
-                style: pw.TextStyle(
-                  color: cardRed,
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                  font: boldFont,
-                ),
+                style: pw.TextStyle(color: cardRed, fontSize: 10, fontWeight: pw.FontWeight.bold, font: boldFont),
               ),
             ),
             // Fees & Attendance & Validity Date Range Box
@@ -626,7 +537,7 @@ class MemberCardPdfService {
                           style: pw.TextStyle(
                             color: feeColor,
                             fontSize: hasBalance ? 7.0 : 8.0,
-                            fontWeight: pw.FontWeight.bold,
+                            fontWeight: (m.isPaid || isDue) ? pw.FontWeight.bold : pw.FontWeight.normal,
                             font: textFont,
                           ),
                           maxLines: 1,
@@ -635,11 +546,7 @@ class MemberCardPdfService {
                       if (attendanceText.isNotEmpty)
                         pw.Text(
                           attendanceText,
-                          style: pw.TextStyle(
-                            color: cardRed,
-                            fontSize: 7.5,
-                            font: regularFont,
-                          ),
+                          style: pw.TextStyle(color: cardRed, fontSize: 7.5, font: regularFont),
                         ),
                     ],
                   ),
@@ -647,11 +554,8 @@ class MemberCardPdfService {
                     pw.SizedBox(height: 1),
                     pw.Text(
                       m.formattedDateRange!,
-                      style: pw.TextStyle(
-                        color: PdfColors.grey800,
-                        fontSize: 7.0,
-                        font: regularFont,
-                      ),
+                      style: pw.TextStyle(color: PdfColors.grey800, fontSize: 7.0, font: regularFont),
+                      maxLines: 1,
                     ),
                   ],
                 ],
@@ -664,10 +568,7 @@ class MemberCardPdfService {
   }
 
   /// One-tap print card using system printing framework
-  Future<void> printCard({
-    required Customer customer,
-    required int year,
-  }) async {
+  Future<void> printCard({required Customer customer, required int year}) async {
     final pdfBytes = await generateCardPdf(customer: customer, year: year);
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdfBytes,
@@ -676,14 +577,8 @@ class MemberCardPdfService {
   }
 
   /// One-tap PDF share/save
-  Future<void> shareCardPdf({
-    required Customer customer,
-    required int year,
-  }) async {
+  Future<void> shareCardPdf({required Customer customer, required int year}) async {
     final pdfBytes = await generateCardPdf(customer: customer, year: year);
-    await Printing.sharePdf(
-      bytes: pdfBytes,
-      filename: 'Gym_Card_${customer.name.replaceAll(' ', '_')}_$year.pdf',
-    );
+    await Printing.sharePdf(bytes: pdfBytes, filename: 'Gym_Card_${customer.name.replaceAll(' ', '_')}_$year.pdf');
   }
 }

@@ -58,52 +58,55 @@ class _AnimatedEmptyStateState extends State<AnimatedEmptyState>
     final isReduced = AppAnimations.isReducedMotion(context);
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            isReduced
-                ? _buildIconContainer()
-                : AnimatedBuilder(
-                    animation: _floatAnimation,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: Offset(0, _floatAnimation.value),
-                        child: child,
-                      );
-                    },
-                    child: _buildIconContainer(),
-                  ),
-            const SizedBox(height: 16),
-            Text(
-              widget.title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.2,
-              ),
-            ),
-            if (widget.subtitle != null) ...[
-              const SizedBox(height: 6),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              isReduced
+                  ? _buildIconContainer()
+                  : AnimatedBuilder(
+                      animation: _floatAnimation,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, _floatAnimation.value),
+                          child: child,
+                        );
+                      },
+                      child: _buildIconContainer(),
+                    ),
+              const SizedBox(height: 16),
               Text(
-                widget.subtitle!,
+                widget.title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textMuted,
-                  height: 1.4,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.2,
                 ),
               ),
+              if (widget.subtitle != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  widget.subtitle!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textMuted,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+              if (widget.action != null) ...[
+                const SizedBox(height: 16),
+                widget.action!,
+              ],
             ],
-            if (widget.action != null) ...[
-              const SizedBox(height: 16),
-              widget.action!,
-            ],
-          ],
+          ),
         ),
       ),
     );

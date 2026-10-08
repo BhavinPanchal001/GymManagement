@@ -43,8 +43,8 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
     _selectedYear = DateTime.now().year;
   }
 
-  Widget _buildCustomerPhoto() {
-    final imagePath = widget.customer.imagePath;
+  Widget _buildCustomerPhoto(Customer customer) {
+    final imagePath = customer.imagePath;
     if (imagePath != null && imagePath.isNotEmpty) {
       final file = File(ImageStorageUtils.normalizeFilePath(imagePath));
       if (file.existsSync()) {
@@ -53,7 +53,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
     }
 
     final bytes =
-        ImageStorageUtils.decodeBase64Image(widget.customer.imageBase64);
+        ImageStorageUtils.decodeBase64Image(customer.imageBase64);
     if (bytes != null) {
       return Image.memory(bytes, fit: BoxFit.cover);
     }
@@ -80,8 +80,10 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   Future<void> _handlePrint() async {
     setState(() => _isGeneratingPdf = true);
     try {
+      final gym = GymService();
+      final customer = gym.getCustomerById(widget.customer.id) ?? widget.customer;
       await MemberCardPdfService().printCard(
-        customer: widget.customer,
+        customer: customer,
         year: _selectedYear,
       );
     } catch (e) {
@@ -98,8 +100,10 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   Future<void> _handleSharePdf() async {
     setState(() => _isGeneratingPdf = true);
     try {
+      final gym = GymService();
+      final customer = gym.getCustomerById(widget.customer.id) ?? widget.customer;
       await MemberCardPdfService().shareCardPdf(
-        customer: widget.customer,
+        customer: customer,
         year: _selectedYear,
       );
     } catch (e) {
@@ -115,7 +119,8 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
 
   Future<void> _handleShareWhatsApp() async {
     final gym = GymService();
-    final yearly = gym.getYearlyCardData(widget.customer.id, _selectedYear);
+    final customer = gym.getCustomerById(widget.customer.id) ?? widget.customer;
+    final yearly = gym.getYearlyCardData(customer.id, _selectedYear);
     final paidCount = yearly.where((m) => m.isPaid).length;
     final totalPres = yearly.fold<int>(0, (sum, m) => sum + m.presentDays);
 
@@ -131,10 +136,10 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
     }
 
     final message = '🏋️ *${gym.settings.gymName} - Member Ledger Card ($_selectedYear)*\n\n'
-        '👤 *Member:* ${widget.customer.name}\n'
-        '💳 *Card No:* ${widget.customer.cardNumber.isNotEmpty ? widget.customer.cardNumber : widget.customer.id}\n'
-        '📅 *Joined:* ${GymDateUtils.formatDisplayDate(widget.customer.joinDate)}\n'
-        '📞 *Phone:* ${widget.customer.phone}\n\n'
+        '👤 *Member:* ${customer.name}\n'
+        '💳 *Card No:* ${customer.cardNumber.isNotEmpty ? customer.cardNumber : customer.id}\n'
+        '📅 *Joined:* ${GymDateUtils.formatDisplayDate(customer.joinDate)}\n'
+        '📞 *Phone:* ${customer.phone}\n\n'
         '📊 *Summary for $_selectedYear:*\n'
         '• Fees Paid: *$paidCount / 12 Months*\n'
         '• Total Gym Attendance: *$totalPres Days*\n'
@@ -143,7 +148,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
         '— *Management, ${gym.settings.gymName}*';
 
     await WhatsAppService().openWhatsApp(
-      phone: widget.customer.phone,
+      phone: customer.phone,
       message: message,
       context: context,
     );
@@ -152,20 +157,24 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   @override
   Widget build(BuildContext context) {
     final gym = GymService();
-    final gymSettings = gym.settings;
-    final gymLogoPath = gymSettings.gymLogoPath ?? gym.gymLogoPath;
-    final yearlyData = gym.getYearlyCardData(widget.customer.id, _selectedYear);
+    return ListenableBuilder(
+      listenable: gym,
+      builder: (context, _) {
+        final customer = gym.getCustomerById(widget.customer.id) ?? widget.customer;
+        final gymSettings = gym.settings;
+        final gymLogoPath = gymSettings.gymLogoPath ?? gym.gymLogoPath;
+        final yearlyData = gym.getYearlyCardData(customer.id, _selectedYear);
 
-    final gymName = gymSettings.gymName.trim().isNotEmpty
-        ? gymSettings.gymName.trim().toUpperCase()
-        : 'TITAN GYM';
+        final gymName = gymSettings.gymName.trim().isNotEmpty
+            ? gymSettings.gymName.trim().toUpperCase()
+            : 'TITAN GYM';
 
-    final cardNumber = widget.customer.cardNumber.trim().isNotEmpty
-        ? widget.customer.cardNumber.trim()
-        : widget.customer.id.replaceAll(RegExp(r'\D'), '').padLeft(3, '0');
+        final cardNumber = customer.cardNumber.trim().isNotEmpty
+            ? customer.cardNumber.trim()
+            : customer.id.replaceAll(RegExp(r'\D'), '').padLeft(3, '0');
 
-    final joinDateFormatted =
-        '${widget.customer.joinDate.day}, ${widget.customer.joinDate.month}, ${widget.customer.joinDate.year}';
+        final joinDateFormatted =
+            '${customer.joinDate.day}, ${customer.joinDate.month}, ${customer.joinDate.year}';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -274,7 +283,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                     border: Border.all(color: cardRed, width: 1.2),
                                     color: Colors.grey.shade50,
                                   ),
-                                  child: _buildCustomerPhoto(),
+                                  child: _buildCustomerPhoto(customer),
                                 ),
                                 const SizedBox(width: 10),
 
@@ -363,13 +372,13 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                             const SizedBox(height: 14),
 
                             // ================= RULED FIELDS =================
-                            _buildScreenRuledField('Name :', widget.customer.name),
+                            _buildScreenRuledField('Name :', customer.name),
                             const SizedBox(height: 8),
                             _buildScreenRuledField(
                               'Add :',
-                              widget.customer.address.isNotEmpty
-                                  ? widget.customer.address
-                                  : widget.customer.notes,
+                              customer.address.isNotEmpty
+                                  ? customer.address
+                                  : customer.notes,
                             ),
                             const SizedBox(height: 8),
 
@@ -387,7 +396,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                   flex: 6,
                                   child: _buildScreenRuledField(
                                     'Mobile No.:',
-                                    widget.customer.phone,
+                                    customer.phone,
                                   ),
                                 ),
                               ],
@@ -410,11 +419,11 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                 ),
                                 TableRow(
                                   children: [
-                                    _buildMeasurementCell(widget.customer.weight),
-                                    _buildMeasurementCell(widget.customer.chest),
-                                    _buildMeasurementCell(widget.customer.bicep),
-                                    _buildMeasurementCell(widget.customer.waist),
-                                    _buildMeasurementCell(widget.customer.leg),
+                                    _buildMeasurementCell(customer.weight),
+                                    _buildMeasurementCell(customer.chest),
+                                    _buildMeasurementCell(customer.bicep),
+                                    _buildMeasurementCell(customer.waist),
+                                    _buildMeasurementCell(customer.leg),
                                   ],
                                 ),
                               ],
@@ -586,6 +595,8 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
               ),
             ),
           ),
+    );
+      },
     );
   }
 

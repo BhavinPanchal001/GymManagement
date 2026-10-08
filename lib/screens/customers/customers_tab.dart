@@ -94,7 +94,9 @@ class _CustomersTabState extends State<CustomersTab> {
           ),
           body: Column(
             children: [
-              const DashboardMetricsGrid(),
+              // Dashboard Metrics (hidden while keyboard is open to maximize space for search results)
+              if (MediaQuery.viewInsetsOf(context).bottom == 0)
+                const DashboardMetricsGrid(),
 
               // Search Bar
               Padding(
