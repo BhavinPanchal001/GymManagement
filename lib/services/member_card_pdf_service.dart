@@ -302,19 +302,12 @@ class MemberCardPdfService {
 
                   // ================= DUE PAYMENT SUMMARY =================
                   () {
-                    final now = DateTime.now();
-                    final joinDate = customer.joinDate;
-                    final monthlyFee = gymSettings.getFeeForPlan(customer.planType);
                     double totalDue = 0;
                     int dueMonthCount = 0;
                     int partialCount = 0;
                     for (final m in yearlyData) {
-                      final monthDate = DateTime(year, m.month);
-                      if (monthDate.isBefore(DateTime(joinDate.year, joinDate.month))) continue;
-                      if (year == now.year && m.month > now.month) continue;
-                      if (year > now.year) continue;
-                      if (!m.isPaid) {
-                        totalDue += monthlyFee;
+                      if (m.isDue) {
+                        totalDue += m.dueAmount;
                         dueMonthCount++;
                       } else if (m.balanceDue > 0) {
                         totalDue += m.balanceDue;
@@ -393,9 +386,6 @@ class MemberCardPdfService {
                             effectiveBold,
                             effectiveRegular,
                             currency: gymSettings.currencySymbol,
-                            monthlyFee: gymSettings.getFeeForPlan(customer.planType),
-                            joinDate: customer.joinDate,
-                            selectedYear: year,
                           ),
                         ),
                         // Right Column (Months 7 - 12)
@@ -405,9 +395,6 @@ class MemberCardPdfService {
                             effectiveBold,
                             effectiveRegular,
                             currency: gymSettings.currencySymbol,
-                            monthlyFee: gymSettings.getFeeForPlan(customer.planType),
-                            joinDate: customer.joinDate,
-                            selectedYear: year,
                           ),
                         ),
                       ],
@@ -547,11 +534,7 @@ class MemberCardPdfService {
     pw.Font boldFont,
     pw.Font regularFont, {
     required String currency,
-    required double monthlyFee,
-    required DateTime joinDate,
-    required int selectedYear,
   }) {
-    final now = DateTime.now();
     return pw.Table(
       border: pw.TableBorder.all(color: cardRed, width: 1.0),
       columnWidths: const {
@@ -560,10 +543,7 @@ class MemberCardPdfService {
         2: pw.FlexColumnWidth(),
       },
       children: months.map((m) {
-        final monthDate = DateTime(selectedYear, m.month);
-        final isAfterJoin = !monthDate.isBefore(DateTime(joinDate.year, joinDate.month));
-        final isPastOrCurrent = selectedYear < now.year || (selectedYear == now.year && m.month <= now.month);
-        final isDue = !m.isPaid && isAfterJoin && isPastOrCurrent;
+        final isDue = m.isDue;
         final hasBalance = m.isPaid && m.balanceDue > 0;
 
         String feeText = '';
@@ -585,7 +565,7 @@ class MemberCardPdfService {
             textFont = boldFont;
           }
         } else if (isDue) {
-          feeText = 'DUE (${GymDateUtils.formatCurrency(monthlyFee, symbol: currency)})';
+          feeText = 'DUE (${GymDateUtils.formatCurrency(m.dueAmount, symbol: currency)})';
           feeColor = const PdfColor(0.8, 0.1, 0.1);
           textFont = boldFont;
         } else {
@@ -633,76 +613,49 @@ class MemberCardPdfService {
               height: 32,
               alignment: pw.Alignment.centerLeft,
               padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              child: m.isPaid
-                  ? pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      mainAxisAlignment: pw.MainAxisAlignment.center,
-                      children: [
-                        pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                          children: [
-                            pw.Expanded(
-                              child: pw.Text(
-                                feeText,
-                                style: pw.TextStyle(
-                                  color: feeColor,
-                                  fontSize: hasBalance ? 7.0 : 8.0,
-                                  fontWeight: pw.FontWeight.bold,
-                                  font: textFont,
-                                ),
-                                maxLines: 1,
-                              ),
-                            ),
-                            if (attendanceText.isNotEmpty)
-                              pw.Text(
-                                attendanceText,
-                                style: pw.TextStyle(
-                                  color: cardRed,
-                                  fontSize: 7.5,
-                                  font: regularFont,
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (m.formattedDateRange != null) ...[
-                          pw.SizedBox(height: 1),
-                          pw.Text(
-                            m.formattedDateRange!,
-                            style: pw.TextStyle(
-                              color: PdfColors.grey800,
-                              fontSize: 7.0,
-                              font: regularFont,
-                            ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Expanded(
+                        child: pw.Text(
+                          feeText,
+                          style: pw.TextStyle(
+                            color: feeColor,
+                            fontSize: hasBalance ? 7.0 : 8.0,
+                            fontWeight: pw.FontWeight.bold,
+                            font: textFont,
                           ),
-                        ],
-                      ],
-                    )
-                  : pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Expanded(
-                          child: pw.Text(
-                            feeText,
-                            style: pw.TextStyle(
-                              color: feeColor,
-                              fontSize: isDue ? 7.5 : 8.5,
-                              fontWeight: isDue ? pw.FontWeight.bold : pw.FontWeight.normal,
-                              font: textFont,
-                            ),
-                            maxLines: 1,
+                          maxLines: 1,
+                        ),
+                      ),
+                      if (attendanceText.isNotEmpty)
+                        pw.Text(
+                          attendanceText,
+                          style: pw.TextStyle(
+                            color: cardRed,
+                            fontSize: 7.5,
+                            font: regularFont,
                           ),
                         ),
-                        if (attendanceText.isNotEmpty)
-                          pw.Text(
-                            attendanceText,
-                            style: pw.TextStyle(
-                              color: cardRed,
-                              fontSize: 7.5,
-                              font: regularFont,
-                            ),
-                          ),
-                      ],
+                    ],
+                  ),
+                  if (m.formattedDateRange != null) ...[
+                    pw.SizedBox(height: 1),
+                    pw.Text(
+                      m.formattedDateRange!,
+                      style: pw.TextStyle(
+                        color: PdfColors.grey800,
+                        fontSize: 7.0,
+                        font: regularFont,
+                      ),
                     ),
+                  ],
+                ],
+              ),
             ),
           ],
         );

@@ -120,18 +120,11 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
     final totalPres = yearly.fold<int>(0, (sum, m) => sum + m.presentDays);
 
     // Calculate total due for WhatsApp message
-    final now = DateTime.now();
-    final joinDate = widget.customer.joinDate;
-    final monthlyFee = gym.settings.getFeeForPlan(widget.customer.planType);
     final currency = gym.settings.currencySymbol;
     double totalDue = 0;
     for (final m in yearly) {
-      final monthDate = DateTime(_selectedYear, m.month);
-      if (monthDate.isBefore(DateTime(joinDate.year, joinDate.month))) continue;
-      if (_selectedYear == now.year && m.month > now.month) continue;
-      if (_selectedYear > now.year) continue;
-      if (!m.isPaid) {
-        totalDue += monthlyFee;
+      if (m.isDue) {
+        totalDue += m.dueAmount;
       } else if (m.balanceDue > 0) {
         totalDue += m.balanceDue;
       }
@@ -432,19 +425,12 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                             // ================= DUE PAYMENT SUMMARY =================
                             Builder(
                               builder: (context) {
-                                final now = DateTime.now();
-                                final joinDate = widget.customer.joinDate;
-                                final monthlyFee = gymSettings.getFeeForPlan(widget.customer.planType);
                                 double totalDue = 0;
                                 int dueMonthCount = 0;
                                 int partialCount = 0;
                                 for (final m in yearlyData) {
-                                  final monthDate = DateTime(_selectedYear, m.month);
-                                  if (monthDate.isBefore(DateTime(joinDate.year, joinDate.month))) continue;
-                                  if (_selectedYear == now.year && m.month > now.month) continue;
-                                  if (_selectedYear > now.year) continue;
-                                  if (!m.isPaid) {
-                                    totalDue += monthlyFee;
+                                  if (m.isDue) {
+                                    totalDue += m.dueAmount;
                                     dueMonthCount++;
                                   } else if (m.balanceDue > 0) {
                                     totalDue += m.balanceDue;
@@ -537,9 +523,6 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                   child: _buildScreenMonthSubTable(
                                     yearlyData.sublist(0, 6),
                                     currency: gymSettings.currencySymbol,
-                                    monthlyFee: gymSettings.getFeeForPlan(widget.customer.planType),
-                                    joinDate: widget.customer.joinDate,
-                                    selectedYear: _selectedYear,
                                   ),
                                 ),
                                 // Months 7 - 12
@@ -547,9 +530,6 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                                   child: _buildScreenMonthSubTable(
                                     yearlyData.sublist(6, 12),
                                     currency: gymSettings.currencySymbol,
-                                    monthlyFee: gymSettings.getFeeForPlan(widget.customer.planType),
-                                    joinDate: widget.customer.joinDate,
-                                    selectedYear: _selectedYear,
                                   ),
                                 ),
                               ],
@@ -680,11 +660,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
   Widget _buildScreenMonthSubTable(
     List<MonthCardData> months, {
     required String currency,
-    required double monthlyFee,
-    required DateTime joinDate,
-    required int selectedYear,
   }) {
-    final now = DateTime.now();
     return Table(
       border: TableBorder.all(color: cardRed, width: 1.0),
       columnWidths: const {
@@ -693,11 +669,23 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
         2: FlexColumnWidth(),
       },
       children: months.map((m) {
-        final monthDate = DateTime(selectedYear, m.month);
-        final isAfterJoin = !monthDate.isBefore(DateTime(joinDate.year, joinDate.month));
-        final isPastOrCurrent = selectedYear < now.year || (selectedYear == now.year && m.month <= now.month);
-        final isDue = !m.isPaid && isAfterJoin && isPastOrCurrent;
+        final isDue = m.isDue;
         final hasBalance = m.isPaid && m.balanceDue > 0;
+        String feeText = '-';
+        Color feeColor = Colors.black26;
+        if (m.isPaid) {
+          feeText = m.isCoveredInPackage
+              ? 'PAID (Pkg)'
+              : 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)})';
+          feeColor = paidGreen;
+          if (hasBalance) {
+            feeText += ' BAL (${GymDateUtils.formatCurrency(m.balanceDue, symbol: currency)})';
+            feeColor = const Color(0xFFE65100);
+          }
+        } else if (isDue) {
+          feeText = 'DUE (${GymDateUtils.formatCurrency(m.dueAmount, symbol: currency)})';
+          feeColor = const Color(0xFFD32F2F);
+        }
 
         return TableRow(
           children: [
@@ -735,99 +723,53 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
               height: 36,
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: m.isPaid
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                m.isCoveredInPackage
-                                    ? 'PAID (Pkg)'
-                                    : (hasBalance
-                                        ? 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)}) BAL (${GymDateUtils.formatCurrency(m.balanceDue, symbol: currency)})'
-                                        : 'PAID (${GymDateUtils.formatCurrency(m.amount, symbol: currency)})'),
-                                style: TextStyle(
-                                  color: hasBalance ? const Color(0xFFE65100) : paidGreen,
-                                  fontSize: hasBalance ? 7.5 : 8.5,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (m.presentDays > 0) ...[
-                              const SizedBox(width: 4),
-                              Text(
-                                '✓ ${m.presentDays} Pres',
-                                style: const TextStyle(
-                                  color: cardRed,
-                                  fontSize: 7.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        if (m.formattedDateRange != null) ...[
-                          const SizedBox(height: 1),
-                          Text(
-                            m.formattedDateRange!,
-                            style: const TextStyle(
-                              color: Color(0xFF424242),
-                              fontSize: 7.5,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.1,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          feeText,
+                          style: TextStyle(
+                            color: feeColor,
+                            fontSize: hasBalance ? 7.5 : 8.5,
+                            fontWeight: FontWeight.w900,
                           ),
-                        ],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (m.presentDays > 0) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '✓ ${m.presentDays} Pres',
+                          style: const TextStyle(
+                            color: cardRed,
+                            fontSize: 7.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
-                    )
-                  : (isDue
-                      ? Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'DUE (${GymDateUtils.formatCurrency(monthlyFee, symbol: currency)})',
-                                style: const TextStyle(
-                                  color: Color(0xFFD32F2F),
-                                  fontSize: 8.0,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (m.presentDays > 0) ...[
-                              const SizedBox(width: 4),
-                              Text(
-                                '${m.presentDays} Pres',
-                                style: const TextStyle(
-                                  color: Colors.black54,
-                                  fontSize: 7.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ],
-                        )
-                      : (m.presentDays > 0
-                          ? Text(
-                              '${m.presentDays} Pres',
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : const Text(
-                              '-',
-                              style: TextStyle(color: Colors.black26, fontSize: 10),
-                            ))),
+                    ],
+                  ),
+                  if (m.formattedDateRange != null) ...[
+                    const SizedBox(height: 1),
+                    Text(
+                      m.formattedDateRange!,
+                      style: const TextStyle(
+                        color: Color(0xFF424242),
+                        fontSize: 7.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         );
