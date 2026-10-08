@@ -47,6 +47,8 @@ class MonthCardData {
   final bool isPaid;
   final double amount;
   final double balanceDue;
+  final double dueAmount;
+  final bool isDue;
   final PaymentMethod? method;
   final DateTime? paidAt;
   final int presentDays;
@@ -63,6 +65,8 @@ class MonthCardData {
     required this.isPaid,
     required this.amount,
     this.balanceDue = 0.0,
+    this.dueAmount = 0.0,
+    this.isDue = false,
     this.method,
     this.paidAt,
     required this.presentDays,
@@ -74,9 +78,11 @@ class MonthCardData {
   });
 
   String? get formattedDateRange {
-    if (!isPaid || startDate == null || endDate == null) return null;
+    if (startDate == null || endDate == null) return null;
     return GymDateUtils.formatCardDateRange(startDate!, endDate!);
   }
+
+  double get outstandingAmount => isDue ? dueAmount : balanceDue;
 }
 
 class _PendingIndex {
@@ -1030,16 +1036,46 @@ class GymService extends ChangeNotifier {
     return '$candidate';
   }
 
-  List<MonthCardData> getYearlyCardData(String customerId, int year) {
+  List<MonthCardData> getYearlyCardData(String customerId, int year, {DateTime? asOf}) {
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December',
     ];
 
+    final now = asOf ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayKey = GymDateUtils.toDateKey(today);
+    final periods = _duesIndex.membershipRecords(customerId);
+    final customer = getCustomerById(customerId);
+    // Legacy profiles may have no recorded membership yet. Display the
+    // initial period from joining without creating a charge or saving data.
+    if (periods.isEmpty && customer != null &&
+        getPaidPaymentsForCustomer(customerId).isEmpty) {
+      periods.add(PaymentRecord(
+        id: 'card_initial_$customerId',
+        customerId: customerId,
+        monthYear: GymDateUtils.toMonthKey(customer.joinDate),
+        amount: 0,
+        totalDue: _feeForCustomer(customer),
+        durationMonths: customer.planDurationMonths,
+        startDate: customer.joinDate,
+      ));
+    }
+    final attendance = _attendanceMap.values.where((record) =>
+        record.customerId == customerId &&
+        record.status == AttendanceStatus.present &&
+        record.dateKey.compareTo(todayKey) <= 0).toList();
     final result = <MonthCardData>[];
     for (int m = 1; m <= 12; m++) {
       final monthKey = '$year-${m.toString().padLeft(2, '0')}';
-      final payment = getPaymentRecord(customerId, monthKey);
+      // Attribute an unpaid cycle only to its start month, even when it
+      // continues into another calendar month or year.
+      final startingPeriods = periods.where((record) =>
+          GymDateUtils.toMonthKey(record.effectiveStartDate) == monthKey).toList();
+      final unpaidPeriods = startingPeriods.where((record) => !record.isPaid).toList();
+      final payment = unpaidPeriods.isNotEmpty
+          ? unpaidPeriods.first
+          : getPaymentRecord(customerId, monthKey);
       final attSummary = getMonthlyAttendanceSummary(customerId, monthKey);
       final present = attSummary['present'] ?? 0;
       final absent = attSummary['absent'] ?? 0;
@@ -1056,13 +1092,26 @@ class GymService extends ChangeNotifier {
 
       DateTime? effStart;
       DateTime? effEnd;
-      // A month covered by a multi-month package whose cycle started earlier.
+      double dueAmount = 0;
+      bool isDue = false;
+      // Carry paid coverage into later months without counting the fee or
+      // remaining balance again.
       final bool isCovered = isPaidForMonth &&
-          payment.durationMonths > 1 &&
-          payment.monthYear != monthKey;
+          GymDateUtils.toMonthKey(payment.effectiveStartDate) != monthKey;
       if (isPaidForMonth) {
         effStart = payment.effectiveStartDate;
         effEnd = payment.effectiveEndDate;
+      } else if (unpaidPeriods.isNotEmpty) {
+        effStart = payment.effectiveStartDate;
+        effEnd = payment.effectiveEndDate;
+        final startKey = GymDateUtils.toDateKey(effStart);
+        final endKey = GymDateUtils.toDateKey(effEnd);
+        final hasAttendance = attendance.any((record) =>
+            record.dateKey.compareTo(startKey) >= 0 &&
+            record.dateKey.compareTo(endKey) <= 0);
+        // The end date is inclusive; an active cycle is not overdue.
+        isDue = hasAttendance && today.isAfter(effEnd);
+        if (isDue) dueAmount = payment.balanceDue;
       }
 
       result.add(MonthCardData(
@@ -1072,6 +1121,8 @@ class GymService extends ChangeNotifier {
         isPaid: isPaidForMonth,
         amount: (isPaidForMonth && !isCovered) ? payment.amount : 0.0,
         balanceDue: (isPaidForMonth && !isCovered) ? payment.balanceDue : 0.0,
+        dueAmount: dueAmount,
+        isDue: isDue,
         method: isPaidForMonth ? payment.method : null,
         paidAt: isPaidForMonth ? payment.paidAt : null,
         presentDays: present,
