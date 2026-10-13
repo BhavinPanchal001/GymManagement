@@ -107,6 +107,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
   }
 
   Future<void> _pickCustomDateRange() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDateRangePicker(
       context: context,
       initialDateRange: DateTimeRange(start: _rangeStart, end: _rangeEnd),
@@ -126,6 +127,8 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
         );
       },
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
 
     if (picked != null) {
       setState(() {

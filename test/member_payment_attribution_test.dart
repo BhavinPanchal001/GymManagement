@@ -425,11 +425,12 @@ void main() {
       );
     }
 
-    // Now July 2026 has attendance marked -> MUST be due!
+    // Pre-join attempts are rejected, so July remains not enrolled.
     final julStageAfterAttendance = gym.getMemberLifecycleStage(member, '2026-07');
-    expect(julStageAfterAttendance, equals(MemberLifecycleStage.due));
-    expect(julStageAfterAttendance.isDue, isTrue);
-    expect(julStageAfterAttendance.isNotEnrolled, isFalse);
+    expect(julStageAfterAttendance, equals(MemberLifecycleStage.notEnrolled));
+    expect(julStageAfterAttendance.isDue, isFalse);
+    expect(julStageAfterAttendance.isNotEnrolled, isTrue);
+    expect(gym.getMonthlyAttendanceSummary(member.id, '2026-07')['present'], 0);
 
     // August 2026 still has 0 attendance -> remains notEnrolled
     final augStageStillZero = gym.getMemberLifecycleStage(member, '2026-08');
@@ -655,69 +656,19 @@ void main() {
     expect(gym.getMonthlyFinancialSummary('2026-09')['pendingCount'], septemberPendingBefore + 1);
   });
 
-  test('Backdated attendance is pending even when the profile join date is later',
-      () async {
+  test('Backdated attendance before joining is rejected and creates no dues', () async {
     final gym = GymService();
-    final augustPendingBefore =
-        gym.getMonthlyFinancialSummary('2026-08')['pendingCount'] as int;
     final member = await gym.addCustomer(
-      name: 'Backdated Member',
-      phone: '9876500013',
-      joinDate: DateTime(2026, 9, 1),
-      markAsPaidNow: false,
+      name: 'Backdated Member', phone: '9876500013',
+      joinDate: DateTime(2026, 9, 1), markAsPaidNow: false,
     );
-      // Backdating individual records is deliberate; automatic month marking
-      // now skips dates before joining.
-      for (var day = 1; day <= 31; day++) {
-        final date = DateTime(2026, 8, day);
-        if (date.weekday == DateTime.sunday) continue;
-        await gym.toggleAttendance(member.id, GymDateUtils.toDateKey(date), AttendanceStatus.present);
-      }
-
-      final start = DateTime(2026, 8, 1);
-    final end = DateTime(2026, 9, 30);
-    expect(gym.getMonthlyAttendanceSummary(member.id, '2026-08')['present'], 26);
-    expect(gym.getUnpaidAttendedDaysInMonth(member.id, '2026-08'), 26);
-    expect(gym.getMemberLifecycleStage(member, '2026-08'),
-        MemberLifecycleStage.due);
-    expect(
-      gym.getPendingDuesByMonth(start, end)
-          .where((group) => group.monthKey == '2026-08')
-          .expand((group) => group.items)
-          .where((item) => item.customer.id == member.id).length,
-      1,
-    );
-    expect(
-      gym.getPendingDuesByMember(start, end)
-          .singleWhere((summary) => summary.customer.id == member.id)
-          .pendingRecords.map((record) => record.monthYear),
-      ['2026-08'],
-    );
-    expect(gym.getMonthlyFinancialSummary('2026-08')['pendingCount'],
-        augustPendingBefore + 1);
-    expect(
-      gym.getPendingDuesByMonth(start, end)
-          .where((group) => group.monthKey == '2026-09')
-          .expand((group) => group.items)
-          .where((item) => item.customer.id == member.id),
-      isEmpty,
-    );
-
-    await gym.markPaymentAsPaid(
-      customerId: member.id,
-      monthYear: '2026-08',
-      method: PaymentMethod.cash,
-      amount: 600,
-      totalDue: 600,
-      startDate: DateTime(2026, 8, 1),
-      endDate: DateTime(2026, 8, 31),
-    );
+    for (var day = 1; day <= 31; day++) {
+      await gym.toggleAttendance(member.id,
+        GymDateUtils.toDateKey(DateTime(2026, 8, day)), AttendanceStatus.present);
+    }
+    expect(gym.getMonthlyAttendanceSummary(member.id, '2026-08')['present'], 0);
     expect(gym.getUnpaidAttendedDaysInMonth(member.id, '2026-08'), 0);
-    expect(
-      gym.getPendingDuesByMonth(start, end)
-          .expand((group) => group.items)
-          .where((item) => item.customer.id == member.id),
-      isEmpty,
-    );
+    expect(gym.getMemberLifecycleStage(member, '2026-08'), MemberLifecycleStage.notEnrolled);
+    expect(gym.getCustomerPaymentHistory(member.id).where((p) => p.monthYear == '2026-08'), isEmpty);
   });
 }

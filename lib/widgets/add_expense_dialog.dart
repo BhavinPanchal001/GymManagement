@@ -58,6 +58,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
   }
 
   Future<void> _pickDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -77,6 +78,8 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
         );
       },
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
       setState(() => _selectedDate = picked);
     }

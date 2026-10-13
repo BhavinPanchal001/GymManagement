@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../services/gym_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/image_storage_utils.dart';
+import '../../utils/name_input_formatter.dart';
 import '../../widgets/gym_logo_widget.dart';
 import 'forgot_password_sheet.dart';
 
@@ -141,12 +142,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       final cred = await AuthService().signUpWithEmailAndPassword(
         email: _signUpEmailController.text,
         password: _signUpPasswordController.text,
-        displayName: _signUpNameController.text,
+        displayName: capitalizeName(_signUpNameController.text.trim()),
         photoPath: _signUpSelectedImagePath,
       );
 
       final newUserId = cred.user?.uid;
-      final gymName = _signUpGymNameController.text.trim();
+      final gymName = capitalizeName(_signUpGymNameController.text.trim());
       final gymLogoBase64 = _signUpSelectedImagePath == null
           ? null
           : await ImageStorageUtils.createThumbnailBase64(
@@ -675,8 +676,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     Widget? suffixIcon,
     String? Function(String?)? validator,
   }) {
+    final isName = controller == _signUpNameController ||
+        controller == _signUpGymNameController;
     return TextFormField(
       controller: controller,
+      textCapitalization: isName ? TextCapitalization.words : TextCapitalization.none,
+      inputFormatters: isName ? [NameInputFormatter()] : null,
       obscureText: obscureText,
       keyboardType: keyboardType,
       autofillHints: autofillHints,

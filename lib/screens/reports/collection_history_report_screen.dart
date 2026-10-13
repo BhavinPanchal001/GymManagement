@@ -95,6 +95,7 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
   }
 
   Future<void> _pickCustomDateRange() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDateRangePicker(
       context: context,
       initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
@@ -114,6 +115,8 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
         );
       },
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
 
     if (picked != null) {
       setState(() {

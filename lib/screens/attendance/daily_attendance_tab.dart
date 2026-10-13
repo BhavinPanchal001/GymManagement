@@ -33,6 +33,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
   }
 
   Future<void> _pickDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate.isAfter(DateTime.now()) ? DateTime.now() : _selectedDate,
@@ -52,6 +53,8 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
         );
       },
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
       setState(() => _selectedDate = picked);
     }

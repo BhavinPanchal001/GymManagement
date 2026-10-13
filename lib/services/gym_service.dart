@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/customer.dart';
 import '../models/attendance.dart';
 import '../models/payment.dart';
+import '../models/membership_gap.dart';
 import '../models/bill.dart';
 import '../models/expense.dart';
 import '../models/gym_settings.dart';
@@ -176,20 +177,9 @@ class _PendingIndex {
           continue;
         }
         final attended = DateTime.parse(dateKey);
-        var start = attended;
-        final earlierPeriods = [
-          ...agreements[customer.id] ?? <PaymentRecord>[],
-          ...payments[customer.id] ?? <PaymentRecord>[],
-          ...inferred,
-        ];
-        for (final period in earlierPeriods) {
-          final after = period.effectiveEndDate.add(const Duration(days: 1));
-          if (!after.isAfter(attended) &&
-              after.year == attended.year && after.month == attended.month &&
-              (start == attended || after.isAfter(start))) {
-            start = after;
-          }
-        }
+        // A new attendance-derived cycle starts when the member returns.
+        // Explicit agreements and previously stored cycle dates remain intact.
+        final start = attended;
         final end = GymDateUtils.computeAnniversaryEndDate(
           start, customer.planDurationMonths,
         );
@@ -1352,6 +1342,36 @@ class GymService extends ChangeNotifier {
     return getPaymentCoveringMonth(customerId, monthKey) != null;
   }
 
+  /// Read-only gaps between paid cycles, merging overlapping legacy coverage.
+  /// Attendance in a gap is shown as unpaid attendance, never described as rest.
+  List<MembershipGap> getMembershipGaps(String customerId) {
+    final paid = getPaidPaymentsForCustomer(customerId)
+      ..sort((a, b) => a.effectiveStartDate.compareTo(b.effectiveStartDate));
+    final gaps = <MembershipGap>[];
+    DateTime? coveredUntil;
+    for (final payment in paid) {
+      final from = payment.effectiveStartDate;
+      final to = payment.effectiveEndDate;
+      final start = DateTime(from.year, from.month, from.day);
+      final end = DateTime(to.year, to.month, to.day);
+      if (end.isBefore(start)) continue;
+      if (coveredUntil != null) {
+        final gapStart = DateTime(coveredUntil.year, coveredUntil.month, coveredUntil.day + 1);
+        if (start.isAfter(gapStart)) {
+          final gapEnd = DateTime(start.year, start.month, start.day - 1);
+          gaps.add(MembershipGap(
+            nextPaymentId: payment.id,
+            start: gapStart,
+            end: gapEnd,
+            attendedDays: getDateRangeAttendanceSummary(customerId, gapStart, gapEnd)['present'] ?? 0,
+          ));
+        }
+      }
+      if (coveredUntil == null || end.isAfter(coveredUntil)) coveredUntil = end;
+    }
+    return gaps;
+  }
+
   /// Returns the PaymentRecord covering a specific month, if any.
   /// Among paid records whose [effectiveStartDate, effectiveEndDate] overlaps the
   /// calendar month, prefers one whose cycle starts in that month (latest start
@@ -1679,16 +1699,14 @@ class GymService extends ChangeNotifier {
 
   bool _canRecordAttendance(
     String customerId,
-    DateTime date, {
-    bool allowBeforeJoin = false,
-  }) {
+    DateTime date,
+  ) {
     final customer = getCustomerById(customerId);
     if (customer == null || !customer.isActive) return false;
     final join = customer.joinDate;
     final now = DateTime.now();
     final day = DateTime(date.year, date.month, date.day);
-    return (allowBeforeJoin ||
-            !day.isBefore(DateTime(join.year, join.month, join.day))) &&
+    return !day.isBefore(DateTime(join.year, join.month, join.day)) &&
         !day.isAfter(DateTime(now.year, now.month, now.day));
   }
 
@@ -1697,7 +1715,7 @@ class GymService extends ChangeNotifier {
   }) => _serializeAttendanceSave(() async {
     final date = DateTime.tryParse(dateKey);
     if (date == null ||
-        !_canRecordAttendance(customerId, date, allowBeforeJoin: true)) {
+        !_canRecordAttendance(customerId, date)) {
       return;
     }
     {
@@ -2197,43 +2215,11 @@ class GymService extends ChangeNotifier {
     final unpaidDays = getUnpaidAttendedDaysInMonth(customerId, monthYear);
     if (covering != null && unpaidDays == 0) return covering;
 
-    // A paid cycle overlaps this month but still-uncovered attended days
-    // remain: suggest the new cycle start at the first uncovered attendance
-    // (or right after the latest paid cycle that ends before it).
-    DateTime? suggestedStart;
-    if (covering != null) {
-      final parts = monthYear.split('-');
-      final y = int.tryParse(parts[0]) ?? DateTime.now().year;
-      final m = int.tryParse(parts[1]) ?? DateTime.now().month;
-      final monthStart = DateTime(y, m, 1);
-
-      DateTime? firstUnpaid;
-      for (final dateKey
-          in _duesIndex.unpaid[customerId]?[monthYear] ?? <String>[]) {
-        final d = DateTime.tryParse(dateKey);
-        if (d != null) {
-          final day = DateTime(d.year, d.month, d.day);
-          if (firstUnpaid == null || day.isBefore(firstUnpaid)) {
-            firstUnpaid = day;
-          }
-        }
-      }
-
-      if (firstUnpaid != null) {
-        DateTime? prevEndPlusOne;
-        for (final p in _duesIndex.payments[customerId] ?? <PaymentRecord>[]) {
-          final e = p.effectiveEndDate;
-          final endPlusOne = DateTime(e.year, e.month, e.day + 1);
-          if (!endPlusOne.isAfter(firstUnpaid) &&
-              !endPlusOne.isBefore(monthStart)) {
-            if (prevEndPlusOne == null || endPlusOne.isAfter(prevEndPlusOne)) {
-              prevEndPlusOne = endPlusOne;
-            }
-          }
-        }
-        suggestedStart = prevEndPlusOne ?? firstUnpaid;
-      }
-    }
+    // Use the first attendance date without paid coverage, never a calendar
+    // boundary or an automatic continuation across a member's break.
+    final unpaidDates = (_duesIndex.unpaid[customerId]?[monthYear] ?? <String>[])
+        .toList()..sort();
+    final suggestedStart = unpaidDates.isEmpty ? null : DateTime.parse(unpaidDates.first);
 
     final customer = getCustomerById(customerId);
     final totalDue = _feeForCustomer(customer);

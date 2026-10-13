@@ -111,7 +111,7 @@ void main() {
   );
 
   test(
-    'correcting pre-membership attendance removes its inferred agreement',
+    'pre-join attendance cannot create an inferred agreement',
     () async {
       final c = await gym.addCustomer(
         name: 'Corrected attendance member',
@@ -128,8 +128,9 @@ void main() {
         '2024-06-15',
         AttendanceStatus.present,
       );
-      expect(gym.getAllPendingDues().single.totalPendingAmount, 3000);
-      expect(gym.getCustomerPaymentHistory(c.id), hasLength(2));
+      expect(gym.getAttendance(c.id, '2024-06-15'), isNull);
+      expect(gym.getAllPendingDues().single.totalPendingAmount, 1500);
+      expect(gym.getCustomerPaymentHistory(c.id), hasLength(1));
 
       await gym.toggleAttendance(
         c.id,

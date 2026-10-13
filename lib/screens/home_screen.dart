@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   List<Widget> get _tabs => [
-    const CustomersTab(),
+    CustomersTab(isVisible: _currentIndex == 0),
     const DailyAttendanceTab(),
     BillingTab(
       sectionIndex: _billingSection,
