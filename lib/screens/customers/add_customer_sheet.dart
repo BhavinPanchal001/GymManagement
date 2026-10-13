@@ -55,6 +55,7 @@ class AddCustomerSheet extends StatefulWidget {
 
 class _AddCustomerSheetState extends State<AddCustomerSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _fieldsKey = GlobalKey();
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _notesController;
@@ -453,16 +454,312 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   Widget build(BuildContext context) {
     final gymService = GymService();
     final currency = gymService.settings.currencySymbol;
+    final media = MediaQuery.of(context);
+    final isShortScreen = media.size.height < 500;
+    final fields = Column(
+      key: _fieldsKey,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Pill handle
+        Center(
+          child: Container(
+            width: 44,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceBorder,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        Text(
+          isEditing ? 'Edit Member Profile' : 'Register New Member',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Avatar / Photo Selector
+        AvatarSelector(
+          initialImagePath: _selectedImagePath,
+          initialImageBase64:
+              _selectedImagePath == widget.customerToEdit?.imagePath
+              ? widget.customerToEdit?.imageBase64
+              : null,
+          customerName: _nameController.text,
+          storageKey:
+              'avatar_${widget.customerToEdit?.id ?? _registrationOperationId}',
+          onImageSelected: (newPath) {
+            setState(() => _selectedImagePath = newPath);
+          },
+        ),
+        const SizedBox(height: 20),
+
+        // Full Name Field
+        Text(
+          'Full Name',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _nameController,
+          textCapitalization: TextCapitalization.words,
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+          decoration: InputDecoration(
+            hintText: 'e.g. Rahul Sharma',
+            prefixIcon: Icon(
+              Icons.person_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            suffixIcon: VoiceSearchSuffix(
+              controller: _nameController,
+              title: 'Speak Member Name',
+              voiceHint: 'Say member full name...',
+              submitLabel: 'Apply',
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          validator: (val) {
+            if (val == null || val.trim().isEmpty) {
+              return 'Please enter member name';
+            }
+            return null;
+          },
+          onChanged: (text) => setState(() {}),
+        ),
+        const SizedBox(height: 16),
+
+        // Phone Number Field
+        Text(
+          'Phone Number',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [_PhoneNumberFormatter()],
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+          decoration: InputDecoration(
+            hintText: 'e.g. 9876543210',
+            prefixIcon: Icon(
+              Icons.phone_rounded,
+              color: AppColors.secondary,
+              size: 20,
+            ),
+            suffixIcon: VoiceSearchSuffix(
+              controller: _phoneController,
+              title: 'Speak Phone Number',
+              voiceHint: 'Say 10-digit phone number...',
+              submitLabel: 'Apply',
+              transformQuery: (text) {
+                String digits = VoiceSearchSuffix.extractDigits(text);
+                if (digits.length == 12 && digits.startsWith('91')) {
+                  digits = digits.substring(2);
+                } else if (digits.length == 11 && digits.startsWith('0')) {
+                  digits = digits.substring(1);
+                }
+                if (digits.length > 10) {
+                  digits = digits.substring(0, 10);
+                }
+                return digits;
+              },
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          validator: (val) {
+            if (val == null || val.trim().isEmpty) {
+              return 'Please enter phone number';
+            }
+            final trimmed = val.trim();
+            if (trimmed.length != 10 ||
+                !RegExp(r'^\d{10}$').hasMatch(trimmed)) {
+              return 'Please enter a valid 10-digit phone number';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        // Card Number & Joining Date Row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Card No.',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFB71C1C,
+                          ).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'ENTRY',
+                          style: TextStyle(
+                            color: Color(0xFFB71C1C),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _cardNumberController,
+                    keyboardType: TextInputType.text,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. 778',
+                      prefixIcon: Icon(
+                        Icons.badge_rounded,
+                        color: Color(0xFFB71C1C),
+                        size: 20,
+                      ),
+                      errorMaxLines: 3,
+                    ),
+                    validator: (value) {
+                      final trimmed = value?.trim() ?? '';
+                      if (trimmed.isEmpty) {
+                        return 'Card number is required';
+                      }
+                      final currentCard = widget.customerToEdit?.cardNumber
+                          .trim()
+                          .toLowerCase();
+                      if (currentCard == trimmed.toLowerCase()) {
+                        return null;
+                      }
+                      final existing = gymService.getCustomerByCardNumber(
+                        trimmed,
+                        excludeCustomerId: widget.customerToEdit?.id,
+                      );
+                      if (existing != null) {
+                        return 'Card #$trimmed is already assigned to ${existing.name}';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Joining Date',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: _pickJoinDate,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.surfaceBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              GymDateUtils.formatDate(_joinDate),
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_drop_down_rounded,
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        _buildMembershipStepper(currency),
+        const SizedBox(height: 16),
+
+        // Collapsible Optional Details Card
+        _buildOptionalDetailsCard(),
+        const SizedBox(height: 24),
+      ],
+    );
     return Container(
-      height: MediaQuery.sizeOf(context).height * 0.92,
+      height: media.size.height * (isShortScreen ? 1 : 0.92),
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
-        top: 20,
+        top: isShortScreen ? 8 : 20,
         bottom:
-            MediaQuery.of(context).viewInsets.bottom +
-            MediaQuery.of(context).viewPadding.bottom +
-            24,
+            media.viewInsets.bottom +
+            media.viewPadding.bottom +
+            (isShortScreen ? 8 : 24),
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -473,326 +770,32 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       ),
       child: Form(
         key: _formKey,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Keep the footer fixed when there is room for both it and a field.
+            // Reparenting the keyed fields preserves typing as the keyboard or
+            // screen orientation changes the available height.
+            if (constraints.maxHeight < 140) {
+              return SingleChildScrollView(
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Pill handle
-                    Center(
-                      child: Container(
-                        width: 44,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceBorder,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Text(
-                      isEditing ? 'Edit Member Profile' : 'Register New Member',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Avatar / Photo Selector
-                    AvatarSelector(
-                      initialImagePath: _selectedImagePath,
-                      initialImageBase64:
-                          _selectedImagePath == widget.customerToEdit?.imagePath
-                          ? widget.customerToEdit?.imageBase64
-                          : null,
-                      customerName: _nameController.text,
-                      storageKey:
-                          'avatar_${widget.customerToEdit?.id ?? _registrationOperationId}',
-                      onImageSelected: (newPath) {
-                        setState(() => _selectedImagePath = newPath);
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Full Name Field
-                    Text(
-                      'Full Name',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _nameController,
-                      textCapitalization: TextCapitalization.words,
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'e.g. Rahul Sharma',
-                        prefixIcon: Icon(
-                          Icons.person_rounded,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                        suffixIcon: VoiceSearchSuffix(
-                          controller: _nameController,
-                          title: 'Speak Member Name',
-                          voiceHint: 'Say member full name...',
-                          submitLabel: 'Apply',
-                          onChanged: (_) => setState(() {}),
-                        ),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return 'Please enter member name';
-                        }
-                        return null;
-                      },
-                      onChanged: (text) => setState(() {}),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Phone Number Field
-                    Text(
-                      'Phone Number',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [_PhoneNumberFormatter()],
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'e.g. 9876543210',
-                        prefixIcon: Icon(
-                          Icons.phone_rounded,
-                          color: AppColors.secondary,
-                          size: 20,
-                        ),
-                        suffixIcon: VoiceSearchSuffix(
-                          controller: _phoneController,
-                          title: 'Speak Phone Number',
-                          voiceHint: 'Say 10-digit phone number...',
-                          submitLabel: 'Apply',
-                          transformQuery: (text) {
-                            String digits = VoiceSearchSuffix.extractDigits(
-                              text,
-                            );
-                            if (digits.length == 12 &&
-                                digits.startsWith('91')) {
-                              digits = digits.substring(2);
-                            } else if (digits.length == 11 &&
-                                digits.startsWith('0')) {
-                              digits = digits.substring(1);
-                            }
-                            if (digits.length > 10) {
-                              digits = digits.substring(0, 10);
-                            }
-                            return digits;
-                          },
-                          onChanged: (_) => setState(() {}),
-                        ),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return 'Please enter phone number';
-                        }
-                        final trimmed = val.trim();
-                        if (trimmed.length != 10 ||
-                            !RegExp(r'^\d{10}$').hasMatch(trimmed)) {
-                          return 'Please enter a valid 10-digit phone number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // Card Number & Joining Date Row
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 4,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Text(
-                                    'Card No.',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 5,
-                                      vertical: 1,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFFB71C1C,
-                                      ).withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      'ENTRY',
-                                      style: TextStyle(
-                                        color: Color(0xFFB71C1C),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _cardNumberController,
-                                keyboardType: TextInputType.text,
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. 778',
-                                  prefixIcon: Icon(
-                                    Icons.badge_rounded,
-                                    color: Color(0xFFB71C1C),
-                                    size: 20,
-                                  ),
-                                  errorMaxLines: 3,
-                                ),
-                                validator: (value) {
-                                  final trimmed = value?.trim() ?? '';
-                                  if (trimmed.isEmpty) {
-                                    return 'Card number is required';
-                                  }
-                                  final currentCard = widget
-                                      .customerToEdit
-                                      ?.cardNumber
-                                      .trim()
-                                      .toLowerCase();
-                                  if (currentCard == trimmed.toLowerCase()) {
-                                    return null;
-                                  }
-                                  final existing = gymService
-                                      .getCustomerByCardNumber(
-                                        trimmed,
-                                        excludeCustomerId:
-                                            widget.customerToEdit?.id,
-                                      );
-                                  if (existing != null) {
-                                    return 'Card #$trimmed is already assigned to ${existing.name}';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 5,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Joining Date',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              InkWell(
-                                onTap: _pickJoinDate,
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 14,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceElevated,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: AppColors.surfaceBorder,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.calendar_today_rounded,
-                                        color: AppColors.primary,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          GymDateUtils.formatDate(_joinDate),
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.arrow_drop_down_rounded,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildMembershipStepper(currency),
-                    const SizedBox(height: 16),
-
-                    // Collapsible Optional Details Card
-                    _buildOptionalDetailsCard(),
-                    const SizedBox(height: 24),
-                  ],
+                child: Column(children: [fields, _buildSubmitButton()]),
+              );
+            }
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    child: fields,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildSubmitButton(),
-          ],
+                const SizedBox(height: 12),
+                _buildSubmitButton(),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -1429,10 +1432,16 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   color: AppColors.paid.withValues(alpha: 0.3),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       Icon(
                         Icons.check_circle_rounded,
@@ -1469,8 +1478,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Text(
                       'Amount Received Today',
@@ -1571,8 +1583,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   ),
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
                         children: [
                           Row(
                             children: [
@@ -1607,8 +1622,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       const SizedBox(height: 6),
                       Divider(height: 1, color: AppColors.surfaceBorder),
                       const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
                         children: [
                           Row(
                             children: [
@@ -1838,17 +1856,23 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF9100).withValues(alpha: 0.2) : AppColors.surface,
+          color: isSelected
+              ? const Color(0xFFFF9100).withValues(alpha: 0.2)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFFFF9100) : AppColors.surfaceBorder,
+            color: isSelected
+                ? const Color(0xFFFF9100)
+                : AppColors.surfaceBorder,
             width: isSelected ? 1.4 : 1.0,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? const Color(0xFFFF9100) : AppColors.textSecondary,
+            color: isSelected
+                ? const Color(0xFFFF9100)
+                : AppColors.textSecondary,
             fontSize: 11,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
           ),
@@ -2187,12 +2211,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Body Measurements (Entry Card)',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
+                                Expanded(
+                                  child: Text(
+                                    'Body Measurements (Entry Card)',
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
