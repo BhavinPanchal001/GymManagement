@@ -12,6 +12,7 @@ import 'customer_detail_screen.dart';
 import '../../widgets/voice_search_suffix.dart';
 import '../../widgets/animations/animated_pressable.dart';
 import '../../widgets/animations/animated_success_dialog.dart';
+
 enum RegistrationPaymentMode {
   payLater,
   partialPayment,
@@ -54,6 +55,7 @@ class AddCustomerSheet extends StatefulWidget {
 
 class _AddCustomerSheetState extends State<AddCustomerSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _fieldsKey = GlobalKey();
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _notesController;
@@ -65,6 +67,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   late TextEditingController _waistController;
   late TextEditingController _legController;
   bool _showOptionalDetails = false;
+  int _membershipStep = 0;
   RegistrationPaymentMode _paymentMode = RegistrationPaymentMode.payLater;
   late TextEditingController _paidAmountController;
 
@@ -94,7 +97,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     super.initState();
     _registrationOperationId =
         '${DateTime.now().microsecondsSinceEpoch}_${identityHashCode(this)}';
-    _nameController = TextEditingController(text: widget.customerToEdit?.name ?? '');
+    _nameController = TextEditingController(
+      text: widget.customerToEdit?.name ?? '',
+    );
     String initialPhone = widget.customerToEdit?.phone ?? '';
     if (initialPhone.isNotEmpty) {
       final digits = initialPhone.replaceAll(RegExp(r'\D'), '');
@@ -105,20 +110,35 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       }
     }
     _phoneController = TextEditingController(text: initialPhone);
-    _notesController = TextEditingController(text: widget.customerToEdit?.notes ?? '');
+    _notesController = TextEditingController(
+      text: widget.customerToEdit?.notes ?? '',
+    );
     _cardNumberController = TextEditingController(
       text: widget.customerToEdit?.cardNumber.isNotEmpty == true
           ? widget.customerToEdit!.cardNumber
           : GymService().getNextCardNumber(),
     );
-    _addressController = TextEditingController(text: widget.customerToEdit?.address ?? '');
-    _weightController = TextEditingController(text: widget.customerToEdit?.weight ?? '');
-    _chestController = TextEditingController(text: widget.customerToEdit?.chest ?? '');
-    _bicepController = TextEditingController(text: widget.customerToEdit?.bicep ?? '');
-    _waistController = TextEditingController(text: widget.customerToEdit?.waist ?? '');
-    _legController = TextEditingController(text: widget.customerToEdit?.leg ?? '');
+    _addressController = TextEditingController(
+      text: widget.customerToEdit?.address ?? '',
+    );
+    _weightController = TextEditingController(
+      text: widget.customerToEdit?.weight ?? '',
+    );
+    _chestController = TextEditingController(
+      text: widget.customerToEdit?.chest ?? '',
+    );
+    _bicepController = TextEditingController(
+      text: widget.customerToEdit?.bicep ?? '',
+    );
+    _waistController = TextEditingController(
+      text: widget.customerToEdit?.waist ?? '',
+    );
+    _legController = TextEditingController(
+      text: widget.customerToEdit?.leg ?? '',
+    );
 
-    final hasOptionalData = (widget.customerToEdit?.address.isNotEmpty == true) ||
+    final hasOptionalData =
+        (widget.customerToEdit?.address.isNotEmpty == true) ||
         (widget.customerToEdit?.notes.isNotEmpty == true) ||
         (widget.customerToEdit?.weight.isNotEmpty == true) ||
         (widget.customerToEdit?.chest.isNotEmpty == true) ||
@@ -138,7 +158,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     _selectedDurationMonths = widget.customerToEdit?.planDurationMonths ?? 1;
 
     _membershipStartDate = _joinDate;
-    _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(_membershipStartDate, _selectedDurationMonths);
+    _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(
+      _membershipStartDate,
+      _selectedDurationMonths,
+    );
   }
 
   @override
@@ -158,6 +181,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   }
 
   Future<void> _pickJoinDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _joinDate,
@@ -177,32 +201,45 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         );
       },
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
       setState(() {
         _joinDate = picked;
         _membershipStartDate = picked;
-        _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(_membershipStartDate, _selectedDurationMonths);
+        _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(
+          _membershipStartDate,
+          _selectedDurationMonths,
+        );
       });
     }
   }
 
   Future<void> _pickMembershipStartDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _membershipStartDate,
       firstDate: DateTime(2015),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) => Theme(data: Theme.of(context), child: child!),
+      builder: (context, child) =>
+          Theme(data: Theme.of(context), child: child!),
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
       setState(() {
         _membershipStartDate = picked;
-        _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(_membershipStartDate, _selectedDurationMonths);
+        _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(
+          _membershipStartDate,
+          _selectedDurationMonths,
+        );
       });
     }
   }
 
   Future<void> _pickMembershipEndDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _membershipEndDate.isAfter(_membershipStartDate)
@@ -210,8 +247,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           : _membershipStartDate.add(const Duration(days: 1)),
       firstDate: _membershipStartDate,
       lastDate: DateTime.now().add(const Duration(days: 730)),
-      builder: (context, child) => Theme(data: Theme.of(context), child: child!),
+      builder: (context, child) =>
+          Theme(data: Theme.of(context), child: child!),
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
       setState(() {
         _membershipEndDate = picked;
@@ -233,11 +273,13 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('Duplicate Phone Number'),
           content: Text(
-            phoneMatches.map((customer) {
-              return 'A member named ${customer.name} '
-                  '(Card #${customer.cardNumber}) is already registered with '
-                  'this phone number. Is this a family member sharing the number?';
-            }).join('\n\n'),
+            phoneMatches
+                .map((customer) {
+                  return 'A member named ${customer.name} '
+                      '(Card #${customer.cardNumber}) is already registered with '
+                      'this phone number. Is this a family member sharing the number?';
+                })
+                .join('\n\n'),
           ),
           actions: [
             TextButton(
@@ -258,16 +300,24 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
     try {
       final totalFee = gymService.settings.totalForConfiguredPrice(
-        gymService.settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths),
+        gymService.settings.getPriceForDuration(
+          _selectedPlan,
+          _selectedDurationMonths,
+        ),
       );
       double? customPaidAmount;
-      if (!isEditing && _paymentMode == RegistrationPaymentMode.partialPayment) {
+      if (!isEditing &&
+          _paymentMode == RegistrationPaymentMode.partialPayment) {
         final text = _paidAmountController.text.trim();
         final parsed = double.tryParse(text);
         if (parsed == null || parsed <= 0) {
           setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter a valid amount received for partial payment.')),
+            const SnackBar(
+              content: Text(
+                'Please enter a valid amount received for partial payment.',
+              ),
+            ),
           );
           return;
         }
@@ -328,7 +378,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           membershipStartDate: _membershipStartDate,
           membershipEndDate: _membershipEndDate,
           membershipFee: gymService.settings.getPriceForDuration(
-            _selectedPlan, _selectedDurationMonths,
+            _selectedPlan,
+            _selectedDurationMonths,
           ),
           paidAmount: _paymentMode == RegistrationPaymentMode.partialPayment
               ? customPaidAmount
@@ -344,11 +395,15 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       if (isEditing) {
         successMessage = '${_nameController.text.trim()} updated successfully';
       } else if (_paymentMode == RegistrationPaymentMode.fullPayment) {
-        successMessage = '${_nameController.text.trim()} registered with fee paid in full';
-      } else if (_paymentMode == RegistrationPaymentMode.partialPayment && customPaidAmount != null) {
-        successMessage = '${_nameController.text.trim()} registered with ${gymService.settings.currencySymbol}${customPaidAmount.toInt()} partial payment';
+        successMessage =
+            '${_nameController.text.trim()} registered with fee paid in full';
+      } else if (_paymentMode == RegistrationPaymentMode.partialPayment &&
+          customPaidAmount != null) {
+        successMessage =
+            '${_nameController.text.trim()} registered with ${gymService.settings.currencySymbol}${customPaidAmount.toInt()} partial payment';
       } else {
-        successMessage = '${_nameController.text.trim()} added to your gym roster';
+        successMessage =
+            '${_nameController.text.trim()} added to your gym roster';
       }
 
       await AnimatedSuccessDialog.show(
@@ -389,9 +444,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       final message = error is StateError
           ? error.message.toString()
           : 'Could not save member. Please try again.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -399,356 +454,510 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
   Widget build(BuildContext context) {
     final gymService = GymService();
     final currency = gymService.settings.currencySymbol;
+    final media = MediaQuery.of(context);
+    final isShortScreen = media.size.height < 500;
+    final fields = Column(
+      key: _fieldsKey,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Pill handle
+        Center(
+          child: Container(
+            width: 44,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceBorder,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        Text(
+          isEditing ? 'Edit Member Profile' : 'Register New Member',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Avatar / Photo Selector
+        AvatarSelector(
+          initialImagePath: _selectedImagePath,
+          initialImageBase64:
+              _selectedImagePath == widget.customerToEdit?.imagePath
+              ? widget.customerToEdit?.imageBase64
+              : null,
+          customerName: _nameController.text,
+          storageKey:
+              'avatar_${widget.customerToEdit?.id ?? _registrationOperationId}',
+          onImageSelected: (newPath) {
+            setState(() => _selectedImagePath = newPath);
+          },
+        ),
+        const SizedBox(height: 20),
+
+        // Full Name Field
+        Text(
+          'Full Name',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _nameController,
+          textCapitalization: TextCapitalization.words,
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+          decoration: InputDecoration(
+            hintText: 'e.g. Rahul Sharma',
+            prefixIcon: Icon(
+              Icons.person_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            suffixIcon: VoiceSearchSuffix(
+              controller: _nameController,
+              title: 'Speak Member Name',
+              voiceHint: 'Say member full name...',
+              submitLabel: 'Apply',
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          validator: (val) {
+            if (val == null || val.trim().isEmpty) {
+              return 'Please enter member name';
+            }
+            return null;
+          },
+          onChanged: (text) => setState(() {}),
+        ),
+        const SizedBox(height: 16),
+
+        // Phone Number Field
+        Text(
+          'Phone Number',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [_PhoneNumberFormatter()],
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+          decoration: InputDecoration(
+            hintText: 'e.g. 9876543210',
+            prefixIcon: Icon(
+              Icons.phone_rounded,
+              color: AppColors.secondary,
+              size: 20,
+            ),
+            suffixIcon: VoiceSearchSuffix(
+              controller: _phoneController,
+              title: 'Speak Phone Number',
+              voiceHint: 'Say 10-digit phone number...',
+              submitLabel: 'Apply',
+              transformQuery: (text) {
+                String digits = VoiceSearchSuffix.extractDigits(text);
+                if (digits.length == 12 && digits.startsWith('91')) {
+                  digits = digits.substring(2);
+                } else if (digits.length == 11 && digits.startsWith('0')) {
+                  digits = digits.substring(1);
+                }
+                if (digits.length > 10) {
+                  digits = digits.substring(0, 10);
+                }
+                return digits;
+              },
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          validator: (val) {
+            if (val == null || val.trim().isEmpty) {
+              return 'Please enter phone number';
+            }
+            final trimmed = val.trim();
+            if (trimmed.length != 10 ||
+                !RegExp(r'^\d{10}$').hasMatch(trimmed)) {
+              return 'Please enter a valid 10-digit phone number';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        // Card Number & Joining Date Row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Card No.',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFB71C1C,
+                          ).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'ENTRY',
+                          style: TextStyle(
+                            color: Color(0xFFB71C1C),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _cardNumberController,
+                    keyboardType: TextInputType.text,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. 778',
+                      prefixIcon: Icon(
+                        Icons.badge_rounded,
+                        color: Color(0xFFB71C1C),
+                        size: 20,
+                      ),
+                      errorMaxLines: 3,
+                    ),
+                    validator: (value) {
+                      final trimmed = value?.trim() ?? '';
+                      if (trimmed.isEmpty) {
+                        return 'Card number is required';
+                      }
+                      final currentCard = widget.customerToEdit?.cardNumber
+                          .trim()
+                          .toLowerCase();
+                      if (currentCard == trimmed.toLowerCase()) {
+                        return null;
+                      }
+                      final existing = gymService.getCustomerByCardNumber(
+                        trimmed,
+                        excludeCustomerId: widget.customerToEdit?.id,
+                      );
+                      if (existing != null) {
+                        return 'Card #$trimmed is already assigned to ${existing.name}';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Joining Date',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: _pickJoinDate,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.surfaceBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              GymDateUtils.formatDate(_joinDate),
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_drop_down_rounded,
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        _buildMembershipStepper(currency),
+        const SizedBox(height: 16),
+
+        // Collapsible Optional Details Card
+        _buildOptionalDetailsCard(),
+        const SizedBox(height: 24),
+      ],
+    );
     return Container(
+      height: media.size.height * (isShortScreen ? 1 : 0.92),
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom +
-            MediaQuery.of(context).viewPadding.bottom +
-            24,
+        top: isShortScreen ? 8 : 20,
+        bottom:
+            media.viewInsets.bottom +
+            media.viewPadding.bottom +
+            (isShortScreen ? 8 : 24),
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: AppColors.surfaceBorder, width: 1.5)),
+        border: Border(
+          top: BorderSide(color: AppColors.surfaceBorder, width: 1.5),
+        ),
       ),
       child: Form(
         key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Pill handle
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppColors.surfaceBorder, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Text(
-                isEditing ? 'Edit Member Profile' : 'Register New Member',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Avatar / Photo Selector
-              AvatarSelector(
-                initialImagePath: _selectedImagePath,
-                initialImageBase64:
-                    _selectedImagePath == widget.customerToEdit?.imagePath
-                        ? widget.customerToEdit?.imageBase64
-                        : null,
-                customerName: _nameController.text,
-                storageKey:
-                    'avatar_${widget.customerToEdit?.id ?? _registrationOperationId}',
-                onImageSelected: (newPath) {
-                  setState(() => _selectedImagePath = newPath);
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // Full Name Field
-              Text(
-                'Full Name',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _nameController,
-                textCapitalization: TextCapitalization.words,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'e.g. Rahul Sharma',
-                  prefixIcon: Icon(Icons.person_rounded, color: AppColors.primary, size: 20),
-                  suffixIcon: VoiceSearchSuffix(
-                    controller: _nameController,
-                    title: 'Speak Member Name',
-                    voiceHint: 'Say member full name...',
-                    submitLabel: 'Apply',
-                    onChanged: (_) => setState(() {}),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Keep the footer fixed when there is room for both it and a field.
+            // Reparenting the keyed fields preserves typing as the keyboard or
+            // screen orientation changes the available height.
+            if (constraints.maxHeight < 140) {
+              return SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Column(children: [fields, _buildSubmitButton()]),
+              );
+            }
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    child: fields,
                   ),
                 ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Please enter member name';
-                  }
-                  return null;
-                },
-                onChanged: (text) => setState(() {}),
-              ),
-              const SizedBox(height: 16),
-
-              // Phone Number Field
-              Text(
-                'Phone Number',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  _PhoneNumberFormatter(),
-                ],
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'e.g. 9876543210',
-                  prefixIcon: Icon(Icons.phone_rounded, color: AppColors.secondary, size: 20),
-                  suffixIcon: VoiceSearchSuffix(
-                    controller: _phoneController,
-                    title: 'Speak Phone Number',
-                    voiceHint: 'Say 10-digit phone number...',
-                    submitLabel: 'Apply',
-                    transformQuery: (text) {
-                      String digits = VoiceSearchSuffix.extractDigits(text);
-                      if (digits.length == 12 && digits.startsWith('91')) {
-                        digits = digits.substring(2);
-                      } else if (digits.length == 11 && digits.startsWith('0')) {
-                        digits = digits.substring(1);
-                      }
-                      if (digits.length > 10) {
-                        digits = digits.substring(0, 10);
-                      }
-                      return digits;
-                    },
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Please enter phone number';
-                  }
-                  final trimmed = val.trim();
-                  if (trimmed.length != 10 || !RegExp(r'^\d{10}$').hasMatch(trimmed)) {
-                    return 'Please enter a valid 10-digit phone number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              // Card Number & Joining Date Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'Card No.',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFB71C1C).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'ENTRY',
-                                style: TextStyle(color: Color(0xFFB71C1C), fontSize: 9, fontWeight: FontWeight.w900),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _cardNumberController,
-                          keyboardType: TextInputType.text,
-                          style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
-                          decoration: const InputDecoration(
-                            hintText: 'e.g. 778',
-                            prefixIcon: Icon(Icons.badge_rounded, color: Color(0xFFB71C1C), size: 20),
-                            errorMaxLines: 3,
-                          ),
-                          validator: (value) {
-                            final trimmed = value?.trim() ?? '';
-                            if (trimmed.isEmpty) {
-                              return 'Card number is required';
-                            }
-                            final currentCard = widget
-                                .customerToEdit
-                                ?.cardNumber
-                                .trim()
-                                .toLowerCase();
-                            if (currentCard == trimmed.toLowerCase()) {
-                              return null;
-                            }
-                            final existing = gymService.getCustomerByCardNumber(
-                              trimmed,
-                              excludeCustomerId: widget.customerToEdit?.id,
-                            );
-                            if (existing != null) {
-                              return 'Card #$trimmed is already assigned to ${existing.name}';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Joining Date',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: _pickJoinDate,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceElevated,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.surfaceBorder),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.calendar_today_rounded, color: AppColors.primary, size: 20),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    GymDateUtils.formatDate(_joinDate),
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Membership Plan Selector
-              Row(
-                children: [
-                  Text(
-                    'Membership Plan',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'MONTHLY TIER',
-                      style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _buildPlanOption(
-                planKey: CustomerPlan.normal,
-                title: 'Normal Plan',
-                subtitle: 'Standard gym access & equipment usage',
-                icon: Icons.fitness_center_rounded,
-                accentColor: AppColors.primary,
-                monthlyFee: GymService().settings.normalPlanFee,
-                currency: GymService().settings.currencySymbol,
-              ),
-              const SizedBox(height: 8),
-              _buildPlanOption(
-                planKey: CustomerPlan.personalTraining,
-                title: 'Plan with Personal Training',
-                subtitle: 'Dedicated 1-on-1 personal training coach',
-                icon: Icons.sports_martial_arts_rounded,
-                accentColor: AppColors.secondary,
-                monthlyFee: GymService().settings.ptPlanFee,
-                currency: GymService().settings.currencySymbol,
-              ),
-              const SizedBox(height: 8),
-              _buildPlanOption(
-                planKey: CustomerPlan.personalTrainingDiet,
-                title: 'Plan with Personal Training + Diet',
-                subtitle: 'Personal trainer plus tailored nutrition chart',
-                icon: Icons.restaurant_menu_rounded,
-                accentColor: const Color(0xFFFF9100),
-                monthlyFee: GymService().settings.ptDietPlanFee,
-                currency: GymService().settings.currencySymbol,
-              ),
-              const SizedBox(height: 18),
-
-              // Duration Package Selector
-              _buildDurationPackageSelector(currency),
-              const SizedBox(height: 16),
-
-              // Upfront Payment Toggle Card (Only when registering new member)
-              if (!isEditing) ...[_buildUpfrontPaymentCard(currency), const SizedBox(height: 16)],
-
-              // Collapsible Optional Details Card
-              _buildOptionalDetailsCard(),
-              const SizedBox(height: 24),
-
-              // Submit Button
-              AnimatedPressable(
-                onTap: _isLoading ? null : _saveCustomer,
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _saveCustomer,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.primaryOn,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryOn),
-                          )
-                        : Text(
-                            isEditing ? 'Save Changes' : 'Register Member',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.2),
-                          ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+                const SizedBox(height: 12),
+                _buildSubmitButton(),
+              ],
+            );
+          },
         ),
       ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return AnimatedPressable(
+      onTap: _isLoading ? null : _saveCustomer,
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _saveCustomer,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.primaryOn,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            elevation: 0,
+          ),
+          child: _isLoading
+              ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: AppColors.primaryOn,
+                  ),
+                )
+              : Text(
+                  isEditing ? 'Save Changes' : 'Register Member',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMembershipStepper(String currency) {
+    final labels = ['Plan', 'Duration', if (!isEditing) 'Payment'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < labels.length; i++)
+              Expanded(
+                child: TextButton(
+                  onPressed: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    setState(() => _membershipStep = i);
+                  },
+                  style: TextButton.styleFrom(
+                    backgroundColor: _membershipStep == i
+                        ? AppColors.primary.withValues(alpha: 0.15)
+                        : null,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text('${i + 1}. ${labels[i]}'),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_membershipStep == 0) _buildPlanSelector(),
+        if (_membershipStep == 1) _buildDurationPackageSelector(currency),
+        if (_membershipStep == 2 && !isEditing)
+          _buildUpfrontPaymentCard(currency),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: _membershipStep == 0
+                  ? null
+                  : () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      setState(() => _membershipStep--);
+                    },
+              child: const Text('Back'),
+            ),
+            if (_membershipStep < labels.length - 1)
+              TextButton(
+                onPressed: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  setState(() => _membershipStep++);
+                },
+                child: const Text('Next'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlanSelector() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text(
+              'Membership Plan',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'MONTHLY TIER',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _buildPlanOption(
+          planKey: CustomerPlan.normal,
+          title: 'Normal Plan',
+          subtitle: 'Standard gym access & equipment usage',
+          icon: Icons.fitness_center_rounded,
+          accentColor: AppColors.primary,
+          monthlyFee: GymService().settings.normalPlanFee,
+          currency: GymService().settings.currencySymbol,
+        ),
+        const SizedBox(height: 8),
+        _buildPlanOption(
+          planKey: CustomerPlan.personalTraining,
+          title: 'Plan with Personal Training',
+          subtitle: 'Dedicated 1-on-1 personal training coach',
+          icon: Icons.sports_martial_arts_rounded,
+          accentColor: AppColors.secondary,
+          monthlyFee: GymService().settings.ptPlanFee,
+          currency: GymService().settings.currencySymbol,
+        ),
+        const SizedBox(height: 8),
+        _buildPlanOption(
+          planKey: CustomerPlan.personalTrainingDiet,
+          title: 'Plan with Personal Training + Diet',
+          subtitle: 'Personal trainer plus tailored nutrition chart',
+          icon: Icons.restaurant_menu_rounded,
+          accentColor: const Color(0xFFFF9100),
+          monthlyFee: GymService().settings.ptDietPlanFee,
+          currency: GymService().settings.currencySymbol,
+        ),
+        const SizedBox(height: 18),
+      ],
     );
   }
 
@@ -769,19 +978,30 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? accentColor.withValues(alpha: 0.12) : AppColors.surfaceElevated.withValues(alpha: 0.5),
+          color: isSelected
+              ? accentColor.withValues(alpha: 0.12)
+              : AppColors.surfaceElevated.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isSelected ? accentColor : AppColors.surfaceBorder, width: isSelected ? 1.8 : 1.0),
+          border: Border.all(
+            color: isSelected ? accentColor : AppColors.surfaceBorder,
+            width: isSelected ? 1.8 : 1.0,
+          ),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isSelected ? accentColor.withValues(alpha: 0.25) : AppColors.surface,
+                color: isSelected
+                    ? accentColor.withValues(alpha: 0.25)
+                    : AppColors.surface,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: isSelected ? accentColor : AppColors.textSecondary, size: 20),
+              child: Icon(
+                icon,
+                color: isSelected ? accentColor : AppColors.textSecondary,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -792,12 +1012,17 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     title,
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w600,
                       fontSize: 14,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                  ),
                 ],
               ),
             ),
@@ -805,9 +1030,15 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isSelected ? accentColor.withValues(alpha: 0.2) : AppColors.surface,
+                color: isSelected
+                    ? accentColor.withValues(alpha: 0.2)
+                    : AppColors.surface,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: isSelected ? accentColor.withValues(alpha: 0.6) : AppColors.surfaceBorder),
+                border: Border.all(
+                  color: isSelected
+                      ? accentColor.withValues(alpha: 0.6)
+                      : AppColors.surfaceBorder,
+                ),
               ),
               child: Text(
                 '$currency${monthlyFee.toInt()}/mo',
@@ -829,7 +1060,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     final packages = settings.getPackagesForPlan(_selectedPlan);
 
     final hasMatch = packages.any((p) => p.months == _selectedDurationMonths);
-    final effectiveSelected = hasMatch ? _selectedDurationMonths : (packages.isNotEmpty ? packages.first.months : 1);
+    final effectiveSelected = hasMatch
+        ? _selectedDurationMonths
+        : (packages.isNotEmpty ? packages.first.months : 1);
 
     Color accentColor;
     switch (_selectedPlan) {
@@ -847,8 +1080,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
     final oneMonthPkg = packages.firstWhere(
       (p) => p.months == 1,
-      orElse: () =>
-          packages.isNotEmpty ? packages.first : const PlanDurationPackage(id: '', planType: '', months: 1, price: 600),
+      orElse: () => packages.isNotEmpty
+          ? packages.first
+          : const PlanDurationPackage(
+              id: '',
+              planType: '',
+              months: 1,
+              price: 600,
+            ),
     );
 
     return Column(
@@ -856,10 +1095,16 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       children: [
         Row(
           children: [
-            Expanded(child: Text(
-              'Package Duration (Combo Pricing)',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
-            )),
+            Expanded(
+              child: Text(
+                'Package Duration (Combo Pricing)',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -869,7 +1114,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
               child: Text(
                 '$effectiveSelected ${effectiveSelected == 1 ? "MONTH" : "MONTHS"}',
-                style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: accentColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -878,19 +1127,29 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         ...packages.map((pkg) {
           final isSelected = effectiveSelected == pkg.months;
           final payablePrice = settings.totalForConfiguredPrice(pkg.price);
-          final regularPrice = settings.totalForConfiguredPrice(oneMonthPkg.price * pkg.months);
-          final savings = (pkg.months > 1 && regularPrice > payablePrice) ? (regularPrice - payablePrice).toInt() : 0;
+          final regularPrice = settings.totalForConfiguredPrice(
+            oneMonthPkg.price * pkg.months,
+          );
+          final savings = (pkg.months > 1 && regularPrice > payablePrice)
+              ? (regularPrice - payablePrice).toInt()
+              : 0;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: AnimatedPressable(
               onTap: () => setState(() {
                 _selectedDurationMonths = pkg.months;
-                _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(_membershipStartDate, _selectedDurationMonths);
+                _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(
+                  _membershipStartDate,
+                  _selectedDurationMonths,
+                );
               }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? accentColor.withValues(alpha: 0.12)
@@ -904,7 +1163,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 child: Row(
                   children: [
                     Icon(
-                      isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                      isSelected
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_off_rounded,
                       color: isSelected ? accentColor : AppColors.textMuted,
                       size: 19,
                     ),
@@ -921,16 +1182,23 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                 pkg.title,
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
                                   fontSize: 13,
                                 ),
                               ),
                               if (savings > 0) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 1,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.paid.withValues(alpha: 0.15),
+                                    color: AppColors.paid.withValues(
+                                      alpha: 0.15,
+                                    ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -949,14 +1217,20 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             const SizedBox(height: 2),
                             Text(
                               'Effective $currency${pkg.monthlyRate.toStringAsFixed(0)} / month',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11,
+                              ),
                             ),
                           ],
                         ],
                       ),
                     ),
                     Text(
-                      GymDateUtils.formatCurrency(payablePrice, symbol: currency),
+                      GymDateUtils.formatCurrency(
+                        payablePrice,
+                        symbol: currency,
+                      ),
                       style: TextStyle(
                         color: isSelected ? accentColor : AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
@@ -992,9 +1266,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         break;
     }
 
-    final enteredAmount = double.tryParse(_paidAmountController.text.trim()) ?? 0.0;
-    final effectivePaid = enteredAmount > fee ? fee : (enteredAmount < 0 ? 0.0 : enteredAmount);
-    final remainingBalance = (fee - effectivePaid) > 0.005 ? (fee - effectivePaid) : 0.0;
+    final enteredAmount =
+        double.tryParse(_paidAmountController.text.trim()) ?? 0.0;
+    final effectivePaid = enteredAmount > fee
+        ? fee
+        : (enteredAmount < 0 ? 0.0 : enteredAmount);
+    final remainingBalance = (fee - effectivePaid) > 0.005
+        ? (fee - effectivePaid)
+        : 0.0;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -1026,8 +1305,8 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   _paymentMode == RegistrationPaymentMode.fullPayment
                       ? Icons.check_circle_rounded
                       : (_paymentMode == RegistrationPaymentMode.partialPayment
-                          ? Icons.pie_chart_rounded
-                          : Icons.payments_rounded),
+                            ? Icons.pie_chart_rounded
+                            : Icons.payments_rounded),
                   color: activeColor,
                   size: 20,
                 ),
@@ -1039,12 +1318,19 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   children: [
                     Text(
                       'Registration Payment',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Full payment, partial advance, or pay later',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -1057,7 +1343,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 ),
                 child: Text(
                   GymDateUtils.formatCurrency(fee, symbol: currency),
-                  style: TextStyle(color: activeColor, fontWeight: FontWeight.w800, fontSize: 13),
+                  style: TextStyle(
+                    color: activeColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -1110,12 +1400,20 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, size: 18, color: AppColors.textSecondary),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Full registration fee ($currency${fee.toInt()}) will be marked pending. You can collect payment at any time.',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ],
@@ -1130,24 +1428,44 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               decoration: BoxDecoration(
                 color: AppColors.paid.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.paid.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.paid.withValues(alpha: 0.3),
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
-                      Icon(Icons.check_circle_rounded, color: AppColors.paid, size: 18),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.paid,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Full Fee Settled Upfront',
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
                   Text(
                     GymDateUtils.formatCurrency(fee, symbol: currency),
-                    style: TextStyle(color: AppColors.paid, fontSize: 16, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                      color: AppColors.paid,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ],
               ),
@@ -1160,27 +1478,45 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Text(
                       'Amount Received Today',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     Text(
                       'Total Fee: $currency${fee.toInt()}',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _paidAmountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d{0,2}'),
+                    ),
                   ],
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'e.g. ${(fee / 2).toInt()}',
                     prefixIcon: Container(
@@ -1188,10 +1524,17 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       alignment: Alignment.center,
                       child: Text(
                         currency,
-                        style: const TextStyle(color: Color(0xFFFF9100), fontSize: 18, fontWeight: FontWeight.w900),
+                        style: const TextStyle(
+                          color: Color(0xFFFF9100),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1229,7 +1572,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
                 // Real-time Balance Box
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
@@ -1237,40 +1583,69 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   ),
                   child: Column(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.check_circle_outline_rounded, size: 14, color: AppColors.paid),
+                              Icon(
+                                Icons.check_circle_outline_rounded,
+                                size: 14,
+                                color: AppColors.paid,
+                              ),
                               const SizedBox(width: 4),
-                              Text('Paid Today', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                              Text(
+                                'Paid Today',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                           ),
                           Text(
-                            GymDateUtils.formatCurrency(effectivePaid, symbol: currency),
-                            style: TextStyle(color: AppColors.paid, fontSize: 13, fontWeight: FontWeight.bold),
+                            GymDateUtils.formatCurrency(
+                              effectivePaid,
+                              symbol: currency,
+                            ),
+                            style: TextStyle(
+                              color: AppColors.paid,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Divider(height: 1, color: AppColors.surfaceBorder),
                       const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
                         children: [
                           Row(
                             children: [
                               Icon(
                                 Icons.pending_actions_rounded,
                                 size: 14,
-                                color: remainingBalance > 0 ? const Color(0xFFFF9100) : AppColors.paid,
+                                color: remainingBalance > 0
+                                    ? const Color(0xFFFF9100)
+                                    : AppColors.paid,
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                remainingBalance > 0 ? 'Remaining Balance Due' : 'Balance Settled',
+                                remainingBalance > 0
+                                    ? 'Remaining Balance Due'
+                                    : 'Balance Settled',
                                 style: TextStyle(
-                                  color: remainingBalance > 0 ? const Color(0xFFFF9100) : AppColors.paid,
+                                  color: remainingBalance > 0
+                                      ? const Color(0xFFFF9100)
+                                      : AppColors.paid,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1278,15 +1653,27 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: (remainingBalance > 0 ? const Color(0xFFFF9100) : AppColors.paid).withValues(alpha: 0.15),
+                              color:
+                                  (remainingBalance > 0
+                                          ? const Color(0xFFFF9100)
+                                          : AppColors.paid)
+                                      .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              GymDateUtils.formatCurrency(remainingBalance, symbol: currency),
+                              GymDateUtils.formatCurrency(
+                                remainingBalance,
+                                symbol: currency,
+                              ),
                               style: TextStyle(
-                                color: remainingBalance > 0 ? const Color(0xFFFF9100) : AppColors.paid,
+                                color: remainingBalance > 0
+                                    ? const Color(0xFFFF9100)
+                                    : AppColors.paid,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -1306,58 +1693,79 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           if (_paymentMode != RegistrationPaymentMode.payLater) ...[
             Text(
               'Payment Method',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: [
-                PaymentMethod.cash,
-                PaymentMethod.gpay,
-                PaymentMethod.phonepe,
-                PaymentMethod.paytm,
-                PaymentMethod.upi,
-                PaymentMethod.card,
-                PaymentMethod.netBanking,
-              ].map((method) {
-                final isSelected = _selectedPaymentMethod == method;
-                return InkWell(
-                  onTap: () => setState(() => _selectedPaymentMethod = method),
-                  borderRadius: BorderRadius.circular(10),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected ? activeColor.withValues(alpha: 0.18) : AppColors.surface,
+              children:
+                  [
+                    PaymentMethod.cash,
+                    PaymentMethod.gpay,
+                    PaymentMethod.phonepe,
+                    PaymentMethod.paytm,
+                    PaymentMethod.upi,
+                    PaymentMethod.card,
+                    PaymentMethod.netBanking,
+                  ].map((method) {
+                    final isSelected = _selectedPaymentMethod == method;
+                    return InkWell(
+                      onTap: () =>
+                          setState(() => _selectedPaymentMethod = method),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isSelected ? activeColor : AppColors.surfaceBorder,
-                        width: isSelected ? 1.5 : 1.0,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                          size: 14,
-                          color: isSelected ? activeColor : AppColors.textMuted,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          method.label,
-                          style: TextStyle(
-                            color: isSelected ? activeColor : AppColors.textPrimary,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            fontSize: 12,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? activeColor.withValues(alpha: 0.18)
+                              : AppColors.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? activeColor
+                                : AppColors.surfaceBorder,
+                            width: isSelected ? 1.5 : 1.0,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.circle_outlined,
+                              size: 14,
+                              color: isSelected
+                                  ? activeColor
+                                  : AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              method.label,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? activeColor
+                                    : AppColors.textPrimary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
             ),
             const SizedBox(height: 12),
           ],
@@ -1383,7 +1791,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
             _paymentMode = mode;
             if (mode == RegistrationPaymentMode.fullPayment) {
               final fee = GymService().settings.totalForConfiguredPrice(
-                GymService().settings.getPriceForDuration(_selectedPlan, _selectedDurationMonths),
+                GymService().settings.getPriceForDuration(
+                  _selectedPlan,
+                  _selectedDurationMonths,
+                ),
               );
               _paidAmountController.text = fee.toStringAsFixed(0);
             }
@@ -1393,7 +1804,9 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
           decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.16) : Colors.transparent,
+            color: isSelected
+                ? color.withValues(alpha: 0.16)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected ? color : Colors.transparent,
@@ -1443,17 +1856,23 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF9100).withValues(alpha: 0.2) : AppColors.surface,
+          color: isSelected
+              ? const Color(0xFFFF9100).withValues(alpha: 0.2)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFFFF9100) : AppColors.surfaceBorder,
+            color: isSelected
+                ? const Color(0xFFFF9100)
+                : AppColors.surfaceBorder,
             width: isSelected ? 1.4 : 1.0,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? const Color(0xFFFF9100) : AppColors.textSecondary,
+            color: isSelected
+                ? const Color(0xFFFF9100)
+                : AppColors.textSecondary,
             fontSize: 11,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
           ),
@@ -1493,7 +1912,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.edit_calendar_rounded, size: 12, color: AppColors.primary),
+                          Icon(
+                            Icons.edit_calendar_rounded,
+                            size: 12,
+                            color: AppColors.primary,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 3),
@@ -1511,7 +1934,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.textSecondary),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 14,
+                  color: AppColors.textSecondary,
+                ),
               ),
               Expanded(
                 child: InkWell(
@@ -1531,7 +1958,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.edit_calendar_rounded, size: 12, color: AppColors.primary),
+                          Icon(
+                            Icons.edit_calendar_rounded,
+                            size: 12,
+                            color: AppColors.primary,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 3),
@@ -1558,7 +1989,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
             ),
             child: Row(
               children: [
-                Icon(Icons.date_range_rounded, size: 13, color: AppColors.primary),
+                Icon(
+                  Icons.date_range_rounded,
+                  size: 13,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -1585,13 +2020,16 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         color: AppColors.surfaceElevated.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _showOptionalDetails ? AppColors.primary.withValues(alpha: 0.4) : AppColors.surfaceBorder,
+          color: _showOptionalDetails
+              ? AppColors.primary.withValues(alpha: 0.4)
+              : AppColors.surfaceBorder,
         ),
       ),
       child: Column(
         children: [
           InkWell(
-            onTap: () => setState(() => _showOptionalDetails = !_showOptionalDetails),
+            onTap: () =>
+                setState(() => _showOptionalDetails = !_showOptionalDetails),
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1603,7 +2041,11 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       color: AppColors.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                    child: Icon(
+                      Icons.tune_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1624,14 +2066,23 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             if (hasFilled) ...[
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.secondary.withValues(alpha: 0.15),
+                                  color: AppColors.secondary.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   'Filled',
-                                  style: TextStyle(color: AppColors.secondary, fontSize: 10, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: AppColors.secondary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -1640,7 +2091,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                         const SizedBox(height: 2),
                         Text(
                           'Address, Body Measurements, Workout Notes',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ),
@@ -1649,7 +2103,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     turns: _showOptionalDetails ? 0.5 : 0.0,
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOutCubic,
-                    child: Icon(Icons.expand_more_rounded, color: AppColors.textSecondary),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -1670,16 +2127,27 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             // Address Field
                             Text(
                               'Address (Optional)',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             TextFormField(
                               controller: _addressController,
                               textCapitalization: TextCapitalization.sentences,
-                              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 14,
+                              ),
                               decoration: InputDecoration(
                                 hintText: 'e.g. Station Road, Market Area',
-                                prefixIcon: Icon(Icons.location_on_outlined, color: AppColors.textMuted, size: 20),
+                                prefixIcon: Icon(
+                                  Icons.location_on_outlined,
+                                  color: AppColors.textMuted,
+                                  size: 20,
+                                ),
                                 suffixIcon: VoiceSearchSuffix(
                                   controller: _addressController,
                                   title: 'Speak Address',
@@ -1695,16 +2163,24 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             // Workout Notes / Goals Field
                             Text(
                               'Workout Notes / Goals (Optional)',
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             TextFormField(
                               controller: _notesController,
                               textCapitalization: TextCapitalization.sentences,
                               maxLines: 2,
-                              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 14,
+                              ),
                               decoration: InputDecoration(
-                                hintText: 'e.g. Weight loss plan, morning slot 7am',
+                                hintText:
+                                    'e.g. Weight loss plan, morning slot 7am',
                                 suffixIcon: VoiceSearchSuffix(
                                   controller: _notesController,
                                   title: 'Speak Workout Notes',
@@ -1723,34 +2199,76 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                 Container(
                                   padding: const EdgeInsets.all(5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFB71C1C).withValues(alpha: 0.15),
+                                    color: const Color(
+                                      0xFFB71C1C,
+                                    ).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: const Icon(Icons.straighten_rounded, color: Color(0xFFB71C1C), size: 15),
+                                  child: const Icon(
+                                    Icons.straighten_rounded,
+                                    color: Color(0xFFB71C1C),
+                                    size: 15,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Body Measurements (Entry Card)',
-                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
+                                Expanded(
+                                  child: Text(
+                                    'Body Measurements (Entry Card)',
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 10),
                             Row(
                               children: [
-                                Expanded(child: _buildMeasurementInput('Weight (Wt)', '72 kg', _weightController)),
+                                Expanded(
+                                  child: _buildMeasurementInput(
+                                    'Weight (Wt)',
+                                    '72 kg',
+                                    _weightController,
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
-                                Expanded(child: _buildMeasurementInput('Chest', '38"', _chestController)),
+                                Expanded(
+                                  child: _buildMeasurementInput(
+                                    'Chest',
+                                    '38"',
+                                    _chestController,
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
-                                Expanded(child: _buildMeasurementInput('Bicep', '14.5"', _bicepController)),
+                                Expanded(
+                                  child: _buildMeasurementInput(
+                                    'Bicep',
+                                    '14.5"',
+                                    _bicepController,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 10),
                             Row(
                               children: [
-                                Expanded(child: _buildMeasurementInput('Waist', '32"', _waistController)),
+                                Expanded(
+                                  child: _buildMeasurementInput(
+                                    'Waist',
+                                    '32"',
+                                    _waistController,
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
-                                Expanded(child: _buildMeasurementInput('Leg', '22"', _legController)),
+                                Expanded(
+                                  child: _buildMeasurementInput(
+                                    'Leg',
+                                    '22"',
+                                    _legController,
+                                  ),
+                                ),
                                 const Expanded(child: SizedBox()),
                               ],
                             ),
@@ -1766,13 +2284,21 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     );
   }
 
-  Widget _buildMeasurementInput(String label, String hint, TextEditingController controller) {
+  Widget _buildMeasurementInput(
+    String label,
+    String hint,
+    TextEditingController controller,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 4),
         TextFormField(
@@ -1781,7 +2307,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           decoration: InputDecoration(
             hintText: hint,
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 10,
+            ),
           ),
         ),
       ],

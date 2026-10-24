@@ -205,6 +205,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _pickDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate.isAfter(DateTime.now()) ? DateTime.now() : _selectedDate,
@@ -217,6 +218,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         );
       },
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
@@ -225,6 +228,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _pickStartDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _startDate,
@@ -232,6 +236,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) => Theme(data: Theme.of(context), child: child!),
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
       final newEnd = GymDateUtils.computeAnniversaryEndDate(picked, _selectedDurationMonths);
       final overlapping = GymService().findOverlappingPaidPayment(
@@ -254,6 +260,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   Future<void> _pickEndDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _endDate.isAfter(_startDate) ? _endDate : _startDate.add(const Duration(days: 1)),
@@ -261,6 +268,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       lastDate: DateTime.now().add(const Duration(days: 730)),
       builder: (context, child) => Theme(data: Theme.of(context), child: child!),
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
       final overlapping = GymService().findOverlappingPaidPayment(
         customerId: widget.customer.id,

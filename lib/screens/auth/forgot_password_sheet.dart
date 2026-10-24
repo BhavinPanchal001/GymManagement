@@ -70,7 +70,9 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
   }
 
   Future<void> _handleResetPassword() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_isLoading || _resendCooldown > 0) return;
+    // The form is removed after success; resend the last successful address.
+    if (!_emailSent && !(_formKey.currentState?.validate() ?? false)) return;
     FocusScope.of(context).unfocus();
 
     setState(() {
@@ -78,7 +80,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       _errorMessage = null;
     });
 
-    final email = _emailController.text.trim();
+    final email = _emailSent ? _lastSentEmail! : _emailController.text.trim();
 
     try {
       await AuthService().sendPasswordResetEmail(email: email);
@@ -94,6 +96,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _emailSent = false;
           _errorMessage = AuthService().getReadableErrorMessage(e);
         });
       }
@@ -101,9 +104,11 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
   }
 
   void _handleTryAnotherEmail() {
+    _cooldownTimer?.cancel();
     setState(() {
       _emailSent = false;
       _errorMessage = null;
+      _resendCooldown = 0;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -167,7 +172,9 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                       decoration: BoxDecoration(
                         color: AppColors.paid.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.paid.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppColors.paid.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: const Icon(
                         Icons.mark_email_read_rounded,
@@ -195,9 +202,12 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                           height: 1.5,
                         ),
                         children: [
-                          const TextSpan(text: 'We sent password reset instructions to\n'),
+                          const TextSpan(
+                            text: 'We sent password reset instructions to\n',
+                          ),
                           TextSpan(
-                            text: _lastSentEmail ?? _emailController.text.trim(),
+                            text:
+                                _lastSentEmail ?? _emailController.text.trim(),
                             style: TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
@@ -223,7 +233,10 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                       ),
                       child: const Text(
                         'Back to Sign In',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -257,10 +270,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          '•',
-                          style: TextStyle(color: AppColors.textMuted),
-                        ),
+                        Text('•', style: TextStyle(color: AppColors.textMuted)),
                         const SizedBox(width: 8),
                         TextButton(
                           onPressed: _isLoading ? null : _handleTryAnotherEmail,
@@ -315,8 +325,13 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.close_rounded, color: AppColors.textMuted),
-                          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: AppColors.textMuted,
+                          ),
+                          onPressed: _isLoading
+                              ? null
+                              : () => Navigator.of(context).pop(),
                         ),
                       ],
                     ),
@@ -324,7 +339,10 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
                     if (_errorMessage != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.absent.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
@@ -375,6 +393,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                         children: [
                           TextFormField(
                             controller: _emailController,
+                            enabled: !_isLoading,
                             focusNode: _emailFocusNode,
                             keyboardType: TextInputType.emailAddress,
                             textCapitalization: TextCapitalization.none,
@@ -387,13 +406,17 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                             style: TextStyle(color: AppColors.textPrimary),
                             decoration: InputDecoration(
                               labelText: 'Email Address',
-                              labelStyle: TextStyle(color: AppColors.textSecondary),
+                              labelStyle: TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
                               prefixIcon: Icon(
                                 Icons.email_outlined,
                                 color: AppColors.textSecondary,
                                 size: 20,
                               ),
-                              suffixIcon: _emailController.text.isNotEmpty && !_isLoading
+                              suffixIcon:
+                                  _emailController.text.isNotEmpty &&
+                                      !_isLoading
                                   ? IconButton(
                                       icon: const Icon(
                                         Icons.clear_rounded,
@@ -412,7 +435,9 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                               fillColor: AppColors.surfaceElevated,
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide(color: AppColors.surfaceBorder),
+                                borderSide: BorderSide(
+                                  color: AppColors.surfaceBorder,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -451,7 +476,9 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                             width: double.infinity,
                             height: 52,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : _handleResetPassword,
+                              onPressed: _isLoading
+                                  ? null
+                                  : _handleResetPassword,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: AppColors.primaryOn,
@@ -466,13 +493,15 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                       height: 22,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2.5,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          AppColors.primaryOn,
-                                        ),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              AppColors.primaryOn,
+                                            ),
                                       ),
                                     )
                                   : const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(Icons.send_rounded, size: 18),
                                         SizedBox(width: 8),

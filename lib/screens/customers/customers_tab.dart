@@ -26,7 +26,8 @@ import '../../widgets/animations/app_page_route.dart';
 enum CustomerFilter { all, active, pendingPayment, archived }
 
 class CustomersTab extends StatefulWidget {
-  const CustomersTab({super.key});
+  final bool isVisible;
+  const CustomersTab({super.key, this.isVisible = true});
 
   @override
   State<CustomersTab> createState() => _CustomersTabState();
@@ -96,7 +97,7 @@ class _CustomersTabState extends State<CustomersTab> {
             children: [
               // Dashboard Metrics (hidden while keyboard is open to maximize space for search results)
               if (MediaQuery.viewInsetsOf(context).bottom == 0)
-                const DashboardMetricsGrid(),
+                DashboardMetricsGrid(isActive: widget.isVisible),
 
               // Search Bar
               Padding(

@@ -113,12 +113,15 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
                 ? null
                 : () async {
                     final now = DateTime.now();
+                    FocusManager.instance.primaryFocus?.unfocus();
                     final date = await showDatePicker(
                       context: context,
                       initialDate: _received.isAfter(now) ? now : _received,
                       firstDate: DateTime(2020),
                       lastDate: DateTime(now.year + 1),
                     );
+                    if (!mounted) return;
+                    FocusManager.instance.primaryFocus?.unfocus();
                     if (date != null && mounted) {
                       setState(() => _received = date);
                     }

@@ -15,10 +15,12 @@ import 'animations/app_page_route.dart';
 
 class DashboardMetricsGrid extends StatefulWidget {
   final VoidCallback? onNavigateToBilling;
+  final bool isActive;
 
   const DashboardMetricsGrid({
     super.key,
     this.onNavigateToBilling,
+    this.isActive = true,
   });
 
   @override
@@ -26,7 +28,13 @@ class DashboardMetricsGrid extends StatefulWidget {
 }
 
 class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
-  bool _isExpanded = true;
+  bool _isExpanded = false;
+
+  @override
+  void didUpdateWidget(covariant DashboardMetricsGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.isActive) _isExpanded = false;
+  }
 
   @override
   Widget build(BuildContext context) {

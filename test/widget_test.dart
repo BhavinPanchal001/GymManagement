@@ -47,6 +47,7 @@ void main() {
     await gym.addCustomer(
       name: 'Test Member',
       phone: '+91 99999 88888',
+      joinDate: DateTime(2026, 9, 1),
       notes: 'Test notes',
     );
     expect(gym.customers.length, initialCount + 1);
