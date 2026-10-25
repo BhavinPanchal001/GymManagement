@@ -82,13 +82,53 @@ enum PaymentMethod {
   }
 }
 
+/// An immutable owner-approved fee or credit change. Cash receipts stay separate.
+class FeeChange {
+  final String id, kind, reason, actor, actorId;
+  final double before, after;
+  final DateTime at;
+  const FeeChange({
+    required this.id,
+    required this.kind,
+    required this.reason,
+    required this.actor,
+    required this.actorId,
+    required this.before,
+    required this.after,
+    required this.at,
+  });
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'kind': kind,
+    'reason': reason,
+    'actor': actor,
+    'actorId': actorId,
+    'before': before,
+    'after': after,
+    'at': at.toIso8601String(),
+  };
+  factory FeeChange.fromMap(Map<String, dynamic> m) => FeeChange(
+    id: m['id'] as String,
+    kind: m['kind'] as String,
+    reason: m['reason'] as String,
+    actor: m['actor'] as String,
+    actorId: m['actorId'] as String,
+    before: (m['before'] as num).toDouble(),
+    after: (m['after'] as num).toDouble(),
+    at: DateTime.parse(m['at'] as String),
+  );
+}
+
 class PaymentRecord {
   final String id;
   final String customerId;
+
   /// Format: "YYYY-MM", e.g. "2026-09"
   final String monthYear;
+
   /// Amount actually paid so far.
   final double amount;
+
   /// Full fee for this cycle. Legacy records default to [amount] (fully paid).
   final double totalDue;
   final PaymentStatus status;
@@ -102,18 +142,31 @@ class PaymentRecord {
   final bool isTaxInclusive;
   final double taxableAmount;
   final double taxAmount;
+
   /// Number of months covered by this payment (1 for standard monthly, or 3, 6, 12)
   final int durationMonths;
+
   /// If this month was covered as part of a multi-month package paid in another month,
   /// this points to that month (e.g. "2026-09")
   final String? coveredByMonthYear;
+
   /// Exact start date of this membership period (e.g., 2026-09-15)
   final DateTime? startDate;
+
   /// Exact end date of this membership period (e.g., 2026-10-14)
   final DateTime? endDate;
   final bool isMembershipAgreement;
   final bool isInferredAgreement;
   final String? planType;
+  final double? originalFee;
+  final double creditApplied, creditUsed, creditRefunded;
+  final List<FeeChange> feeChanges;
+  double get availableCredit => double.parse(
+    (amount - totalDue - creditUsed - creditRefunded)
+        .clamp(0.0, double.infinity)
+        .toStringAsFixed(2),
+  );
+  bool get hasFeeChanges => feeChanges.isNotEmpty;
 
   const PaymentRecord({
     required this.id,
@@ -139,12 +192,19 @@ class PaymentRecord {
     this.isMembershipAgreement = false,
     this.isInferredAgreement = false,
     this.planType,
+    this.originalFee,
+    this.creditApplied = 0,
+    this.creditUsed = 0,
+    this.creditRefunded = 0,
+    this.feeChanges = const [],
   });
 
   bool get isPaid => status == PaymentStatus.paid;
 
   /// Remaining fee still owed on a partially paid cycle.
-  double get balanceDue => (totalDue - amount) > 0.005 ? totalDue - amount : 0.0;
+  double get balanceDue => (totalDue - amount - creditApplied) > 0.005
+      ? double.parse((totalDue - amount - creditApplied).toStringAsFixed(2))
+      : 0.0;
 
   bool get isPartiallyPaid => isPaid && balanceDue > 0;
 
@@ -165,7 +225,10 @@ class PaymentRecord {
 
   DateTime get effectiveEndDate {
     if (endDate != null) return endDate!;
-    return GymDateUtils.computeAnniversaryEndDate(effectiveStartDate, durationMonths);
+    return GymDateUtils.computeAnniversaryEndDate(
+      effectiveStartDate,
+      durationMonths,
+    );
   }
 
   String get formattedDateRange =>
@@ -175,7 +238,9 @@ class PaymentRecord {
     if (method == null) return 'Cash';
     return method.label;
   }
-  bool get isCoveredInPackage => coveredByMonthYear != null && coveredByMonthYear!.isNotEmpty;
+
+  bool get isCoveredInPackage =>
+      coveredByMonthYear != null && coveredByMonthYear!.isNotEmpty;
 
   PaymentRecord copyWith({
     String? id,
@@ -201,6 +266,11 @@ class PaymentRecord {
     bool? isMembershipAgreement,
     bool? isInferredAgreement,
     String? planType,
+    double? originalFee,
+    double? creditApplied,
+    double? creditUsed,
+    double? creditRefunded,
+    List<FeeChange>? feeChanges,
   }) {
     return PaymentRecord(
       id: id ?? this.id,
@@ -227,6 +297,11 @@ class PaymentRecord {
           isMembershipAgreement ?? this.isMembershipAgreement,
       isInferredAgreement: isInferredAgreement ?? this.isInferredAgreement,
       planType: planType ?? this.planType,
+      originalFee: originalFee ?? this.originalFee,
+      creditApplied: creditApplied ?? this.creditApplied,
+      creditUsed: creditUsed ?? this.creditUsed,
+      creditRefunded: creditRefunded ?? this.creditRefunded,
+      feeChanges: feeChanges ?? this.feeChanges,
     );
   }
 
@@ -255,6 +330,11 @@ class PaymentRecord {
       'isMembershipAgreement': isMembershipAgreement,
       'isInferredAgreement': isInferredAgreement,
       'planType': planType,
+      'originalFee': originalFee,
+      'creditApplied': creditApplied,
+      'creditUsed': creditUsed,
+      'creditRefunded': creditRefunded,
+      'feeChanges': feeChanges.map((c) => c.toMap()).toList(),
     };
   }
 
@@ -264,8 +344,10 @@ class PaymentRecord {
       customerId: map['customerId'] as String? ?? '',
       monthYear: map['monthYear'] as String? ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      totalDue: (map['totalDue'] as num?)?.toDouble() ??
-          (map['amount'] as num?)?.toDouble() ?? 0.0,
+      totalDue:
+          (map['totalDue'] as num?)?.toDouble() ??
+          (map['amount'] as num?)?.toDouble() ??
+          0.0,
       status: PaymentStatus.fromString(map['status'] as String?),
       method: map['method'] != null
           ? PaymentMethod.fromString(map['method'] as String?)
@@ -292,6 +374,15 @@ class PaymentRecord {
       isMembershipAgreement: map['isMembershipAgreement'] as bool? ?? false,
       isInferredAgreement: map['isInferredAgreement'] as bool? ?? false,
       planType: map['planType'] as String?,
+      originalFee: (map['originalFee'] as num?)?.toDouble(),
+      creditApplied: (map['creditApplied'] as num?)?.toDouble() ?? 0,
+      creditUsed: (map['creditUsed'] as num?)?.toDouble() ?? 0,
+      creditRefunded: (map['creditRefunded'] as num?)?.toDouble() ?? 0,
+      feeChanges: List.unmodifiable(
+        (map['feeChanges'] as List? ?? []).map(
+          (v) => FeeChange.fromMap(Map<String, dynamic>.from(v as Map)),
+        ),
+      ),
     );
   }
 
@@ -319,8 +410,10 @@ class MemberPendingSummary {
 enum DueUrgency {
   /// Plan still running and not attended yet: can be paid by the plan end.
   upcoming,
+
   /// Plan still running but already attended: should be paid now.
   attendedInPlan,
+
   /// Plan period has ended and the fee is still unpaid.
   overdue,
 }
@@ -337,8 +430,8 @@ class DueBucket {
   DateTime? get earliestEndDate => records.isEmpty
       ? null
       : records
-          .map((r) => r.effectiveEndDate)
-          .reduce((a, b) => a.isBefore(b) ? a : b);
+            .map((r) => r.effectiveEndDate)
+            .reduce((a, b) => a.isBefore(b) ? a : b);
 }
 
 class MemberDueBreakdown {
@@ -353,10 +446,10 @@ class MemberDueBreakdown {
   });
 
   DueBucket of(DueUrgency urgency) => switch (urgency) {
-        DueUrgency.upcoming => upcoming,
-        DueUrgency.attendedInPlan => attendedInPlan,
-        DueUrgency.overdue => overdue,
-      };
+    DueUrgency.upcoming => upcoming,
+    DueUrgency.attendedInPlan => attendedInPlan,
+    DueUrgency.overdue => overdue,
+  };
 
   int get totalCount => upcoming.count + attendedInPlan.count + overdue.count;
   double get totalAmount =>
@@ -367,10 +460,7 @@ class MonthPendingItem {
   final Customer customer;
   final PaymentRecord payment;
 
-  const MonthPendingItem({
-    required this.customer,
-    required this.payment,
-  });
+  const MonthPendingItem({required this.customer, required this.payment});
 }
 
 class MonthPendingGroup {
@@ -398,18 +488,14 @@ class MemberCollectionSummary {
     required this.totalCollectedAmount,
   });
 
-  List<String> get paidMonths =>
-      paidRecords.map((r) => r.monthYear).toList();
+  List<String> get paidMonths => paidRecords.map((r) => r.monthYear).toList();
 }
 
 class MonthCollectionItem {
   final Customer customer;
   final PaymentRecord payment;
 
-  const MonthCollectionItem({
-    required this.customer,
-    required this.payment,
-  });
+  const MonthCollectionItem({required this.customer, required this.payment});
 }
 
 class MonthCollectionGroup {

@@ -1,3 +1,4 @@
+import 'fee_adjustment_sheet.dart';
 import 'package:flutter/material.dart';
 import '../models/customer.dart';
 import '../models/payment.dart';
@@ -482,6 +483,15 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (!widget.isRenewal)
+              TextButton.icon(
+                onPressed: _isLoading ? null : () async {
+                  await FeeAdjustmentSheet.show(context, widget.currentRecord);
+                  if (context.mounted) Navigator.pop(context, true);
+                },
+                icon: const Icon(Icons.price_change_outlined),
+                label: const Text('Adjust fee'),
+              ),
             // Handle pill
             Center(
               child: Container(

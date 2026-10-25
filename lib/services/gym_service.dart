@@ -2032,6 +2032,258 @@ class GymService extends ChangeNotifier {
 
   // ==================== PAYMENT OPERATIONS ====================
 
+  List<PaymentRecord> feePeriods(String memberId) =>
+      List.unmodifiable(getCustomerPaymentHistory(memberId));
+
+  PaymentRecord creditRenewalPeriod(String memberId) {
+    final customer = getCustomerById(memberId);
+    if (customer == null) throw ArgumentError('Member not found.');
+    final period = getRenewalPaymentRecord(customer);
+    return period.copyWith(
+      id: 'credit_period_${memberId}_${GymDateUtils.toDateKey(period.effectiveStartDate)}',
+      endDate: period.effectiveEndDate,
+      isMembershipAgreement: true,
+    );
+  }
+
+  FeeChange _feeChange(
+    String id,
+    String kind,
+    String reason,
+    double before,
+    double after,
+  ) {
+    if (reason.trim().isEmpty) throw ArgumentError('Please enter a reason.');
+    return FeeChange(
+      id: id,
+      kind: kind,
+      reason: reason.trim(),
+      actor: AuthService().displayName,
+      actorId: _currentUserId ?? 'local-owner',
+      before: before,
+      after: after,
+      at: DateTime.now(),
+    );
+  }
+
+  PaymentRecord _feeRecord(PaymentRecord expected) {
+    PaymentRecord? current = _paymentMap[expected.id];
+    if (current == null) {
+      for (final p in _duesIndex.membershipRecords(expected.customerId)) {
+        if (p.id == expected.id) current = p;
+      }
+    }
+    if (current == null && expected.id.startsWith('credit_period_')) {
+      if (getCustomerById(expected.customerId)?.isActive != true) {
+        throw ArgumentError('Restore the member before starting a new membership period.');
+      }
+      final proposed = creditRenewalPeriod(expected.customerId);
+      if (proposed.id == expected.id) current = proposed;
+    }
+    if (current == null ||
+        current.customerId != expected.customerId ||
+        json.encode(current.toMap()) != json.encode(expected.toMap())) {
+      throw StateError('This period changed. Close and reopen Adjust fee.');
+    }
+    return current;
+  }
+
+  /// Changes a period's agreed fee, never its cash receipts or membership dates.
+  Future<void> adjustMembershipFee({
+    required PaymentRecord expected,
+    required double revisedFee,
+    required String reason,
+    required String operationId,
+  }) => _serializeFinancialSave(() async {
+    if (_paymentMap[expected.id]?.feeChanges.any((c) => c.id == operationId) ??
+        false) {
+      return;
+    }
+    final p = _feeRecord(expected);
+    if (!revisedFee.isFinite ||
+        !(revisedFee * 100).isFinite ||
+        revisedFee < 0 ||
+        (revisedFee * 100 - (revisedFee * 100).round()).abs() > 0.00001) {
+      throw ArgumentError(
+        'Enter a fee of zero or more, with up to two decimal places.',
+      );
+    }
+    if ((revisedFee - p.totalDue).abs() < 0.005) {
+      throw ArgumentError('Enter a different fee.');
+    }
+    if (p.creditApplied > 0 ||
+        (p.creditUsed + p.creditRefunded > 0 &&
+            revisedFee > p.amount - p.creditUsed - p.creditRefunded + 0.005)) {
+      throw ArgumentError(
+        'Credit has already been used or returned. This fee change would undo that credit.',
+      );
+    }
+    final change = _feeChange(
+      operationId,
+      'Fee adjusted',
+      reason,
+      p.totalDue,
+      revisedFee,
+    );
+    final tax = _taxAmountForTotal(
+      total: revisedFee,
+      isTaxEnabled: p.isTaxEnabled,
+      taxRatePercent: p.taxRatePercent,
+    );
+    await _commitFinancialRecords(
+      payments: [
+        p.copyWith(
+          originalFee: p.originalFee ?? p.totalDue,
+          totalDue: revisedFee,
+          taxAmount: tax,
+          taxableAmount: revisedFee - tax,
+          isMembershipAgreement: true,
+          isInferredAgreement: false,
+          startDate: p.effectiveStartDate,
+          endDate: p.effectiveEndDate,
+          status: p.amount > 0 || revisedFee == 0
+              ? PaymentStatus.paid
+              : PaymentStatus.pending,
+          feeChanges: [...p.feeChanges, change],
+        ),
+      ],
+    );
+  });
+
+  /// Moves existing excess money between this member's periods. No new income.
+  Future<void> applyMemberCredit({
+    required PaymentRecord expectedSource,
+    required PaymentRecord expectedTarget,
+    required double amount,
+    required String operationId,
+  }) => _serializeFinancialSave(() async {
+    if (_paymentMap[expectedSource.id]?.feeChanges.any(
+          (c) => c.id == operationId,
+        ) ??
+        false) {
+      return;
+    }
+    final source = _feeRecord(expectedSource),
+        target = _feeRecord(expectedTarget);
+    if (source.customerId != target.customerId ||
+        source.id == target.id ||
+        !amount.isFinite ||
+        amount <= 0 ||
+        (amount * 100 - (amount * 100).round()).abs() > 0.00001 ||
+        amount > source.availableCredit + 0.005 ||
+        amount > target.balanceDue + 0.005) {
+      throw ArgumentError(
+        'Choose an unpaid period for this member and an amount within the available credit.',
+      );
+    }
+    final used = double.parse(amount.toStringAsFixed(2));
+    if (used <= 0 ||
+        used > source.availableCredit ||
+        used > target.balanceDue) {
+      throw ArgumentError(
+        'Enter a valid credit amount with up to two decimal places.',
+      );
+    }
+    final overlap = findOverlappingPaidPayment(
+      customerId: target.customerId,
+      startDate: target.effectiveStartDate,
+      endDate: target.effectiveEndDate,
+      excludePaymentId: target.id,
+    );
+    if (overlap != null) {
+      throw ArgumentError('This period overlaps another paid membership.');
+    }
+    await _commitFinancialRecords(
+      payments: [
+        source.copyWith(
+          creditUsed: source.creditUsed + used,
+          feeChanges: [
+            ...source.feeChanges,
+            _feeChange(
+              operationId,
+              'Credit used',
+              'Applied to ${target.formattedDateRange}',
+              0,
+              used,
+            ),
+          ],
+        ),
+        target.copyWith(
+          creditApplied: target.creditApplied + used,
+          status: PaymentStatus.paid,
+          isMembershipAgreement: true,
+          isInferredAgreement: false,
+          startDate: target.effectiveStartDate,
+          endDate: target.effectiveEndDate,
+          feeChanges: [
+            ...target.feeChanges,
+            _feeChange(
+              operationId,
+              'Credit received',
+              'From ${source.formattedDateRange}',
+              0,
+              used,
+            ),
+          ],
+        ),
+      ],
+    );
+  });
+
+  /// Records cash already returned by the owner. Does not initiate a bank transfer.
+  Future<void> refundMemberCredit({
+    required PaymentRecord expected,
+    required double amount,
+    required PaymentMethod method,
+    required String reason,
+    required String operationId,
+  }) => _serializeFinancialSave(() async {
+    if (_paymentMap[expected.id]?.feeChanges.any((c) => c.id == operationId) ??
+        false) {
+      return;
+    }
+    final p = _feeRecord(expected);
+    if (!amount.isFinite ||
+        amount <= 0 ||
+        amount > p.availableCredit ||
+        (amount * 100 - (amount * 100).round()).abs() > 0.00001) {
+      throw ArgumentError(
+        'Enter a positive amount within the available credit, with up to two decimals.',
+      );
+    }
+    final change = _feeChange(operationId, 'Money returned', reason, 0, amount);
+    final customer = getCustomerById(p.customerId)!;
+    final now = DateTime.now();
+    final bill = BillRecord(
+      id: 'bill_refund_$operationId',
+      billNumber: generateBillNumber(GymDateUtils.toMonthKey(now)),
+      customerId: p.customerId,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      planType: p.planType ?? customer.planType,
+      monthYear: GymDateUtils.toMonthKey(now),
+      amount: -amount,
+      paymentId: p.id,
+      billType: 'REFUND',
+      method: method,
+      paidAt: now,
+      issuedAt: now,
+      gymName: _settings.gymName,
+      startDate: p.effectiveStartDate,
+      endDate: p.effectiveEndDate,
+      notes: 'Money returned after fee adjustment: ${reason.trim()}',
+    );
+    await _commitFinancialRecords(
+      payments: [
+        p.copyWith(
+          creditRefunded: p.creditRefunded + amount,
+          feeChanges: [...p.feeChanges, change],
+        ),
+      ],
+      bills: [bill],
+    );
+  });
+
   /// The plan fee used for derived pending records and as default total due.
   double _feeForCustomer(Customer? customer, {int? durationMonths}) {
     final configuredPrice = customer == null
@@ -2245,11 +2497,34 @@ class GymService extends ChangeNotifier {
   // ---------- Bills ----------
 
   /// The primary (non-BALANCE) PAID bill issued for a payment.
+  double feeAtReceipt(PaymentRecord payment, BillRecord bill) {
+    var fee = payment.originalFee ?? payment.totalDue;
+    for (final change in payment.feeChanges) {
+      if (change.kind == 'Fee adjusted' && !change.at.isAfter(bill.issuedAt)) {
+        fee = change.after;
+      }
+    }
+    return fee;
+  }
+
+  double balanceAtReceipt(PaymentRecord payment, BillRecord bill) {
+    final received = getAllBillsForPayment(payment.id)
+        .where((b) => b.billType != 'REFUND' &&
+          !b.issuedAt.isAfter(bill.issuedAt))
+        .fold<double>(0, (sum, b) => sum + b.amount);
+    final credit = payment.feeChanges.where((c) => c.kind == 'Credit received' &&
+        !c.at.isAfter(bill.issuedAt)).fold<double>(0, (sum, c) => sum + c.after);
+    return (feeAtReceipt(payment, bill) - received - credit)
+        .clamp(0.0, double.infinity).toDouble();
+  }
+
   BillRecord? getBillForPayment(String paymentId) {
+    if (_billsMap[paymentId]?.billType == 'REFUND') return _billsMap[paymentId];
     for (final b in _billsMap.values) {
       if (b.paymentId == paymentId &&
           b.status == 'PAID' &&
-          b.billType != 'BALANCE') {
+          b.billType != 'BALANCE'&&
+          b.billType != 'REFUND') {
         return b;
       }
     }
@@ -2289,7 +2564,9 @@ class GymService extends ChangeNotifier {
   }
 
   BillRecord getOrCreateBillForPayment(Customer customer, PaymentRecord payment) {
-    if (payment.isPaid) {
+    final refund = _billsMap[payment.id];
+    if (refund?.billType == 'REFUND') return refund!;
+    if (payment.isPaid&& payment.amount > 0) {
       final existing = getBillForPayment(payment.id);
       if (existing != null) return existing;
 
@@ -2304,7 +2581,7 @@ class GymService extends ChangeNotifier {
     // Transient/pending payment: return a non-persisted preview bill.
     final effectiveAmount = payment.amount > 0.0
         ? payment.amount
-        : _feeForCustomer(customer, durationMonths: payment.durationMonths);
+        : (payment.hasFeeChanges ? payment.amount : payment.totalDue);
     return _buildPaidBill(customer, payment).copyWith(
       id: 'bill_${customer.id}_${payment.monthYear}',
       amount: effectiveAmount,
@@ -2466,6 +2743,11 @@ class GymService extends ChangeNotifier {
         }
       }
     }
+    if (matchingAgreement?.hasFeeChanges == true &&
+        totalDue != null &&
+        (totalDue - matchingAgreement!.totalDue).abs() > 0.005) {
+      throw ArgumentError('The adjusted fee changed. Reopen this payment.');
+    }
     final effectiveTotalDue = totalDue ?? matchingAgreement?.totalDue ??
         _feeForCustomer(customer, durationMonths: effectiveDuration);
     final isTaxEnabled =
@@ -2508,6 +2790,11 @@ class GymService extends ChangeNotifier {
 
 
     final record = PaymentRecord(
+      originalFee: matchingAgreement?.originalFee,
+      feeChanges: matchingAgreement?.feeChanges ?? const [],
+      creditApplied: matchingAgreement?.creditApplied ?? 0,
+      creditUsed: matchingAgreement?.creditUsed ?? 0,
+      creditRefunded: matchingAgreement?.creditRefunded ?? 0,
       id: matchingAgreement?.id ?? _newPaymentId(customerId),
       customerId: customerId,
       monthYear: startMonthKey,
@@ -2610,7 +2897,11 @@ class GymService extends ChangeNotifier {
     );
     final customer = getCustomerById(record.customerId);
 
-    final updated = record.copyWith(amount: record.amount + collected);
+    final updated = record.copyWith(
+      amount: record.amount + collected,
+      paidAt: record.paidAt ?? effectivePaidAt,
+      method: record.method ?? method,
+    );
     final receiptTaxAmount = _receiptTaxAmount(record, collected);
     final bill = BillRecord(
       id: operationId == null
@@ -2668,6 +2959,12 @@ class GymService extends ChangeNotifier {
     final record = _paymentMap[paymentId];
     if (record == null || !record.isPaid) {
       throw ArgumentError('No paid payment found for id $paymentId');
+    }
+
+    if (record.hasFeeChanges) {
+      throw ArgumentError(
+        'Use Adjust fee for this period. Existing receipts and credit history must be kept.',
+      );
     }
 
     final newStart = startDate ?? record.startDate;
@@ -2820,6 +3117,11 @@ class GymService extends ChangeNotifier {
   Future<void> revertPayment(String paymentId) async {
     final record = _paymentMap[paymentId];
     if (record == null) return;
+    if (record.hasFeeChanges) {
+      throw ArgumentError(
+        'This period has fee or credit history. Use Adjust fee and record any money returned there.',
+      );
+    }
     final revertedAgreement = record.isMembershipAgreement
         ? PaymentRecord(
             id: record.id, customerId: record.customerId, monthYear: record.monthYear,
@@ -3370,8 +3672,34 @@ class GymService extends ChangeNotifier {
     for (final payment in _paymentMap.values) {
       if (!payment.isPaid) continue;
       if (payment.paidAt == null) continue;
-      if (payment.paidAt!.isBefore(startDay) || payment.paidAt!.isAfter(endDay)) continue;
+      if (payment.paidAt!.isBefore(startDay) || payment.paidAt!.isAfter(endDay)) {
+        continue;
+      }
       (byMember[payment.customerId] ??= []).add(payment);
+    }
+
+    for (final bill in _billsMap.values) {
+      if (bill.billType != 'REFUND' ||
+          !bill.isPaid ||
+          bill.paidAt.isBefore(startDay) ||
+          bill.paidAt.isAfter(endDay)) {
+        continue;
+      }
+      (byMember[bill.customerId] ??= []).add(
+        PaymentRecord(
+          id: bill.id,
+          customerId: bill.customerId,
+          monthYear: bill.monthYear,
+          amount: bill.amount,
+          totalDue: 0,
+          status: PaymentStatus.paid,
+          method: bill.method,
+          paidAt: bill.paidAt,
+          notes: bill.notes,
+          startDate: bill.startDate,
+          endDate: bill.endDate,
+        ),
+      );
     }
 
     final summaries = <MemberCollectionSummary>[];

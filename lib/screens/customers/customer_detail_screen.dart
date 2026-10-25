@@ -1,3 +1,4 @@
+import "../../widgets/fee_adjustment_sheet.dart";
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/customer.dart';
@@ -3806,6 +3807,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    TextButton.icon(
+                      onPressed: () => FeeAdjustmentSheet.show(context, item),
+                      icon: const Icon(Icons.price_change_outlined),
+                      label: const Text("Adjust fee"),
+                    ),
+                    if (item.hasFeeChanges)
+                      Text(
+                        "Adjusted fee: ${GymDateUtils.formatCurrency(item.totalDue, symbol: currency)} • Credit available: ${GymDateUtils.formatCurrency(item.availableCredit, symbol: currency)}",
+                      ),
+
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [

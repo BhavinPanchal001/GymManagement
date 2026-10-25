@@ -118,26 +118,23 @@ class PaymentReceiptPdfService {
     final payment = effectiveBill.paymentId.isNotEmpty
         ? gym.getPaymentById(effectiveBill.paymentId)
         : null;
-    final planTotal = (payment != null && payment.totalDue > 0)
-        ? payment.totalDue
-        : effectiveBill.amount;
-    // PAID bills on the same payment issued before this one.
-    final paidEarlier = payment == null
-        ? 0.0
-        : gym.getBillsForPayment(payment.id)
-            .where((b) =>
-                b.id != effectiveBill.id &&
-                b.issuedAt.isBefore(effectiveBill.issuedAt))
-            .fold<double>(0.0, (s, b) => s + b.amount);
-    final balanceAfter =
-        (planTotal - paidEarlier - effectiveBill.amount).clamp(0.0, double.infinity);
+    final planTotal = payment != null
+        ? gym.feeAtReceipt(payment, effectiveBill) : effectiveBill.amount;
+    final balanceAfter = payment == null ? 0.0 : gym.balanceAtReceipt(payment, effectiveBill);
+    final paidEarlier = payment == null ? 0.0 : gym.getAllBillsForPayment(payment.id)
+        .where((b) => b.billType != 'REFUND' && b.id != effectiveBill.id && b.issuedAt.isBefore(effectiveBill.issuedAt))
+        .fold<double>(0, (sum, b) => sum + b.amount);
+    final creditApplied = payment == null ? 0.0 : payment.feeChanges
+        .where((c) => c.kind == 'Credit received' && !c.at.isAfter(effectiveBill.issuedAt))
+        .fold<double>(0, (sum, c) => sum + c.after);
+    final isRefund = effectiveBill.billType == 'REFUND';
     final isCancelled = effectiveBill.status == 'CANCELLED';
     final isPartial = effectiveBill.billType == 'PARTIAL';
     final isBalance = effectiveBill.billType == 'BALANCE';
     final isInstallment = isPartial || isBalance;
     final badgeLabel = isCancelled
         ? 'CANCELLED'
-        : (isPartial
+        : isRefund ? 'MONEY RETURNED' : (isPartial
             ? 'PARTIAL PAYMENT'
             : (isBalance ? 'BALANCE RECEIVED' : 'PAYMENT RECEIVED'));
     final badgeColor =
@@ -792,7 +789,9 @@ class PaymentReceiptPdfService {
                           if (isInstallment) ...[
                             if (paidEarlier > 0) ...[
                               pw.SizedBox(height: 4),
-                              _buildSummaryRow('Paid Earlier:', formatMoney(paidEarlier), effectiveRegular, effectiveMedium),
+                                _buildSummaryRow('Paid Earlier:', formatMoney(paidEarlier), effectiveRegular, effectiveMedium),
+                              if (creditApplied > 0)
+                                _buildSummaryRow('Credit applied:', formatMoney(creditApplied), effectiveRegular, effectiveMedium),
                             ],
                             pw.SizedBox(height: 4),
                             _buildSummaryRow('Balance Due:', formatMoney(balanceAfter), effectiveRegular, effectiveMedium),
@@ -811,7 +810,7 @@ class PaymentReceiptPdfService {
                               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                               children: [
                                 pw.Text(
-                                  isInstallment ? 'PAID NOW:' : 'TOTAL PAID:',
+                                  isRefund ? 'MONEY RETURNED:' : isInstallment ? 'PAID NOW:' : 'TOTAL PAID:',
                                   style: pw.TextStyle(
                                     font: effectiveBold,
                                     fontSize: 10,

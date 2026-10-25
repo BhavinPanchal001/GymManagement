@@ -310,7 +310,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                       : (bill.billType == 'PARTIAL'
                                           ? AppColors.pending
                                           : AppColors.paid));
-                              final chipLabel = cancelled
+                              final chipLabel = bill.billType == 'REFUND' ? 'MONEY RETURNED' : cancelled
                                   ? 'CANCELLED'
                                   : (bill.billType == 'BALANCE'
                                       ? 'BALANCE PAID'
@@ -361,7 +361,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                           Builder(builder: (context) {
                             final pay = GymService().getPaymentById(bill.paymentId);
                             final label = bill.billType == 'PARTIAL'
-                                ? 'Partial payment — balance ${GymDateUtils.formatCurrency(pay?.balanceDue ?? 0, symbol: currency)}'
+                                ? 'Partial payment — balance ${GymDateUtils.formatCurrency(pay == null ? 0 : GymService().balanceAtReceipt(pay, bill), symbol: currency)}'
                                 : 'Balance payment for cycle ${bill.formattedValidityPeriod}';
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 4),
