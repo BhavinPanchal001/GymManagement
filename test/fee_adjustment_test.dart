@@ -327,6 +327,7 @@ void main() {
       find.widgetWithText(TextField, 'Revised fee'),
       '300',
     );
+    await tester.ensureVisible(find.text('Review fee adjustment'));
     await tester.tap(find.text('Review fee adjustment'));
     await tester.pumpAndSettle();
     expect(
@@ -338,6 +339,7 @@ void main() {
       find.widgetWithText(TextField, 'Reason for adjustment'),
       'Approved break',
     );
+    await tester.ensureVisible(find.text('Review fee adjustment'));
     await tester.tap(find.text('Review fee adjustment'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Review change'), findsOneWidget);

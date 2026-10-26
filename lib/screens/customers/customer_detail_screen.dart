@@ -1,4 +1,4 @@
-import "../../widgets/fee_adjustment_sheet.dart";
+import '../../widgets/fee_adjustment_button.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/customer.dart';
@@ -1713,6 +1713,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ),
               ),
             ],
+          ),
+          FeeAdjustmentButton(
+            key: const ValueKey('month-fee-adjustment'),
+            payment: record,
+            topSpacing: 12,
           ),
           const SizedBox(height: 14),
           if (isPaid) ...[
@@ -3872,14 +3877,18 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextButton.icon(
-                      onPressed: () => FeeAdjustmentSheet.show(context, item),
-                      icon: const Icon(Icons.price_change_outlined),
-                      label: const Text("Adjust fee"),
+                    FeeAdjustmentButton(
+                      payment: item,
+                      compact: true,
+                      topSpacing: 4,
+                      bottomSpacing: 12,
                     ),
                     if (item.hasFeeChanges)
-                      Text(
-                        "Adjusted fee: ${GymDateUtils.formatCurrency(item.totalDue, symbol: currency)} • Credit available: ${GymDateUtils.formatCurrency(item.availableCredit, symbol: currency)}",
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          "Adjusted fee: ${GymDateUtils.formatCurrency(item.totalDue, symbol: currency)} • Credit available: ${GymDateUtils.formatCurrency(item.availableCredit, symbol: currency)}",
+                        ),
                       ),
 
                     Row(

@@ -84,9 +84,13 @@ class _AnimatedSuccessDialogState extends State<AnimatedSuccessDialog>
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(),
       elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
           decoration: BoxDecoration(

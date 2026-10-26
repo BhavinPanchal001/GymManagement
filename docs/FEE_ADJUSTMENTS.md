@@ -1,7 +1,22 @@
 # Fee adjustments
 
-Open **Members → select member → Payments → Payment History → Adjust fee**.
-The same option is available from a payment form.
+Open **Members → select member → Payments → the month's payment card → Adjust fee**.
+The highlighted shortcut is also available on member cards in the main
+**Payments → Collections** list, in **Payment History**, and directly below
+the heading in a payment form. The shortcut opens the selected membership
+period; months without an existing period do not show it.
+
+Adjust fee is shown only while a period has an outstanding balance. Fully paid
+periods with saved changes show **View adjustment** instead; fully paid periods
+without changes have no adjustment button. Existing adjustments open as details
+and history, without a new reason field. To make another change to an unpaid
+period, choose **Change fee** explicitly.
+
+In the history, **Remove adjustment** restores the fee before the latest active
+adjustment, after confirmation. Multiple adjustments must be removed newest
+first. Money received, membership dates and receipts remain unchanged. The
+original reason and a dated removal record stay in the history. Removal is
+blocked if it would undo credit already applied or money already returned.
 
 Enter the revised fee and a reason, then review and confirm. The screen keeps
 the original fee, current fee, money received, amount still owed, and a dated
