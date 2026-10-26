@@ -11,6 +11,7 @@ import '../../services/phone_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
+import '../../widgets/calendar_payment_indicator.dart';
 import '../../widgets/mark_payment_dialog.dart';
 import '../../widgets/mark_month_attendance_dialog.dart';
 import '../../widgets/bill_history_sheet.dart';
@@ -42,6 +43,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   late TabController _tabController;
   bool _isCustomRangeMode = false;
   bool _isDuesExpanded = false;
+  bool _showCalendarPayments = false;
   DateTime? _customStartDate;
   DateTime? _customEndDate;
   Timer? _midnightTimer;
@@ -3417,6 +3419,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     final year = _displayedMonth.year;
     final month = _displayedMonth.month;
     final totalDays = GymDateUtils.daysInMonth(year, month);
+    final paymentPeriods = _showCalendarPayments
+        ? GymService().feePeriods(customer.id)
+        : <PaymentRecord>[];
     final firstDayOfWeek = DateTime(year, month, 1).weekday % 7; // 0 for Sunday
 
     final weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -3429,7 +3434,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     ).isAfter(DateTime(now.year, now.month, 1));
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.symmetric(
+        horizontal: _showCalendarPayments ? 8 : 16,
+        vertical: 16,
+      ),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
@@ -3465,6 +3473,31 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          SwitchListTile.adaptive(
+            key: const ValueKey('show-calendar-payments'),
+            contentPadding: EdgeInsets.zero,
+            title: Text('Show payment details',
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+            value: _showCalendarPayments,
+            onChanged: (value) => setState(() => _showCalendarPayments = value),
+          ),
+          if (_showCalendarPayments) ...[
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                for (final status in CalendarPaymentStatus.values)
+                  CalendarPaymentIndicator(status: status, showLabel: true),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Payment icons apply to the membership period, even on absent or rest days. '
+              'Part paid means some of the period’s fee is still due.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+            ),
+          ],
           const SizedBox(height: 14),
 
           // Weekday header
@@ -3493,10 +3526,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: totalDays + firstDayOfWeek,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
+              crossAxisSpacing: _showCalendarPayments ? 4 : 8,
+              mainAxisExtent: _showCalendarPayments ? 82 : null,
               childAspectRatio: 1.0,
             ),
             itemBuilder: (context, index) {
@@ -3617,26 +3651,57 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       width: isToday ? 2 : 1,
                     ),
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Text(
-                        '$day',
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: isToday
-                              ? FontWeight.w900
-                              : FontWeight.w600,
-                          fontSize: 13,
+                  key: ValueKey('attendance-day-$dateKey'),
+                  child: _showCalendarPayments
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('$day',
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontWeight: isToday
+                                      ? FontWeight.w900
+                                      : FontWeight.w600,
+                                  fontSize: 13,
+                                )),
+                            SizedBox(
+                              height: 16,
+                              child: statusIcon != null && !isDisabled
+                                  ? Icon(statusIcon,
+                                      size: 10, color: borderColor)
+                                  : null,
+                            ),
+                            CalendarPaymentIndicator(
+                              status: calendarPaymentStatus(
+                                date: date,
+                                joinDate: customer.joinDate,
+                                periods: paymentPeriods,
+                              ),
+                              dateLabel: GymDateUtils.formatDate(date),
+                            ),
+                          ],
+                        )
+                      : Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Text(
+                              '$day',
+                              style: TextStyle(
+                                color: textColor,
+                                fontWeight: isToday
+                                    ? FontWeight.w900
+                                    : FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (statusIcon != null && !isDisabled)
+                              Positioned(
+                                bottom: 2,
+                                child: Icon(statusIcon,
+                                    size: 10, color: borderColor),
+                              ),
+                          ],
                         ),
-                      ),
-                      if (statusIcon != null && !isDisabled)
-                        Positioned(
-                          bottom: 2,
-                          child: Icon(statusIcon, size: 10, color: borderColor),
-                        ),
-                    ],
-                  ),
                 ),
               );
             },
