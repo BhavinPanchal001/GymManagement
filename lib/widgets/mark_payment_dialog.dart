@@ -292,6 +292,14 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
 
   Future<void> _submitPayment() async {
     if (_isLoading) return;
+    final attendanceError = GymService().paymentPeriodAttendanceError(
+      customerId: widget.customer.id, startDate: _startDate, endDate: _endDate,
+      existingPeriod: widget.isRenewal ? null : widget.currentRecord,
+    );
+    if (attendanceError != null) {
+      _showError(attendanceError);
+      return;
+    }
     final overlapping = _overlappingPayment;
     if (overlapping != null) {
       _showError(
@@ -373,9 +381,12 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showDialog<void>(context: context, builder: (context) => AlertDialog(
+      scrollable: true,
+      title: const Text('Check payment details'),
+      content: Text(message),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+    ));
   }
 
   Future<void> _collectBalance() async {
@@ -564,6 +575,11 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             ),
             // Date Validity Period Card & Cycle Mode Toggles
             _buildValidityDateSection(),
+            const SizedBox(height: 8),
+            Text(
+              'Paid late? Keep the membership dates and set the payment received date below.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
             const SizedBox(height: 14),
 
             // Package & Duration Combo Selector
@@ -1009,7 +1025,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           ] else ...[
             // Expired / Break member -> Quick Toggles
             Text(
-              'Renewal Start Date (Break or Late Payment):',
+              'Membership period:',
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 11,
@@ -1057,8 +1073,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       ),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Icon(
                                 Icons.fiber_new_rounded,
@@ -1133,8 +1150,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       ),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Icon(
                                 Icons.replay_rounded,
@@ -1406,7 +1424,10 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               'Package Duration',
@@ -1425,7 +1446,6 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.bold),
               ),
             ),
-            const Spacer(),
             Text(
               '$_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"}',
               style: TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),

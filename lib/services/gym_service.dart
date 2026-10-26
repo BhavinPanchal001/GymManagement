@@ -2662,6 +2662,47 @@ class GymService extends ChangeNotifier {
   }
 
   /// Creates a paid cycle or settles an unpaid agreement.
+  String? paymentPeriodAttendanceError({
+    required String customerId,
+    required DateTime startDate,
+    required DateTime endDate,
+    PaymentRecord? existingPeriod,
+  }) {
+    final startKey = GymDateUtils.toDateKey(startDate);
+    final endKey = GymDateUtils.toDateKey(endDate);
+    if (endKey.compareTo(startKey) < 0) return null;
+    // An explicitly selected cycle must keep its visits. A separate historical
+    // payment may retain earlier attendance-derived debt without editing it.
+    final periods = existingPeriod == null
+        ? _duesIndex.membershipRecords(customerId).where((p) =>
+            !p.isPaid && !p.isInferredAgreement &&
+            GymDateUtils.toDateKey(p.effectiveStartDate).compareTo(endKey) <= 0 &&
+            GymDateUtils.toDateKey(p.effectiveEndDate).compareTo(startKey) >= 0)
+        : <PaymentRecord>[_paymentMap[existingPeriod.id] ?? existingPeriod];
+    for (final period in periods) {
+      final oldStart = GymDateUtils.toDateKey(period.effectiveStartDate);
+      final oldEnd = GymDateUtils.toDateKey(period.effectiveEndDate);
+      if (startKey.compareTo(oldStart) <= 0 && endKey.compareTo(oldEnd) >= 0) continue;
+      final omitted = _attendanceMap.values.where((a) =>
+        a.customerId == customerId && a.status == AttendanceStatus.present &&
+        a.dateKey.compareTo(oldStart) >= 0 && a.dateKey.compareTo(oldEnd) <= 0 &&
+        (a.dateKey.compareTo(startKey) < 0 || a.dateKey.compareTo(endKey) > 0) &&
+        !(_duesIndex.payments[customerId] ?? <PaymentRecord>[]).any((paid) =>
+          paid.id != period.id &&
+          a.dateKey.compareTo(GymDateUtils.toDateKey(paid.effectiveStartDate)) >= 0 &&
+          a.dateKey.compareTo(GymDateUtils.toDateKey(paid.effectiveEndDate)) <= 0))
+        .map((a) => a.dateKey).toSet().toList()..sort();
+      if (omitted.isEmpty) continue;
+      return 'These dates leave ${omitted.length} recorded visit${omitted.length == 1 ? '' : 's'} '
+          '(${GymDateUtils.formatShortDate(DateTime.parse(omitted.first))} – '
+          '${GymDateUtils.formatShortDate(DateTime.parse(omitted.last))}) outside this membership. '
+          'Keep the membership period ${period.formattedDateRange}. '
+          'If the member paid late, change the payment received date instead of the membership start date. '
+          'No payment has been saved.';
+    }
+    return null;
+  }
+
   Future<BillRecord> markPaymentAsPaid({
     required String customerId,
     required String monthYear,
@@ -2743,6 +2784,11 @@ class GymService extends ChangeNotifier {
         }
       }
     }
+    final attendanceError = paymentPeriodAttendanceError(
+      customerId: customerId, startDate: computedStartDate, endDate: computedEndDate,
+      existingPeriod: agreementId != null ? matchingAgreement : null,
+    );
+    if (attendanceError != null) throw ArgumentError(attendanceError);
     if (matchingAgreement?.hasFeeChanges == true &&
         totalDue != null &&
         (totalDue - matchingAgreement!.totalDue).abs() > 0.005) {
@@ -2995,6 +3041,12 @@ class GymService extends ChangeNotifier {
       transactionRef: transactionRef,
       monthYear: newMonthYear,
     );
+    final attendanceError = paymentPeriodAttendanceError(
+      customerId: record.customerId,
+      startDate: updated.effectiveStartDate, endDate: updated.effectiveEndDate,
+      existingPeriod: record,
+    );
+    if (attendanceError != null) throw ArgumentError(attendanceError);
     if (updated.totalDue != record.totalDue) {
       final updatedTaxAmount = _taxAmountForTotal(
         total: updated.totalDue,
