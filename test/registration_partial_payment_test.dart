@@ -145,11 +145,11 @@ void main() {
       expect(find.text('Joining Date'), findsOneWidget);
       expect(find.text('Membership Plan'), findsOneWidget);
       expect(find.text('Normal Plan'), findsOneWidget);
-      await tester.ensureVisible(find.text('2. Duration'));
-      await tester.tap(find.text('2. Duration'));
+      await tester.ensureVisible(find.text('Duration'));
+      await tester.tap(find.text('Duration'));
       await tester.pumpAndSettle();
       expect(find.text('Package Duration (Combo Pricing)'), findsOneWidget);
-      await tester.tap(find.text('3. Payment'));
+      await tester.tap(find.text('Payment'));
       await tester.pumpAndSettle();
       expect(find.text('Registration Payment'), findsOneWidget);
 
@@ -191,8 +191,8 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('3. Payment'));
-      await tester.tap(find.text('3. Payment'));
+      await tester.ensureVisible(find.text('Payment'));
+      await tester.tap(find.text('Payment'));
       await tester.pumpAndSettle();
 
       // Mode tabs
@@ -201,8 +201,8 @@ void main() {
       expect(find.text('Full Paid'), findsOneWidget);
 
       // Tap Partial
-      await tester.ensureVisible(find.text('3. Payment'));
-      await tester.tap(find.text('3. Payment'));
+      await tester.ensureVisible(find.text('Payment'));
+      await tester.tap(find.text('Payment'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Partial'));
       await tester.tap(find.text('Partial'));
@@ -259,8 +259,8 @@ void main() {
       await tester.enterText(find.byType(TextFormField).at(1), '9876543219');
 
       // Select Partial Payment
-      await tester.ensureVisible(find.text('3. Payment'));
-      await tester.tap(find.text('3. Payment'));
+      await tester.ensureVisible(find.text('Payment'));
+      await tester.tap(find.text('Payment'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Partial'));
       await tester.tap(find.text('Partial'));

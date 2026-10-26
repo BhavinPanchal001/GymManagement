@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/date_utils.dart';
 import '../../widgets/customer_avatar.dart';
 import '../../widgets/mark_payment_dialog.dart';
+import '../../widgets/fee_adjustment_button.dart';
 import '../../widgets/bill_history_sheet.dart';
 import '../../widgets/collect_balance_dialog.dart';
 import '../../widgets/bill_receipt_dialog.dart';
@@ -226,40 +227,46 @@ class _BillingTabState extends State<BillingTab> {
                 ),
               ),
 
-              // Segmented Sub-Navigation: Collections | Expenses | Balance Sheet
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.surfaceBorder),
+                // Segmented Sub-Navigation: Collections | Expenses | Balance Sheet
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
                   ),
-                  padding: const EdgeInsets.all(4),
-                  child: Row(
-                    children: [
-                      _buildSectionTabItem(
-                        index: 0,
-                        title: 'Collections',
-                        icon: Icons.payments_outlined,
-                        badge: '$paidCount/$totalMembers',
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.surfaceBorder),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildSectionTabItem(
+                            index: 0,
+                            title: 'Collections',
+                            icon: Icons.payments_outlined,
+                            badge: '$paidCount/$totalMembers',
+                          ),
+                          _buildSectionTabItem(
+                            index: 1,
+                            title: 'Expenses',
+                            icon: Icons.receipt_long_outlined,
+                            badge: '${gym.getMonthlyExpenses(monthKey).length}',
+                          ),
+                          _buildSectionTabItem(
+                            index: 2,
+                            title: 'Balance Sheet',
+                            icon: Icons.account_balance_outlined,
+                            badge: null,
+                          ),
+                        ],
                       ),
-                      _buildSectionTabItem(
-                        index: 1,
-                        title: 'Expenses',
-                        icon: Icons.receipt_long_outlined,
-                        badge: '${gym.getMonthlyExpenses(monthKey).length}',
-                      ),
-                      _buildSectionTabItem(
-                        index: 2,
-                        title: 'Balance Sheet',
-                        icon: Icons.account_balance_outlined,
-                        badge: null,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
               ],
 
               if (_billingSection == 1)
@@ -408,10 +415,14 @@ class _BillingTabState extends State<BillingTab> {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  Wrap(
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
                                     children: [
                                       Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
                                             'Collection Rate: ',
@@ -578,51 +589,65 @@ class _BillingTabState extends State<BillingTab> {
         child: AnimatedContainer(
           duration: AppAnimations.microDuration,
           curve: AppAnimations.curveEaseInOut,
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (badge != null) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 16,
                     color: isSelected
-                        ? AppColors.primaryOn.withValues(alpha: 0.2)
-                        : AppColors.surfaceBorder,
-                    borderRadius: BorderRadius.circular(6),
+                        ? AppColors.primaryOn
+                        : AppColors.textSecondary,
                   ),
-                  child: Text(
-                    badge,
-                    style: TextStyle(
-                      color: isSelected ? AppColors.primaryOn : AppColors.textMuted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                  if (badge != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primaryOn.withValues(alpha: 0.2)
+                            : AppColors.surfaceBorder,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badge,
+                        style: TextStyle(
+                          color: isSelected
+                              ? AppColors.primaryOn
+                              : AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: isSelected
+                      ? AppColors.primaryOn
+                      : AppColors.textSecondary,
+                  fontSize: 12,
+                  height: 1.2,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -674,6 +699,8 @@ class _BillingTabState extends State<BillingTab> {
       child: AnimatedContainer(
         duration: AppAnimations.microDuration,
         curve: AppAnimations.curveEaseInOut,
+        constraints: const BoxConstraints(minHeight: 36),
+        alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
@@ -688,6 +715,7 @@ class _BillingTabState extends State<BillingTab> {
             color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
             fontSize: 12,
+            height: 1.2,
           ),
         ),
       ),
@@ -1060,6 +1088,11 @@ class _BillingTabState extends State<BillingTab> {
                   ),
                 ],
               ],
+            ),
+            FeeAdjustmentButton(
+              payment: payment,
+              topSpacing: 10,
+              expand: true,
             ),
             if (isPaid && payment.balanceDue > 0) ...[
               const SizedBox(height: 10),

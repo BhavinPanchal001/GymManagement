@@ -1500,7 +1500,10 @@ class GymService extends ChangeNotifier {
     return MemberLifecycleStage.due;
   }
 
-  Future<void> updateCustomer(Customer updated) async {
+  Future<void> updateCustomer(
+    Customer updated, {
+    bool realignUnpaidRegistration = false,
+  }) async {
     final index = _customers.indexWhere((c) => c.id == updated.id);
     if (index != -1) {
       final previous = _customers[index];
@@ -1536,47 +1539,94 @@ class GymService extends ChangeNotifier {
             );
           }
         }
-        await _commitFinancialRecords(
-          customers: [prepared.copyWith(cardNumber: assignedCardNumber)],
-        );
-        // When the plan type or duration changes, update any unpaid membership
-        // agreement records so the card/ledger reflects the current plan fee,
-        // duration and end date rather than the stale original values.
+        final joinChanged = GymDateUtils.toDateKey(existingCustomer.joinDate) !=
+            GymDateUtils.toDateKey(updated.joinDate);
         final planChanged = existingCustomer.planType != updated.planType ||
             existingCustomer.planDurationMonths != updated.planDurationMonths;
-        if (planChanged) {
-          final updatedPayments = <PaymentRecord>[];
-          for (final payment in _paymentMap.values) {
-            if (payment.customerId == updated.id &&
-                payment.isMembershipAgreement &&
-                !payment.isPaid) {
-              final newFee = _feeForCustomer(
-                updated,
-                durationMonths: updated.planDurationMonths,
-              );
-              final taxAmount = _settings.taxAmountFromTotal(newFee);
-              final newEnd = GymDateUtils.computeAnniversaryEndDate(
-                payment.effectiveStartDate,
-                updated.planDurationMonths,
-              );
-              updatedPayments.add(payment.copyWith(
-                durationMonths: updated.planDurationMonths,
-                totalDue: newFee,
-                endDate: newEnd,
-                planType: updated.planType,
-                isTaxEnabled: _settings.isTaxEnabled,
-                taxLabel: _settings.taxLabel,
-                taxRatePercent: _settings.taxRatePercent,
-                isTaxInclusive: _settings.isTaxInclusive,
-                taxableAmount: newFee - taxAmount,
-                taxAmount: taxAmount,
-              ));
+        final updatedPayments = <PaymentRecord>[];
+        for (final payment in _paymentMap.values) {
+          if (payment.customerId != updated.id ||
+              !payment.isMembershipAgreement || payment.isPaid) {
+            continue;
+          }
+          // Only the untouched registration agreement follows the join date.
+          // Receipts, adjusted fees and later renewal periods retain their dates.
+          final followsPreviousJoin =
+              GymDateUtils.toDateKey(payment.effectiveStartDate) ==
+                  GymDateUtils.toDateKey(existingCustomer.joinDate);
+          final moveRegistration =
+              payment.id == 'membership_${updated.id}' &&
+              payment.amount == 0 && payment.paidAt == null &&
+              !payment.hasFeeChanges && payment.creditApplied == 0 &&
+              payment.creditUsed == 0 && payment.creditRefunded == 0 &&
+              !_billsMap.values.any((bill) => bill.paymentId == payment.id) &&
+              (realignUnpaidRegistration || (joinChanged && followsPreviousJoin));
+          if (!planChanged && !moveRegistration) continue;
+          final start = moveRegistration
+              ? DateTime(updated.joinDate.year, updated.joinDate.month,
+                  updated.joinDate.day)
+              : payment.effectiveStartDate;
+          final duration = planChanged
+              ? updated.planDurationMonths : payment.durationMonths;
+          final fee = planChanged
+              ? _feeForCustomer(updated, durationMonths: duration)
+              : payment.totalDue;
+          final taxAmount = planChanged
+              ? _settings.taxAmountFromTotal(fee) : payment.taxAmount;
+          updatedPayments.add(payment.copyWith(
+            monthYear: moveRegistration ? GymDateUtils.toMonthKey(start) : null,
+            startDate: moveRegistration ? start : null,
+            endDate: GymDateUtils.computeAnniversaryEndDate(start, duration),
+            durationMonths: duration,
+            totalDue: fee,
+            planType: planChanged ? updated.planType : null,
+            isTaxEnabled: planChanged ? _settings.isTaxEnabled : null,
+            taxLabel: planChanged ? _settings.taxLabel : null,
+            taxRatePercent: planChanged ? _settings.taxRatePercent : null,
+            isTaxInclusive: planChanged ? _settings.isTaxInclusive : null,
+            taxableAmount: planChanged ? fee - taxAmount : null,
+            taxAmount: taxAmount,
+          ));
+        }
+        final deletedPaymentIds = <String>[];
+        final movedRegistration = updatedPayments.where((payment) =>
+            payment.id == 'membership_${updated.id}' &&
+            GymDateUtils.toDateKey(payment.effectiveStartDate) !=
+                GymDateUtils.toDateKey(_paymentMap[payment.id]!.effectiveStartDate));
+        if (movedRegistration.isNotEmpty) {
+          final registration = movedRegistration.single;
+          final startKey = GymDateUtils.toDateKey(registration.effectiveStartDate);
+          final endKey = GymDateUtils.toDateKey(registration.effectiveEndDate);
+          for (final inferred in _paymentMap.values) {
+            if (inferred.customerId != updated.id ||
+                !inferred.isInferredAgreement || inferred.isPaid ||
+                inferred.amount != 0 || inferred.hasFeeChanges ||
+                inferred.creditApplied != 0 || inferred.creditUsed != 0 ||
+                inferred.creditRefunded != 0 ||
+                _billsMap.values.any((bill) => bill.paymentId == inferred.id)) {
+              continue;
+            }
+            final inferredStart = GymDateUtils.toDateKey(inferred.effectiveStartDate);
+            final inferredEnd = GymDateUtils.toDateKey(inferred.effectiveEndDate);
+            final hasAttendanceOutsideRegistration = _attendanceMap.values.any((a) =>
+                a.customerId == updated.id && a.status == AttendanceStatus.present &&
+                a.dateKey.compareTo(inferredStart) >= 0 &&
+                a.dateKey.compareTo(inferredEnd) <= 0 &&
+                (a.dateKey.compareTo(startKey) < 0 || a.dateKey.compareTo(endKey) > 0));
+            if (!hasAttendanceOutsideRegistration &&
+                inferredStart.compareTo(endKey) <= 0 &&
+                inferredEnd.compareTo(startKey) >= 0) {
+              deletedPaymentIds.add(inferred.id);
             }
           }
-          if (updatedPayments.isNotEmpty) {
-            await _commitFinancialRecords(payments: updatedPayments);
-          }
         }
+        // Save the profile and registration dates together, removing only
+        // untouched attendance charges now covered by the corrected period.
+        await _commitFinancialRecords(
+          customers: [prepared.copyWith(cardNumber: assignedCardNumber)],
+          payments: updatedPayments.where((p) => !deletedPaymentIds.contains(p.id)).toList(),
+          deletedPaymentIds: deletedPaymentIds,
+        );
       });
       if (imageChanged) {
         await ImageStorageUtils.deleteManagedImage(previous.imagePath);
@@ -2051,8 +2101,9 @@ class GymService extends ChangeNotifier {
     String kind,
     String reason,
     double before,
-    double after,
-  ) {
+    double after, {
+    String? reversesChangeId,
+  }) {
     if (reason.trim().isEmpty) throw ArgumentError('Please enter a reason.');
     return FeeChange(
       id: id,
@@ -2063,6 +2114,7 @@ class GymService extends ChangeNotifier {
       before: before,
       after: after,
       at: DateTime.now(),
+      reversesChangeId: reversesChangeId,
     );
   }
 
@@ -2145,6 +2197,54 @@ class GymService extends ChangeNotifier {
               ? PaymentStatus.paid
               : PaymentStatus.pending,
           feeChanges: [...p.feeChanges, change],
+        ),
+      ],
+    );
+  });
+
+  /// Restores the previous fee while retaining the adjustment and receipts.
+  Future<void> removeMembershipFeeAdjustment({
+    required PaymentRecord expected,
+    required String adjustmentId,
+    required String operationId,
+  }) => _serializeFinancialSave(() async {
+    if (_paymentMap[expected.id]?.feeChanges.any((c) => c.id == operationId) ??
+        false) {
+      return;
+    }
+    final p = _feeRecord(expected);
+    final adjustment = p.latestFeeAdjustment;
+    if (adjustment == null || adjustment.id != adjustmentId) {
+      throw ArgumentError('Remove the most recent active adjustment first.');
+    }
+    final blocked = p.adjustmentRemovalBlockedReason;
+    if (blocked != null) throw ArgumentError(blocked);
+    final restoredFee = adjustment.before;
+    final tax = _taxAmountForTotal(
+      total: restoredFee,
+      isTaxEnabled: p.isTaxEnabled,
+      taxRatePercent: p.taxRatePercent,
+    );
+    await _commitFinancialRecords(
+      payments: [
+        p.copyWith(
+          totalDue: restoredFee,
+          taxAmount: tax,
+          taxableAmount: restoredFee - tax,
+          status: p.amount > 0 || restoredFee == 0
+              ? PaymentStatus.paid
+              : PaymentStatus.pending,
+          feeChanges: [
+            ...p.feeChanges,
+            _feeChange(
+              operationId,
+              'Fee adjustment removed',
+              'Removed adjustment: ${adjustment.reason}',
+              p.totalDue,
+              restoredFee,
+              reversesChangeId: adjustment.id,
+            ),
+          ],
         ),
       ],
     );
@@ -2500,7 +2600,9 @@ class GymService extends ChangeNotifier {
   double feeAtReceipt(PaymentRecord payment, BillRecord bill) {
     var fee = payment.originalFee ?? payment.totalDue;
     for (final change in payment.feeChanges) {
-      if (change.kind == 'Fee adjusted' && !change.at.isAfter(bill.issuedAt)) {
+      if ((change.kind == 'Fee adjusted' ||
+              change.kind == 'Fee adjustment removed') &&
+          !change.at.isAfter(bill.issuedAt)) {
         fee = change.after;
       }
     }
@@ -3376,38 +3478,66 @@ class GymService extends ChangeNotifier {
         (!_cloudAttendanceLoaded || !_cloudPaymentsLoaded)) {
       return {};
     }
-    final unsupportedIds = <String>{};
-    for (final agreement in _paymentMap.values) {
-      if (!agreement.isMembershipAgreement ||
-          !agreement.isInferredAgreement ||
-          agreement.isPaid) {
-        continue;
+    // Attendance-derived, untouched periods are provisional. Rebuild their
+    // timeline from present days so correcting an accidental earlier day cannot
+    // leave two overlapping charges. Financially edited periods remain fixed.
+    final candidates = <String, List<PaymentRecord>>{};
+    final fixedRanges = <String, List<(String, String)>>{};
+    for (final payment in _paymentMap.values) {
+      final provisional = payment.isMembershipAgreement &&
+          payment.isInferredAgreement && !payment.isPaid &&
+          payment.amount == 0 && payment.paidAt == null &&
+          !payment.hasFeeChanges && payment.creditApplied == 0 &&
+          payment.creditUsed == 0 && payment.creditRefunded == 0 &&
+          !_billsMap.values.any((bill) => bill.paymentId == payment.id);
+      if (provisional) {
+        (candidates[payment.customerId] ??= []).add(payment);
+      } else if (payment.isMembershipAgreement || payment.isPaid) {
+        (fixedRanges[payment.customerId] ??= []).add((
+          GymDateUtils.toDateKey(payment.effectiveStartDate),
+          GymDateUtils.toDateKey(payment.effectiveEndDate),
+        ));
       }
-      final startKey = GymDateUtils.toDateKey(agreement.effectiveStartDate);
-      final endKey = GymDateUtils.toDateKey(agreement.effectiveEndDate);
-      final hasExclusiveAttendance = _attendanceMap.values.any((attendance) {
-        if (attendance.customerId != agreement.customerId ||
-            attendance.status != AttendanceStatus.present ||
-            attendance.dateKey.compareTo(startKey) < 0 ||
-            attendance.dateKey.compareTo(endKey) > 0) {
-          return false;
+    }
+    final presentDays = <String, Set<String>>{};
+    for (final attendance in _attendanceMap.values) {
+      if (attendance.status == AttendanceStatus.present) {
+        (presentDays[attendance.customerId] ??= {}).add(attendance.dateKey);
+      }
+    }
+    final unsupportedIds = <String>{};
+    for (final entry in candidates.entries) {
+      final customer = getCustomerById(entry.key);
+      if (customer == null) continue;
+      final ranges = [...fixedRanges[entry.key] ?? <(String, String)>[]];
+      final days = (presentDays[entry.key] ?? <String>{}).toList()..sort();
+      final retained = <String>{};
+      final byStart = <String, PaymentRecord>{};
+      final sorted = List<PaymentRecord>.of(entry.value)
+        ..sort((a, b) => a.id.compareTo(b.id));
+      for (final payment in sorted) {
+        byStart.putIfAbsent(
+          GymDateUtils.toDateKey(payment.effectiveStartDate), () => payment,
+        );
+      }
+      for (final day in days) {
+        if (ranges.any((range) =>
+            day.compareTo(range.$1) >= 0 && day.compareTo(range.$2) <= 0)) {
+          continue;
         }
-        return !_paymentMap.values.any((other) {
-          if (other.id == agreement.id ||
-              other.customerId != agreement.customerId ||
-              (!other.isPaid &&
-                  (!other.isMembershipAgreement ||
-                      other.isInferredAgreement))) {
-            return false;
-          }
-          final otherStart =
-              GymDateUtils.toDateKey(other.effectiveStartDate);
-          final otherEnd = GymDateUtils.toDateKey(other.effectiveEndDate);
-          return attendance.dateKey.compareTo(otherStart) >= 0 &&
-              attendance.dateKey.compareTo(otherEnd) <= 0;
-        });
-      });
-      if (!hasExclusiveAttendance) unsupportedIds.add(agreement.id);
+        final existing = byStart[day];
+        // Keep the frozen fee/duration when the cycle still starts on the same
+        // real attendance day. Only changed cycles are generated again.
+        final end = existing?.effectiveEndDate ??
+            GymDateUtils.computeAnniversaryEndDate(
+              DateTime.parse(day), customer.planDurationMonths,
+            );
+        ranges.add((day, GymDateUtils.toDateKey(end)));
+        if (existing != null) retained.add(existing.id);
+      }
+      unsupportedIds.addAll(entry.value
+          .where((payment) => !retained.contains(payment.id))
+          .map((payment) => payment.id));
     }
     return unsupportedIds;
   }

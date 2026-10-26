@@ -73,6 +73,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
 
   String? _selectedImagePath;
   late DateTime _joinDate;
+  bool _joinDateSelected = false;
   late DateTime _membershipStartDate;
   late DateTime _membershipEndDate;
   String _selectedPlan = CustomerPlan.normal;
@@ -206,6 +207,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     if (picked != null) {
       setState(() {
         _joinDate = picked;
+        _joinDateSelected = true;
         _membershipStartDate = picked;
         _membershipEndDate = GymDateUtils.computeAnniversaryEndDate(
           _membershipStartDate,
@@ -355,7 +357,10 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           waist: _waistController.text.trim(),
           leg: _legController.text.trim(),
         );
-        await gymService.updateCustomer(updated);
+        await gymService.updateCustomer(
+          updated,
+          realignUnpaidRegistration: _joinDateSelected,
+        );
       } else {
         final collectNow = _paymentMode != RegistrationPaymentMode.payLater;
         createdCustomer = await gymService.addCustomer(
@@ -839,55 +844,199 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
     );
   }
 
+  void _selectMembershipStep(int step) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _membershipStep = step);
+  }
+
   Widget _buildMembershipStepper(String currency) {
     final labels = ['Plan', 'Duration', if (!isEditing) 'Payment'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            for (var i = 0; i < labels.length; i++)
-              Expanded(
-                child: TextButton(
-                  onPressed: () {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                    setState(() => _membershipStep = i);
-                  },
-                  style: TextButton.styleFrom(
-                    backgroundColor: _membershipStep == i
-                        ? AppColors.primary.withValues(alpha: 0.15)
-                        : null,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.surfaceBorder),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final stepWidth =
+                  (64 * MediaQuery.textScalerOf(context).scale(12) / 12).clamp(
+                    0.0,
+                    constraints.maxWidth / labels.length,
+                  );
+              final halfStepWidth = stepWidth / 2;
+              return Stack(
+                children: [
+                  Positioned(
+                    top: 18,
+                    left: halfStepWidth,
+                    right: halfStepWidth,
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < labels.length - 1; i++)
+                          Expanded(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              height: 2,
+                              color: i < _membershipStep
+                                  ? AppColors.primary
+                                  : AppColors.surfaceBorder,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                  child: Text('${i + 1}. ${labels[i]}'),
-                ),
-              ),
-          ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (var i = 0; i < labels.length; i++)
+                        SizedBox(
+                          width: stepWidth,
+                          child: Semantics(
+                            button: true,
+                            selected: _membershipStep == i,
+                            label: labels[i],
+                            value: 'Step ${i + 1} of ${labels.length}',
+                            excludeSemantics: true,
+                            onTap: () => _selectMembershipStep(i),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => _selectMembershipStep(i),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                child: Column(
+                                  children: [
+                                    AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 180,
+                                      ),
+                                      width: 36,
+                                      height: 36,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _membershipStep == i
+                                            ? AppColors.primary
+                                            : AppColors.surfaceElevated,
+                                        border: Border.all(
+                                          color: i <= _membershipStep
+                                              ? AppColors.primary
+                                              : AppColors.textMuted,
+                                          width: 2,
+                                        ),
+                                        boxShadow: _membershipStep == i
+                                            ? [
+                                                BoxShadow(
+                                                  color: AppColors.primary
+                                                      .withValues(alpha: 0.15),
+                                                  spreadRadius: 4,
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Text(
+                                        '${i + 1}',
+                                        style: TextStyle(
+                                          color: _membershipStep == i
+                                              ? AppColors.primaryOn
+                                              : i < _membershipStep
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      labels[i],
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: _membershipStep == i
+                                            ? AppColors.primary
+                                            : AppColors.textSecondary,
+                                        fontSize: 12,
+                                        fontWeight: _membershipStep == i
+                                            ? FontWeight.w800
+                                            : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         ),
         const SizedBox(height: 12),
         if (_membershipStep == 0) _buildPlanSelector(),
         if (_membershipStep == 1) _buildDurationPackageSelector(currency),
         if (_membershipStep == 2 && !isEditing)
           _buildUpfrontPaymentCard(currency),
+        const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            TextButton(
+            OutlinedButton.icon(
               onPressed: _membershipStep == 0
                   ? null
-                  : () {
-                      FocusManager.instance.primaryFocus?.unfocus();
-                      setState(() => _membershipStep--);
-                    },
-              child: const Text('Back'),
+                  : () => _selectMembershipStep(_membershipStep - 1),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                disabledForegroundColor: AppColors.textMuted,
+                backgroundColor: AppColors.surfaceElevated,
+                side: BorderSide(color: AppColors.surfaceBorder),
+                minimumSize: const Size(108, 48),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              icon: const Icon(Icons.arrow_back_rounded, size: 18),
+              label: const Text('Back'),
             ),
             if (_membershipStep < labels.length - 1)
-              TextButton(
-                onPressed: () {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                  setState(() => _membershipStep++);
-                },
-                child: const Text('Next'),
+              FilledButton.icon(
+                onPressed: () => _selectMembershipStep(_membershipStep + 1),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.primaryOn,
+                  minimumSize: const Size(108, 48),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                iconAlignment: IconAlignment.end,
+                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                label: const Text('Next'),
               ),
           ],
         ),

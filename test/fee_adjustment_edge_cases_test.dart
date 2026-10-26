@@ -312,6 +312,8 @@ void main() {
   test('receipt balances retain their meaning after a later refund', () async {
     final p = await member(paid: 400);
     final bill = gym.getAllBillsForCustomer(p.customerId).single;
+    // The change is later than the receipt, including on millisecond clocks.
+    await Future<void>.delayed(const Duration(milliseconds: 5));
     await adjust(p, 300);
     await refund(current(p), 100);
     expect(gym.feeAtReceipt(current(p), bill), 600);
@@ -351,6 +353,10 @@ void main() {
       );
       await tester.pump();
       expect(tester.takeException(), isNull);
+      expect(find.text('Record money returned'), findsNothing);
+      await tester.ensureVisible(find.text('Apply credit'));
+      await tester.tap(find.text('Apply credit'));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Apply credit to selected period'));
       await tester.pump();
       expect(tester.takeException(), isNull);
@@ -377,6 +383,7 @@ void main() {
       find.widgetWithText(TextField, 'Reason for adjustment'),
       'Approved break',
     );
+    await tester.ensureVisible(find.text('Review fee adjustment'));
     await tester.tap(find.text('Review fee adjustment'));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('Cancel'));
@@ -398,7 +405,7 @@ void main() {
     expect(PaymentRecord.fromJson(jsonEncode(p.toMap())).amount, 400);
   });
 
-  for (final action in ['adjust', 'credit', 'refund']) {
+  for (final action in ['adjust', 'credit', 'refund', 'remove']) {
     test(
       'failed $action save leaves both memory and stored money unchanged',
       () async {
@@ -415,7 +422,13 @@ void main() {
               ? adjust(source, 300)
               : action == 'credit'
               ? credit(source, target, 100)
-              : refund(source, 100);
+              : action == 'refund'
+              ? refund(source, 100)
+              : gym.removeMembershipFeeAdjustment(
+                  expected: source,
+                  adjustmentId: source.latestFeeAdjustment!.id,
+                  operationId: 'failed-remove',
+                );
           await expectLater(attempt, throwsStateError);
           expect(current(p).toJson(), before);
           expect(cash(p.customerId), 400);
@@ -516,6 +529,9 @@ void main() {
           home: Scaffold(body: FeeAdjustmentSheet(payment: current(p))),
         ),
       );
+      await tester.ensureVisible(find.text('Apply credit'));
+      await tester.tap(find.text('Apply credit'));
+      await tester.pumpAndSettle();
       final dropdown = find.byType(DropdownButtonFormField<String>);
       await tester.ensureVisible(dropdown);
       await tester.pump();
@@ -547,15 +563,16 @@ void main() {
         home: Scaffold(body: FeeAdjustmentSheet(payment: current(p))),
       ),
     );
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    await tester.ensureVisible(find.text('Record refund'));
+    await tester.tap(find.text('Record refund'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, 'Reason / return reference'),
       'QA return',
     );
     for (final value in ['NaN', 'Infinity', '-1', '100.001', '101']) {
-      final field = find.widgetWithText(
-        TextField,
-        'Credit amount to use or return',
-      );
+      final field = find.widgetWithText(TextField, 'Amount');
       await tester.ensureVisible(field);
       await tester.enterText(field, value);
       final button = find.text('Record money returned');

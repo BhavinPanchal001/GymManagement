@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/payment.dart';
 import '../services/gym_service.dart';
 import '../utils/date_utils.dart';
+import '../theme/app_theme.dart';
 
 /// Owner-approved changes to a single agreed membership period.
 class FeeAdjustmentSheet extends StatefulWidget {
@@ -13,6 +14,11 @@ class FeeAdjustmentSheet extends StatefulWidget {
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
+        backgroundColor: AppColors.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        clipBehavior: Clip.antiAlias,
         builder: (_) => FeeAdjustmentSheet(payment: payment),
       );
 
@@ -28,12 +34,16 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
   PaymentMethod _method = PaymentMethod.cash;
   late PaymentRecord _expected;
   bool _busy = false, _changed = false;
+  late bool _editingFee;
+  int? _creditAction;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _expected = widget.payment;
+    _expected =
+        GymService().getPaymentById(widget.payment.id) ?? widget.payment;
+    _editingFee = !_expected.hasFeeChanges && _expected.canAdjustFee;
     _fee.text = _expected.totalDue.toStringAsFixed(2);
     _creditAmount.text = _expected.availableCredit.toStringAsFixed(2);
   }
@@ -88,6 +98,10 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
         _fee.text = _expected.totalDue.toStringAsFixed(2);
         _creditAmount.text = _expected.availableCredit.toStringAsFixed(2);
         _target = null;
+        _editingFee = false;
+        _creditAction = null;
+        _reason.clear();
+        _refundReason.clear();
         _changed = true;
       });
     } catch (e) {
@@ -105,6 +119,10 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
   }
 
   void _adjust() {
+    if (!_expected.canAdjustFee) {
+      setState(() => _error = 'This period has no outstanding balance.');
+      return;
+    }
     final amount = double.tryParse(_fee.text.trim());
     if (amount == null ||
         !amount.isFinite ||
@@ -136,6 +154,31 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
     );
   }
 
+  void _removeAdjustment() {
+    final change = _expected.latestFeeAdjustment;
+    if (change == null) return;
+    final blocked = _expected.adjustmentRemovalBlockedReason;
+    if (blocked != null) {
+      setState(() => _error = blocked);
+      return;
+    }
+    final balance = (change.before - _expected.amount - _expected.creditApplied)
+        .clamp(0.0, double.infinity)
+        .toDouble();
+    _run(
+      'Remove this adjustment and restore the fee from '
+      '${money(_expected.totalDue)} to ${money(change.before)}?\n\n'
+      'The remaining balance will be ${money(balance)}. '
+      'Money received, membership dates and receipts will stay unchanged. '
+      'The removal will remain in adjustment history.',
+      (id) => GymService().removeMembershipFeeAdjustment(
+        expected: _expected,
+        adjustmentId: change.id,
+        operationId: id,
+      ),
+    );
+  }
+
   bool _validCreditAmount(double? amount) =>
       amount != null &&
       amount.isFinite &&
@@ -143,8 +186,299 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
       amount <= _expected.availableCredit &&
       (amount * 100 - (amount * 100).round()).abs() <= 0.00001;
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _card(Widget child, {Color? accent}) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: accent == null
+          ? AppColors.surfaceElevated
+          : accent.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: accent?.withValues(alpha: 0.3) ?? AppColors.surfaceBorder,
+      ),
+    ),
+    child: child,
+  );
+
+  InputDecoration _input(String label, {String? hint, String? prefix}) =>
+      InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixText: prefix,
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.surfaceBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      );
+
+  ButtonStyle get _primaryButton => FilledButton.styleFrom(
+    backgroundColor: AppColors.primary,
+    foregroundColor: AppColors.primaryOn,
+    minimumSize: const Size(double.infinity, 46),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+  );
+
+  Widget _metric(String label, double amount, {Color? color}) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+      ),
+      const SizedBox(height: 5),
+      Text(
+        money(amount),
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          color: color ?? AppColors.textPrimary,
+        ),
+      ),
+    ],
+  );
+
+  Widget _summary() {
+    final settled = _expected.balanceDue == 0;
+    final statusColor = settled
+        ? AppColors.dynamicPaid
+        : AppColors.dynamicPending;
+    final original = _expected.originalFee ?? _expected.totalDue;
+    return _card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current fee',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      money(_expected.totalDue),
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Original fee: ${money(original)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  settled ? 'Settled' : 'Balance due',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Divider(height: 1, color: AppColors.surfaceBorder),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _metric('Money received', _expected.amount)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _metric(
+                  'Still owed',
+                  _expected.balanceDue,
+                  color: statusColor,
+                ),
+              ),
+            ],
+          ),
+          if (_expected.creditApplied > 0) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Credit applied here: ${money(_expected.creditApplied)}',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _editFee() => _card(
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Update this period',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _fee,
+          enabled: !_busy,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: _input(
+            'Revised fee',
+            prefix: '${GymService().settings.currencySymbol} ',
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _reason,
+          enabled: !_busy,
+          maxLength: 500,
+          maxLines: 2,
+          decoration: _input(
+            'Reason for adjustment',
+            hint: 'e.g. Approved half-month discount',
+          ),
+        ),
+        const SizedBox(height: 4),
+        FilledButton.icon(
+          onPressed: _busy ? null : _adjust,
+          style: _primaryButton,
+          icon: const Icon(Icons.check_rounded, size: 18),
+          label: const Text('Review fee adjustment'),
+        ),
+      ],
+    ),
+  );
+
+  Widget _creditChoice(int index, String label, IconData icon) {
+    final selected = _creditAction == index;
+    return Expanded(
+      child: Semantics(
+        selected: selected,
+        child: Material(
+          color: selected ? AppColors.primary : AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _busy
+                ? null
+                : () => setState(() {
+                    _creditAction = selected ? null : index;
+                    _error = null;
+                  }),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected ? AppColors.primary : AppColors.surfaceBorder,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: selected ? AppColors.primaryOn : AppColors.primary,
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: selected
+                          ? AppColors.primaryOn
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _applyCredit() {
+    final target = _target, amount = double.tryParse(_creditAmount.text);
+    if (target == null ||
+        !_validCreditAmount(amount) ||
+        amount! > target.balanceDue) {
+      setState(
+        () => _error =
+            'Choose a period and a positive amount within its balance and available credit, with up to two decimals.',
+      );
+      return;
+    }
+    _run(
+      'Apply ${money(amount)} of existing credit to ${target.formattedDateRange}?\nNo new money will be recorded.',
+      (id) => GymService().applyMemberCredit(
+        expectedSource: _expected,
+        expectedTarget: target,
+        amount: amount,
+        operationId: id,
+      ),
+    );
+  }
+
+  void _recordRefund() {
+    final amount = double.tryParse(_creditAmount.text);
+    if (!_validCreditAmount(amount) || _refundReason.text.trim().isEmpty) {
+      setState(() => _error = 'Enter a valid amount and return reason.');
+      return;
+    }
+    _run(
+      'Confirm you have already returned ${money(amount!)} by ${_method.label}.\n'
+      'This records money returned and reduces net collections. It does not send a bank payment.',
+      (id) => GymService().refundMemberCredit(
+        expected: _expected,
+        amount: amount,
+        method: _method,
+        reason: _refundReason.text,
+        operationId: id,
+      ),
+    );
+  }
+
+  Widget _creditCard() {
     final gym = GymService();
     final targets = gym
         .feePeriods(_expected.customerId)
@@ -154,28 +488,304 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
     if (!targets.any((p) => p.effectiveStartDate == next.effectiveStartDate)) {
       targets.add(next);
     }
+    return _card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Available member credit',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      money(_expected.availableCredit),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Keep it for later, or choose an action below.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _creditChoice(0, 'Apply credit', Icons.swap_horiz_rounded),
+              const SizedBox(width: 10),
+              _creditChoice(1, 'Record refund', Icons.undo_rounded),
+            ],
+          ),
+          if (_creditAction != null) ...[
+            const SizedBox(height: 18),
+            TextField(
+              controller: _creditAmount,
+              enabled: !_busy,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: _input(
+                'Amount',
+                prefix: '${gym.settings.currencySymbol} ',
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (_creditAction == 0) ...[
+              DropdownButtonFormField<String>(
+                key: ValueKey(_expected.feeChanges.length),
+                initialValue: _target?.id,
+                isExpanded: true,
+                decoration: _input('Membership period'),
+                items: targets
+                    .map(
+                      (p) => DropdownMenuItem(
+                        value: p.id,
+                        child: Text(
+                          '${p.formattedDateRange} (${money(p.balanceDue)} due)',
+                          maxLines: 2,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _busy
+                    ? null
+                    : (id) => setState(
+                        () => _target = targets.firstWhere((p) => p.id == id),
+                      ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _busy ? null : _applyCredit,
+                style: _primaryButton,
+                icon: const Icon(Icons.check_rounded, size: 18),
+                label: const Text('Apply credit to selected period'),
+              ),
+            ] else ...[
+              DropdownButtonFormField<PaymentMethod>(
+                initialValue: _method,
+                decoration: _input('Refund method'),
+                items: PaymentMethod.values
+                    .map(
+                      (m) => DropdownMenuItem(value: m, child: Text(m.label)),
+                    )
+                    .toList(),
+                onChanged: _busy ? null : (m) => setState(() => _method = m!),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _refundReason,
+                enabled: !_busy,
+                maxLines: 2,
+                decoration: _input(
+                  'Reason / return reference',
+                  hint: 'e.g. Cash returned to member',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Only record money you have already returned.',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: _busy ? null : _recordRefund,
+                style: _primaryButton,
+                icon: const Icon(Icons.undo_rounded, size: 18),
+                label: const Text('Record money returned'),
+              ),
+            ],
+          ],
+        ],
+      ),
+      accent: AppColors.primary,
+    );
+  }
+
+  Widget _historyEntry(FeeChange change) {
+    final removed = _expected.feeChanges.any(
+      (c) => c.reversesChangeId == change.id,
+    );
+    final latest = change.id == _expected.latestFeeAdjustment?.id;
+    final blocked = _expected.adjustmentRemovalBlockedReason;
+    final date = change.at.toLocal();
+    final isFee =
+        change.kind == 'Fee adjusted' ||
+        change.kind == 'Fee adjustment removed';
+    return _card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  change.kind,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              if (removed)
+                Text(
+                  'Removed',
+                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (isFee) ...[
+                Text(
+                  money(change.before),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: AppColors.textMuted,
+                ),
+              ],
+              Text(
+                money(change.after),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            change.reason,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${change.actor} • ${GymDateUtils.formatDate(date)} '
+            '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
+            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+          ),
+          if (latest) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _busy || blocked != null ? null : _removeAdjustment,
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+              ),
+              icon: const Icon(Icons.delete_outline, size: 16),
+              label: const Text(
+                'Remove adjustment',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            if (blocked != null)
+              Text(
+                blocked,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return PopScope(
       canPop: !_busy,
       child: SafeArea(
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             20,
-            16,
+            12,
             20,
-            16 + MediaQuery.viewInsetsOf(context).bottom,
+            20 + MediaQuery.viewInsetsOf(context).bottom,
           ),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Adjust fee',
+                        _editingFee ? 'Adjust fee' : 'Fee adjustment details',
                         style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -184,202 +794,118 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                       onPressed: _busy
                           ? null
                           : () => Navigator.pop(context, _changed),
-                      icon: const Icon(Icons.close),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.surfaceElevated,
+                        foregroundColor: AppColors.textSecondary,
+                      ),
+                      icon: const Icon(Icons.close, size: 20),
                     ),
                   ],
                 ),
-                Text(_expected.formattedDateRange),
-                const SizedBox(height: 12),
-                Text(
-                  'Original fee: ${money(_expected.originalFee ?? _expected.totalDue)}\n'
-                  'Current fee: ${money(_expected.totalDue)}\n'
-                  'Money received: ${money(_expected.amount)}\n'
-                  'Credit applied here: ${money(_expected.creditApplied)}\n'
-                  'Still owed: ${money(_expected.balanceDue)}',
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 13,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        _expected.formattedDateRange,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _fee,
-                  enabled: !_busy,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Revised fee',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _reason,
-                  enabled: !_busy,
-                  maxLength: 500,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Reason for adjustment',
-                    hintText: 'Approved half-month discount',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                FilledButton(
-                  onPressed: _busy ? null : _adjust,
-                  child: const Text('Review fee adjustment'),
-                ),
-                if (_expected.availableCredit > 0) ...[
-                  const Divider(height: 32),
-                  Text(
-                    'Available member credit: ${money(_expected.availableCredit)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const Text(
-                    'This is money already received. Leave it here for later, apply it to a period, or record money you have returned.',
-                  ),
+                const SizedBox(height: 20),
+                _summary(),
+                if (!_editingFee && _expected.canAdjustFee) ...[
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: _creditAmount,
-                    enabled: !_busy,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Credit amount to use or return',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(_expected.feeChanges.length),
-                    initialValue: _target?.id,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Apply to membership period',
-                    ),
-                    items: targets
-                        .map(
-                          (p) => DropdownMenuItem(
-                            value: p.id,
-                            child: Text(
-                              '${p.formattedDateRange} (${money(p.balanceDue)} due)',
-                              maxLines: 2,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _busy
-                        ? null
-                        : (id) => setState(
-                            () =>
-                                _target = targets.firstWhere((p) => p.id == id),
-                          ),
-                  ),
-                  OutlinedButton(
+                  OutlinedButton.icon(
                     onPressed: _busy
                         ? null
-                        : () {
-                            final target = _target,
-                                amount = double.tryParse(_creditAmount.text);
-                            if (target == null ||
-                                !_validCreditAmount(amount) ||
-                                amount! > target.balanceDue) {
-                              setState(
-                                () => _error =
-                                    'Choose a period and a positive amount within its balance and available credit, with up to two decimals.',
-                              );
-                              return;
-                            }
-                            _run(
-                              'Apply ${money(amount)} of existing credit to ${target.formattedDateRange}?\nNo new money will be recorded.',
-                              (id) => gym.applyMemberCredit(
-                                expectedSource: _expected,
-                                expectedTarget: target,
-                                amount: amount,
-                                operationId: id,
-                              ),
-                            );
-                          },
-                    child: const Text('Apply credit to selected period'),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<PaymentMethod>(
-                    initialValue: _method,
-                    decoration: const InputDecoration(
-                      labelText: 'How money was returned',
+                        : () => setState(() {
+                            _editingFee = true;
+                            _error = null;
+                          }),
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Change fee'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.4),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    items: PaymentMethod.values
-                        .map(
-                          (m) =>
-                              DropdownMenuItem(value: m, child: Text(m.label)),
-                        )
-                        .toList(),
-                    onChanged: _busy
-                        ? null
-                        : (m) => setState(() => _method = m!),
-                  ),
-                  TextField(
-                    controller: _refundReason,
-                    enabled: !_busy,
-                    decoration: const InputDecoration(
-                      labelText: 'Reason / return reference',
-                    ),
-                  ),
-                  OutlinedButton(
-                    onPressed: _busy
-                        ? null
-                        : () {
-                            final amount = double.tryParse(_creditAmount.text);
-                            if (!_validCreditAmount(amount) ||
-                                _refundReason.text.trim().isEmpty) {
-                              setState(
-                                () => _error =
-                                    'Enter a valid amount and return reason.',
-                              );
-                              return;
-                            }
-                            _run(
-                              'Confirm you have already returned ${money(amount!)} by ${_method.label}.\n'
-                              'This records money returned and reduces net collections. It does not send a bank payment.',
-                              (id) => gym.refundMemberCredit(
-                                expected: _expected,
-                                amount: amount,
-                                method: _method,
-                                reason: _refundReason.text,
-                                operationId: id,
-                              ),
-                            );
-                          },
-                    child: const Text('Record money returned'),
                   ),
                 ],
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
+                if (_editingFee && _expected.canAdjustFee) ...[
+                  const SizedBox(height: 16),
+                  _editFee(),
+                ],
+                if (_expected.availableCredit > 0) ...[
+                  const SizedBox(height: 16),
+                  _creditCard(),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  _card(
+                    Text(
                       _error!,
                       style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
                         color: Theme.of(context).colorScheme.error,
                       ),
                     ),
+                    accent: Theme.of(context).colorScheme.error,
                   ),
-                if (_busy) const LinearProgressIndicator(),
-                if (_changed)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Change saved.'),
-                  ),
-                if (_expected.feeChanges.isNotEmpty) ...[
-                  const Divider(height: 24),
-                  const Text(
-                    'Adjustment history',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  for (final c in _expected.feeChanges.reversed)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        '${c.kind}: ${money(c.before)} → ${money(c.after)}\n'
-                        '${c.reason}\n${c.actor} • ${GymDateUtils.formatDate(c.at.toLocal())} ${c.at.toLocal().hour.toString().padLeft(2, '0')}:${c.at.toLocal().minute.toString().padLeft(2, '0')}',
+                ],
+                if (_busy) ...[
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(),
+                ],
+                if (_changed) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 16,
+                        color: AppColors.dynamicPaid,
                       ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Change saved.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.dynamicPaid,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_expected.feeChanges.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'Adjustment history',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
+                  ),
+                  for (final change in _expected.feeChanges.reversed) ...[
+                    const SizedBox(height: 12),
+                    _historyEntry(change),
+                  ],
                 ],
               ],
             ),

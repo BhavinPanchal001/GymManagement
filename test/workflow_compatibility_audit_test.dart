@@ -90,9 +90,9 @@ void main() {
         (tester) async {
           await openForm(tester, size: size, keyboard: 240);
           expect(tester.takeException(), isNull);
-          await step(tester, '2. Duration');
+          await step(tester, 'Duration');
           expect(tester.takeException(), isNull);
-          await step(tester, '3. Payment');
+          await step(tester, 'Payment');
           await tester.ensureVisible(find.text(mode));
           await tester.tap(find.text(mode));
           await tester.pumpAndSettle();
@@ -114,11 +114,11 @@ void main() {
         'Audit Member',
       );
       await tester.enterText(find.byType(TextFormField).at(1), '9876543210');
-      await step(tester, '2. Duration');
+      await step(tester, 'Duration');
       await tester.ensureVisible(find.text('3 Months (Quarterly)'));
       await tester.tap(find.text('3 Months (Quarterly)'));
       await tester.pumpAndSettle();
-      await step(tester, '3. Payment');
+      await step(tester, 'Payment');
       await tester.ensureVisible(find.text('Partial'));
       await tester.tap(find.text('Partial'));
       await tester.pumpAndSettle();
@@ -128,14 +128,14 @@ void main() {
       await tester.ensureVisible(find.text('Google Pay'));
       await tester.tap(find.text('Google Pay'));
       await tester.pumpAndSettle();
-      await step(tester, '1. Plan');
-      await step(tester, '3. Payment');
+      await step(tester, 'Plan');
+      await step(tester, 'Payment');
       final received = find.byType(TextFormField).last;
       final amount = double.parse(
         tester.widget<TextFormField>(received).controller!.text,
       );
       expect(amount, greaterThan(0));
-      await step(tester, '1. Plan');
+      await step(tester, 'Plan');
       await tester.tap(find.text('Register Member'));
       await tester.pumpAndSettle();
       final member = gym.customers.single;
@@ -173,7 +173,7 @@ void main() {
         find.widgetWithText(TextFormField, 'e.g. Rahul Sharma'),
         'Renamed Member',
       );
-      await step(tester, '2. Duration');
+      await step(tester, 'Duration');
       await tester.tap(find.text('Save Changes'));
       await tester.pumpAndSettle();
       final saved = gym.getCustomerById(member.id)!;
@@ -242,7 +242,7 @@ void main() {
   );
 
   test(
-    'stored inferred agreement keeps its dates and fee after return-date change',
+    'untouched inferred agreement follows corrected return-date attendance',
     () async {
       final member = await gym.addCustomer(
         name: 'Existing cycle',
@@ -278,8 +278,15 @@ void main() {
         AttendanceStatus.present,
         toggle: false,
       );
-      expect(gym.getPaymentById(oldCycle.id)!.toMap(), oldCycle.toMap());
-      expect(gym.getPaymentRecord(member.id, '2020-09').id, oldCycle.id);
+      // An automatic period whose start is no longer a present day must not
+      // survive alongside the corrected cycle. Paid and edited periods have
+      // separate preservation checks.
+      expect(gym.getPaymentById(oldCycle.id), isNull);
+      final corrected = gym.getPaymentRecord(member.id, '2020-09');
+      expect(corrected.effectiveStartDate, DateTime(2020, 9, 20));
+      expect(corrected.effectiveEndDate, DateTime(2020, 10, 19));
+      expect(corrected.totalDue, 600);
+      expect(gym.getCustomerPaymentHistory(member.id), hasLength(1));
     },
   );
   testWidgets(

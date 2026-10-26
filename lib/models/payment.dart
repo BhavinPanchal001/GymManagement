@@ -85,6 +85,7 @@ enum PaymentMethod {
 /// An immutable owner-approved fee or credit change. Cash receipts stay separate.
 class FeeChange {
   final String id, kind, reason, actor, actorId;
+  final String? reversesChangeId;
   final double before, after;
   final DateTime at;
   const FeeChange({
@@ -96,6 +97,7 @@ class FeeChange {
     required this.before,
     required this.after,
     required this.at,
+    this.reversesChangeId,
   });
   Map<String, dynamic> toMap() => {
     'id': id,
@@ -106,6 +108,7 @@ class FeeChange {
     'before': before,
     'after': after,
     'at': at.toIso8601String(),
+    if (reversesChangeId != null) 'reversesChangeId': reversesChangeId,
   };
   factory FeeChange.fromMap(Map<String, dynamic> m) => FeeChange(
     id: m['id'] as String,
@@ -116,6 +119,7 @@ class FeeChange {
     before: (m['before'] as num).toDouble(),
     after: (m['after'] as num).toDouble(),
     at: DateTime.parse(m['at'] as String),
+    reversesChangeId: m['reversesChangeId'] as String?,
   );
 }
 
@@ -167,6 +171,29 @@ class PaymentRecord {
         .toStringAsFixed(2),
   );
   bool get hasFeeChanges => feeChanges.isNotEmpty;
+
+  bool get canAdjustFee => balanceDue > 0 && !isCoveredInPackage;
+
+  FeeChange? get latestFeeAdjustment {
+    final removed = feeChanges.map((c) => c.reversesChangeId).toSet();
+    for (final change in feeChanges.reversed) {
+      if (change.kind == 'Fee adjusted' && !removed.contains(change.id)) {
+        return change;
+      }
+    }
+    return null;
+  }
+
+  String? get adjustmentRemovalBlockedReason {
+    final change = latestFeeAdjustment;
+    if (change == null) return null;
+    if (creditApplied > 0 ||
+        (creditUsed + creditRefunded > 0 &&
+            change.before > amount - creditUsed - creditRefunded + 0.005)) {
+      return 'This adjustment cannot be removed because credit has already been applied or money returned.';
+    }
+    return null;
+  }
 
   const PaymentRecord({
     required this.id,

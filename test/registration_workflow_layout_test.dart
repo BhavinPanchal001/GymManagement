@@ -78,11 +78,11 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.getCenter(register).dy, initialY);
-      await tester.ensureVisible(find.text('2. Duration'));
-      await tester.tap(find.text('2. Duration'));
+      await tester.ensureVisible(find.text('Duration'));
+      await tester.tap(find.text('Duration'));
       await tester.pumpAndSettle();
       expect(find.text('Package Duration (Combo Pricing)'), findsOneWidget);
-      await tester.tap(find.text('3. Payment'));
+      await tester.tap(find.text('Payment'));
       await tester.pumpAndSettle();
       expect(find.text('Registration Payment'), findsOneWidget);
       expect(register.hitTestable(), findsOneWidget);

@@ -13,6 +13,7 @@ import '../../widgets/bill_receipt_dialog.dart';
 import '../../widgets/whatsapp_reminder_sheet.dart';
 import 'export_report_dialog.dart';
 import '../../widgets/voice_search_suffix.dart';
+import '../customers/customer_detail_screen.dart';
 
 enum DateRangePreset {
   allOutstanding('All Outstanding'),
@@ -71,6 +72,38 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
     _searchController.dispose();
     super.dispose();
   }
+
+  Widget _memberName(
+    Customer customer, {
+    double fontSize = 15,
+    FontWeight fontWeight = FontWeight.bold,
+  }) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => CustomerDetailScreen(customerId: customer.id),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(
+          customer.name,
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ),
+  );
 
   void _applyPreset(DateRangePreset preset) {
     final now = DateTime.now();
@@ -703,16 +736,7 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          customer.name,
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        _memberName(customer),
                         const SizedBox(height: 2),
                         InkWell(
                           onTap: () => PhoneService().makeCall(
@@ -1014,15 +1038,9 @@ class _PendingPaymentsReportScreenState extends State<PendingPaymentsReportScree
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              customer.name,
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            _memberName(customer,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                             Text(
                               customer.phone,
