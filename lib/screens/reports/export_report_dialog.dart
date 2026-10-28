@@ -41,7 +41,8 @@ class ExportReportDialog extends StatefulWidget {
   State<ExportReportDialog> createState() => _ExportReportDialogState();
 }
 
-class _ExportReportDialogState extends State<ExportReportDialog> with SingleTickerProviderStateMixin {
+class _ExportReportDialogState extends State<ExportReportDialog>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late String _csvContent;
   late String _textContent;
@@ -63,7 +64,8 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
     final gym = GymService();
     final gymName = gym.settings.gymName.isEmpty ? 'Gym' : gym.settings.gymName;
     final currency = gym.settings.currencySymbol;
-    final dateRangeStr = '${GymDateUtils.formatDate(widget.startDate)} to ${GymDateUtils.formatDate(widget.endDate)}';
+    final dateRangeStr =
+        '${GymDateUtils.formatDate(widget.startDate)} to ${GymDateUtils.formatDate(widget.endDate)}';
 
     // 1. Generate CSV
     final csvBuf = StringBuffer();
@@ -74,7 +76,9 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
       final join = GymDateUtils.formatDate(m.customer.joinDate);
       for (final r in m.pendingRecords) {
         final monthStr = GymDateUtils.formatMonthYearKey(r.monthYear);
-        csvBuf.writeln('"$name","$phone","$join","$monthStr",${gym.pendingAmountOf(r).toStringAsFixed(2)},"Pending"');
+        csvBuf.writeln(
+          '"$name","$phone","$join","$monthStr",${gym.pendingAmountOf(r).toStringAsFixed(2)},"Pending"',
+        );
       }
     }
     _csvContent = csvBuf.toString();
@@ -83,7 +87,9 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
     final textBuf = StringBuffer();
     textBuf.writeln('📋 *$gymName - Outstanding Dues Report*');
     textBuf.writeln('📅 Period: $dateRangeStr');
-    textBuf.writeln('💰 Total Pending: ${GymDateUtils.formatCurrency(widget.totalPending, symbol: currency)}');
+    textBuf.writeln(
+      '💰 Total Pending: ${GymDateUtils.formatCurrency(widget.totalPending, symbol: currency)}',
+    );
     textBuf.writeln('👥 Unpaid Members: ${widget.memberSummaries.length}');
     textBuf.writeln('----------------------------------------');
 
@@ -92,9 +98,13 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
     } else {
       for (int i = 0; i < widget.memberSummaries.length; i++) {
         final m = widget.memberSummaries[i];
-        final months = m.pendingMonths.map(GymDateUtils.formatMonthYearKey).join(', ');
+        final months = m.pendingMonths
+            .map(GymDateUtils.formatMonthYearKey)
+            .join(', ');
         textBuf.writeln('${i + 1}. *${m.customer.name}* (${m.customer.phone})');
-        textBuf.writeln('   • Due: ${GymDateUtils.formatCurrency(m.totalPendingAmount, symbol: currency)}');
+        textBuf.writeln(
+          '   • Due: ${GymDateUtils.formatCurrency(m.totalPendingAmount, symbol: currency)}',
+        );
         textBuf.writeln('   • Pending For: $months\n');
       }
     }
@@ -108,14 +118,20 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle_rounded, color: AppColors.primaryOn, size: 18),
+              Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.primaryOn,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text('$label copied to clipboard!'),
             ],
           ),
           backgroundColor: AppColors.primary,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -147,7 +163,11 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
                     color: AppColors.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.file_download_outlined, color: AppColors.primary, size: 22),
+                  child: Icon(
+                    Icons.file_download_outlined,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -164,13 +184,19 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
                       ),
                       Text(
                         'Copy CSV data or share formatted summary',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textSecondary,
+                  ),
                   onPressed: () => Navigator.pop(context),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -194,7 +220,10 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
                 ),
                 labelColor: AppColors.primaryOn,
                 unselectedLabelColor: AppColors.textSecondary,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerHeight: 0,
                 tabs: const [
@@ -224,7 +253,7 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
                         _csvContent,
                         style: TextStyle(
                           fontFamily: 'monospace',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: AppColors.textSecondary,
                           height: 1.4,
                         ),
@@ -244,7 +273,7 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
                       child: SelectableText(
                         _textContent,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           color: AppColors.textPrimary,
                           height: 1.4,
                         ),
@@ -265,10 +294,15 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
                       foregroundColor: AppColors.textPrimary,
                       side: BorderSide(color: AppColors.surfaceBorder),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     icon: const Icon(Icons.copy_rounded, size: 16),
-                    label: const Text('Copy CSV', style: TextStyle(fontSize: 13)),
+                    label: const Text(
+                      'Copy CSV',
+                      style: TextStyle(fontSize: 14),
+                    ),
                     onPressed: () => _copyToClipboard(_csvContent, 'CSV Data'),
                   ),
                 ),
@@ -279,12 +313,21 @@ class _ExportReportDialogState extends State<ExportReportDialog> with SingleTick
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.primaryOn,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       elevation: 0,
                     ),
                     icon: const Icon(Icons.assignment_outlined, size: 16),
-                    label: const Text('Copy Text', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    onPressed: () => _copyToClipboard(_textContent, 'Text Summary'),
+                    label: const Text(
+                      'Copy Text',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () =>
+                        _copyToClipboard(_textContent, 'Text Summary'),
                   ),
                 ),
               ],

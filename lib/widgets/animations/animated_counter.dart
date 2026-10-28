@@ -59,10 +59,7 @@ class AnimatedCounter extends StatelessWidget {
       duration: duration,
       curve: curve,
       builder: (context, currentVal, child) {
-        return Text(
-          '$prefix${_formatNumber(currentVal)}$suffix',
-          style: style,
-        );
+        return Text('$prefix${_formatNumber(currentVal)}$suffix', style: style);
       },
     );
   }

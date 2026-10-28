@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../utils/image_storage_utils.dart';
+import '../theme/app_theme.dart';
 
 class CustomerAvatar extends StatelessWidget {
   final String? imagePath;
@@ -19,7 +20,7 @@ class CustomerAvatar extends StatelessWidget {
   });
 
   static final List<List<Color>> avatarGradients = [
-    [const Color(0xFFFF5722), const Color(0xFFFF9800)],
+    [const Color(0xFFFF5722), const Color(0xFFA66510)],
     [const Color(0xFF7C4DFF), const Color(0xFF00B0FF)],
     [const Color(0xFF00E676), const Color(0xFF1DE9B6)],
     [const Color(0xFFFF4081), const Color(0xFFFF80AB)],
@@ -47,8 +48,9 @@ class CustomerAvatar extends StatelessWidget {
     if (imagePath != null && imagePath!.startsWith('avatar:')) {
       final indexStr = imagePath!.replaceAll('avatar:', '');
       final index = (int.tryParse(indexStr) ?? 1) - 1;
-      final safeIndex = (index >= 0 && index < avatarGradients.length) ? index : 0;
-      final gradient = avatarGradients[safeIndex];
+      final safeIndex = (index >= 0 && index < avatarGradients.length)
+          ? index
+          : 0;
       final icon = avatarIcons[safeIndex % avatarIcons.length];
 
       avatarContent = Container(
@@ -56,27 +58,13 @@ class CustomerAvatar extends StatelessWidget {
         height: radius * 2,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: gradient[0].withValues(alpha: 0.35),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          color: AppColors.surfaceElevated,
         ),
-        child: Icon(
-          icon,
-          size: radius * 1.05,
-          color: Colors.white,
-        ),
+        child: Icon(icon, size: radius * 1.05, color: AppColors.primary),
       );
     } else if (imagePath != null && imagePath!.isNotEmpty) {
-      if (imagePath!.startsWith('http://') || imagePath!.startsWith('https://')) {
+      if (imagePath!.startsWith('http://') ||
+          imagePath!.startsWith('https://')) {
         avatarContent = Container(
           width: radius * 2,
           height: radius * 2,
@@ -104,10 +92,7 @@ class CustomerAvatar extends StatelessWidget {
             height: radius * 2,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              image: DecorationImage(
-                image: FileImage(file),
-                fit: BoxFit.cover,
-              ),
+              image: DecorationImage(image: FileImage(file), fit: BoxFit.cover),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.4),
@@ -126,10 +111,7 @@ class CustomerAvatar extends StatelessWidget {
     }
 
     if (onTap != null) {
-      return GestureDetector(
-        onTap: onTap,
-        child: avatarContent,
-      );
+      return GestureDetector(onTap: onTap, child: avatarContent);
     }
 
     return avatarContent;
@@ -143,10 +125,7 @@ class CustomerAvatar extends StatelessWidget {
       height: radius * 2,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        image: DecorationImage(
-          image: MemoryImage(bytes),
-          fit: BoxFit.cover,
-        ),
+        image: DecorationImage(image: MemoryImage(bytes), fit: BoxFit.cover),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.4),
@@ -160,28 +139,27 @@ class CustomerAvatar extends StatelessWidget {
 
   Widget _buildInitialsFallback() {
     final initials = name.trim().isNotEmpty
-        ? name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+        ? name
+              .trim()
+              .split(' ')
+              .map((e) => e.isNotEmpty ? e[0] : '')
+              .take(2)
+              .join()
+              .toUpperCase()
         : 'U';
-
-    final safeIndex = (name.hashCode.abs()) % avatarGradients.length;
-    final gradient = avatarGradients[safeIndex];
 
     return Container(
       width: radius * 2,
       height: radius * 2,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.surfaceElevated,
       ),
       child: Center(
         child: Text(
           initials,
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.primary,
             fontWeight: FontWeight.bold,
             fontSize: radius * 0.85,
           ),

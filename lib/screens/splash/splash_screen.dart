@@ -54,31 +54,28 @@ class _SplashScreenState extends State<SplashScreen>
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final hasSeenIntro =
-          prefs.getBool(IntroScreen.keyHasSeenIntro) ?? false;
+      final hasSeenIntro = prefs.getBool(IntroScreen.keyHasSeenIntro) ?? false;
 
       if (!mounted) return;
 
-      final Widget destination =
-          hasSeenIntro ? const AuthGate() : const IntroScreen();
+      final Widget destination = hasSeenIntro
+          ? const AuthGate()
+          : const IntroScreen();
 
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, anim, secondaryAnim) => destination,
           transitionsBuilder: (context, animation, secondaryAnim, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
+            return FadeTransition(opacity: animation, child: child);
           },
           transitionDuration: const Duration(milliseconds: 450),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AuthGate()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthGate()));
     }
   }
 
@@ -146,10 +143,7 @@ class _SplashScreenState extends State<SplashScreen>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
-                            colors: [
-                              AppColors.primary,
-                              AppColors.secondary,
-                            ],
+                            colors: [AppColors.primary, AppColors.secondary],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -207,7 +201,7 @@ class _SplashScreenState extends State<SplashScreen>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: AppColors.primary,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
                     ),
@@ -251,7 +245,7 @@ class _SplashScreenState extends State<SplashScreen>
                       'Offline First • Cloud Synced',
                       style: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
                       ),
@@ -263,7 +257,7 @@ class _SplashScreenState extends State<SplashScreen>
                   'v1.0.0',
                   style: TextStyle(
                     color: AppColors.textMuted.withValues(alpha: 0.6),
-                    fontSize: 11,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

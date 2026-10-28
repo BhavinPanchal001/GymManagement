@@ -40,7 +40,9 @@ class GymLogoWidget extends StatelessWidget {
     Widget content;
     final effectiveBorderColor = borderColor ?? AppColors.primary;
     final effectiveIconColor = iconColor ?? effectiveBorderColor;
-    final effectiveBg = backgroundColor ?? (AppColors.isDark ? AppColors.surface : Colors.white);
+    final effectiveBg =
+        backgroundColor ??
+        (AppColors.isDark ? AppColors.surface : Colors.white);
 
     if (logoPath != null && logoPath!.startsWith('avatar:')) {
       content = CustomerAvatar(
@@ -56,7 +58,8 @@ class GymLogoWidget extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (ctx, err, stack) => _buildFallback(effectiveIconColor, effectiveBg),
+          errorBuilder: (ctx, err, stack) =>
+              _buildFallback(effectiveIconColor, effectiveBg),
         );
       } else {
         final file = File(cleanPath);
@@ -66,11 +69,13 @@ class GymLogoWidget extends StatelessWidget {
             width: size,
             height: size,
             fit: BoxFit.cover,
-            errorBuilder: (ctx, err, stack) => _buildFallback(effectiveIconColor, effectiveBg),
+            errorBuilder: (ctx, err, stack) =>
+                _buildFallback(effectiveIconColor, effectiveBg),
           );
         } else {
           content =
-              _buildSyncedLogo() ?? _buildFallback(effectiveIconColor, effectiveBg);
+              _buildSyncedLogo() ??
+              _buildFallback(effectiveIconColor, effectiveBg);
         }
       }
     } else {
@@ -100,18 +105,12 @@ class GymLogoWidget extends StatelessWidget {
           color: effectiveBg,
           border: Border.all(color: effectiveBorderColor, width: borderWidth),
         ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: content,
-        ),
+        child: ClipRRect(borderRadius: radius, child: content),
       );
     }
 
     if (onTap != null) {
-      return GestureDetector(
-        onTap: onTap,
-        child: framedWidget,
-      );
+      return GestureDetector(onTap: onTap, child: framedWidget);
     }
 
     return framedWidget;
@@ -254,7 +253,11 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                         color: AppColors.primary.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 20),
+                      child: Icon(
+                        Icons.fitness_center_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -273,7 +276,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                             'Logo appears on member entry cards & payment receipts',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 12,
+                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -314,7 +317,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                   'Or pick a gym brand emblem preset:',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -324,7 +327,8 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: 8,
-                    separatorBuilder: (context, index) => const SizedBox(width: 10),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: 10),
                     itemBuilder: (context, i) {
                       final avatarKey = 'avatar:${i + 1}';
                       final isSelected = _currentLogoPath == avatarKey;
@@ -367,7 +371,10 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
                       label: const Text(
                         'Remove Logo',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                       onPressed: () {
                         setState(() {
@@ -443,10 +450,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
               padding: const EdgeInsets.all(3.5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.primary,
-                  width: 2.5,
-                ),
+                border: Border.all(color: AppColors.primary, width: 2.5),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withValues(alpha: 0.22),
@@ -458,7 +462,9 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
               child: GymLogoWidget(
                 logoPath: _currentLogoPath,
                 logoBase64: _currentLogoBase64,
-                gymName: widget.gymName.isNotEmpty ? widget.gymName : 'Gym Logo',
+                gymName: widget.gymName.isNotEmpty
+                    ? widget.gymName
+                    : 'Gym Logo',
                 size: size,
                 borderColor: Colors.transparent,
                 borderWidth: 0,

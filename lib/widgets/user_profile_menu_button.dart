@@ -8,10 +8,7 @@ import 'user_avatar.dart';
 class UserProfileMenuButton extends StatelessWidget {
   final VoidCallback? onOpenSettings;
 
-  const UserProfileMenuButton({
-    super.key,
-    this.onOpenSettings,
-  });
+  const UserProfileMenuButton({super.key, this.onOpenSettings});
 
   void _confirmSignOut(BuildContext context) {
     showDialog(
@@ -21,7 +18,10 @@ class UserProfileMenuButton extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
           'Sign Out?',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
           'Are you sure you want to sign out of your account?',
@@ -30,7 +30,10 @@ class UserProfileMenuButton extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -41,7 +44,10 @@ class UserProfileMenuButton extends StatelessWidget {
               Navigator.pop(ctx);
               await AuthService().signOut();
             },
-            child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -51,7 +57,10 @@ class UserProfileMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([AuthService().profileNotifier, ThemeService()]),
+      listenable: Listenable.merge([
+        AuthService().profileNotifier,
+        ThemeService(),
+      ]),
       builder: (context, _) {
         final auth = AuthService();
         final theme = ThemeService();
@@ -107,7 +116,7 @@ class UserProfileMenuButton extends StatelessWidget {
                                 email,
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -126,9 +135,19 @@ class UserProfileMenuButton extends StatelessWidget {
               value: 'edit_profile',
               child: Row(
                 children: [
-                  Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 18),
+                  Icon(
+                    Icons.person_outline_rounded,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
                   const SizedBox(width: 10),
-                  Text('Edit Profile', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  Text(
+                    'Edit Profile',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -137,14 +156,19 @@ class UserProfileMenuButton extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    theme.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                    theme.isDarkMode
+                        ? Icons.light_mode_rounded
+                        : Icons.dark_mode_rounded,
                     color: AppColors.secondary,
                     size: 18,
                   ),
                   const SizedBox(width: 10),
                   Text(
                     theme.isDarkMode ? 'Light Mode' : 'Dark Mode',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -154,9 +178,19 @@ class UserProfileMenuButton extends StatelessWidget {
                 value: 'settings',
                 child: Row(
                   children: [
-                    Icon(Icons.settings_outlined, color: AppColors.textSecondary, size: 18),
+                    Icon(
+                      Icons.settings_outlined,
+                      color: AppColors.textSecondary,
+                      size: 18,
+                    ),
                     const SizedBox(width: 10),
-                    Text('Gym Settings', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                    Text(
+                      'Gym Settings',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -164,7 +198,11 @@ class UserProfileMenuButton extends StatelessWidget {
               value: 'logout',
               child: Row(
                 children: [
-                  const Icon(Icons.logout_rounded, color: AppColors.absent, size: 18),
+                  const Icon(
+                    Icons.logout_rounded,
+                    color: AppColors.absent,
+                    size: 18,
+                  ),
                   const SizedBox(width: 10),
                   const Text(
                     'Sign Out',

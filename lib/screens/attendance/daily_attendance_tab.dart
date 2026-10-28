@@ -36,7 +36,9 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
     FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate.isAfter(DateTime.now()) ? DateTime.now() : _selectedDate,
+      initialDate: _selectedDate.isAfter(DateTime.now())
+          ? DateTime.now()
+          : _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -63,7 +65,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
   void _markAllPresent() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final targetDay = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final targetDay = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
     if (targetDay.isAfter(today)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -81,16 +87,20 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
       await gym.markAllPresentForDate(dateKey);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Could not save attendance. Please try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save attendance. Please try again.'),
+          ),
+        );
       }
       return;
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('All eligible members marked Present for ${GymDateUtils.formatDate(_selectedDate)}!'),
+          content: Text(
+            'All eligible members marked Present for ${GymDateUtils.formatDate(_selectedDate)}!',
+          ),
           backgroundColor: AppColors.paid,
           behavior: SnackBarBehavior.floating,
         ),
@@ -107,13 +117,21 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         final dateKey = GymDateUtils.toDateKey(_selectedDate);
-        final targetDay = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+        final targetDay = DateTime(
+          _selectedDate.year,
+          _selectedDate.month,
+          _selectedDate.day,
+        );
         final isToday = targetDay == today;
         final isFutureDate = targetDay.isAfter(today);
         final overview = gym.getDailyOverview(dateKey);
         final activeCustomers = gym.customers
             .where(
-              (c) => c.isActive && !targetDay.isBefore(DateTime(c.joinDate.year, c.joinDate.month, c.joinDate.day)),
+              (c) =>
+                  c.isActive &&
+                  !targetDay.isBefore(
+                    DateTime(c.joinDate.year, c.joinDate.month, c.joinDate.day),
+                  ),
             )
             .toList();
         final searchQuery = _searchController.text.trim().toLowerCase();
@@ -135,12 +153,18 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
             title: const Text('Daily Attendance'),
             actions: [
               IconButton(
-                icon: Icon(Icons.calendar_today_rounded, color: AppColors.primary),
+                icon: Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppColors.primary,
+                ),
                 tooltip: 'Change Date',
                 onPressed: _pickDate,
               ),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded, color: AppColors.textPrimary),
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.textPrimary,
+                ),
                 tooltip: 'More Attendance Options',
                 color: AppColors.surface,
                 shape: RoundedRectangleBorder(
@@ -157,14 +181,20 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                     if (isFutureMonth) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Cannot mark attendance for future months.'),
+                          content: Text(
+                            'Cannot mark attendance for future months.',
+                          ),
                           backgroundColor: AppColors.pending,
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
                       return;
                     }
-                    final updated = await MarkMonthAttendanceDialog.show(context, customer: null, month: _selectedDate);
+                    final updated = await MarkMonthAttendanceDialog.show(
+                      context,
+                      customer: null,
+                      month: _selectedDate,
+                    );
                     if (updated == true && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -183,11 +213,19 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                     value: 'mark_month',
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 20),
+                        Icon(
+                          Icons.calendar_month_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           'Mark Month (All Members)...',
-                          style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -202,126 +240,198 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
               // search field and results fit on small screens)
               if (MediaQuery.viewInsetsOf(context).bottom == 0)
                 Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.surfaceBorder),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      GymDateUtils.formatDate(_selectedDate),
-                                      style: TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (isToday) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
                                       child: Text(
-                                        'TODAY',
+                                        GymDateUtils.formatDate(_selectedDate),
                                         style: TextStyle(
-                                          color: AppColors.primaryOn,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w900,
+                                          color: AppColors.textPrimary,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (isToday) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'TODAY',
+                                          style: TextStyle(
+                                            color: AppColors.primaryOn,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w900,
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ],
-                                ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  GymDateUtils.formatDayOfWeek(_selectedDate),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: isFutureDate ? null : _markAllPresent,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.paid,
+                              side: BorderSide(
+                                color: isFutureDate
+                                    ? AppColors.surfaceBorder
+                                    : AppColors.paid,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                GymDateUtils.formatDayOfWeek(_selectedDate),
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                            ),
+                            icon: const Icon(Icons.done_all_rounded, size: 16),
+                            label: const Text(
+                              'Mark All',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (isFutureDate) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.pending.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppColors.pending.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline_rounded,
+                                color: AppColors.pending,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Future date: Attendance cannot be marked in advance.',
+                                  style: TextStyle(
+                                    color: AppColors.pending,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        OutlinedButton.icon(
-                          onPressed: isFutureDate ? null : _markAllPresent,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.paid,
-                            side: BorderSide(color: isFutureDate ? AppColors.surfaceBorder : AppColors.paid),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          ),
-                          icon: const Icon(Icons.done_all_rounded, size: 16),
-                          label: const Text('Mark All', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                        ),
                       ],
-                    ),
-                    if (isFutureDate) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.pending.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.pending.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline_rounded, color: AppColors.pending, size: 16),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Future date: Attendance cannot be marked in advance.',
-                                style: TextStyle(color: AppColors.pending, fontSize: 12, fontWeight: FontWeight.w600),
-                              ),
+                      const SizedBox(height: 16),
+
+                      // Metrics Strip
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricCol(
+                              'Present',
+                              present,
+                              AppColors.paid,
                             ),
-                          ],
-                        ),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 28,
+                            color: AppColors.surfaceBorder,
+                          ),
+                          Expanded(
+                            child: _buildMetricCol(
+                              'Absent',
+                              absent,
+                              AppColors.absent,
+                            ),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 28,
+                            color: AppColors.surfaceBorder,
+                          ),
+                          Expanded(
+                            child: _buildMetricCol(
+                              'Turnout',
+                              rate,
+                              AppColors.primary,
+                              suffix: '%',
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                    const SizedBox(height: 16),
-
-                    // Metrics Strip
-                    Row(
-                      children: [
-                        Expanded(child: _buildMetricCol('Present', present, AppColors.paid)),
-                        Container(width: 1, height: 28, color: AppColors.surfaceBorder),
-                        Expanded(child: _buildMetricCol('Absent', absent, AppColors.absent)),
-                        Container(width: 1, height: 28, color: AppColors.surfaceBorder),
-                        Expanded(child: _buildMetricCol('Turnout', rate, AppColors.primary, suffix: '%')),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
 
               // Search Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: TextField(
                   controller: _searchController,
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     hintText: 'Search by name, phone, or card #...',
-                    prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: AppColors.textSecondary,
+                    ),
                     suffixIcon: VoiceSearchSuffix(
                       controller: _searchController,
                       voiceHint: 'Say member name, phone, or card number...',
@@ -349,10 +459,14 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                         itemCount: filteredCustomers.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 10),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
                         itemBuilder: (context, i) {
                           final customer = filteredCustomers[i];
-                          final status = gym.getAttendanceStatus(customer.id, dateKey);
+                          final status = gym.getAttendanceStatus(
+                            customer.id,
+                            dateKey,
+                          );
                           final isPresent = status == AttendanceStatus.present;
 
                           return AnimatedFadeSlide.staggered(
@@ -361,60 +475,81 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                             child: AnimatedContainer(
                               duration: AppAnimations.normalDuration,
                               curve: AppAnimations.curveEaseInOut,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.surface,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: isPresent ? AppColors.paid.withValues(alpha: 0.35) : AppColors.surfaceBorder,
+                                  color: AppColors.surfaceBorder,
                                 ),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  CustomerAvatar(
-                                    imagePath: customer.imagePath,
-                                    imageBase64: customer.imageBase64,
-                                    name: customer.name,
-                                    radius: 22,
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        AppPageRoute(builder: (_) => CustomerDetailScreen(customerId: customer.id)),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          AppPageRoute(
-                                            builder: (_) => CustomerDetailScreen(customerId: customer.id),
-                                          ),
-                                        );
-                                      },
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            customer.name,
-                                            style: TextStyle(
-                                              color: AppColors.textPrimary,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
+                                  Row(
+                                    children: [
+                                      CustomerAvatar(
+                                        imagePath: customer.imagePath,
+                                        imageBase64: customer.imageBase64,
+                                        name: customer.name,
+                                        radius: 22,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            AppPageRoute(
+                                              builder: (_) =>
+                                                  CustomerDetailScreen(
+                                                    customerId: customer.id,
+                                                  ),
                                             ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            customer.phone,
-                                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                          ),
-                                        ],
+                                          );
+                                        },
                                       ),
-                                    ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              AppPageRoute(
+                                                builder: (_) =>
+                                                    CustomerDetailScreen(
+                                                      customerId: customer.id,
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                customer.name,
+                                                style: TextStyle(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                customer.phone,
+                                                style: TextStyle(
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(height: 12),
 
                                   // Quick Status Toggle Buttons
                                   Row(
@@ -428,7 +563,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                         onTap: isFutureDate
                                             ? null
                                             : () {
-                                                gym.toggleAttendance(customer.id, dateKey, AttendanceStatus.present);
+                                                gym.toggleAttendance(
+                                                  customer.id,
+                                                  dateKey,
+                                                  AttendanceStatus.present,
+                                                );
                                               },
                                       ),
                                       const SizedBox(width: 6),
@@ -436,12 +575,17 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                         label: 'Absent',
                                         icon: Icons.cancel_rounded,
                                         color: AppColors.absent,
-                                        isActive: status == AttendanceStatus.absent,
+                                        isActive:
+                                            status == AttendanceStatus.absent,
                                         isDisabled: isFutureDate,
                                         onTap: isFutureDate
                                             ? null
                                             : () {
-                                                gym.toggleAttendance(customer.id, dateKey, AttendanceStatus.absent);
+                                                gym.toggleAttendance(
+                                                  customer.id,
+                                                  dateKey,
+                                                  AttendanceStatus.absent,
+                                                );
                                               },
                                       ),
                                     ],
@@ -460,18 +604,31 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
     );
   }
 
-  Widget _buildMetricCol(String label, num val, Color color, {String suffix = ''}) {
+  Widget _buildMetricCol(
+    String label,
+    num val,
+    Color color, {
+    String suffix = '',
+  }) {
     return Column(
       children: [
         AnimatedCounter(
           value: val,
           suffix: suffix,
-          style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w900),
+          style: TextStyle(
+            color: color,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -494,7 +651,9 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
         decoration: BoxDecoration(
           color: isDisabled
               ? AppColors.surfaceElevated.withValues(alpha: 0.4)
-              : (isActive ? color.withValues(alpha: 0.2) : AppColors.surfaceElevated),
+              : (isActive
+                    ? color.withValues(alpha: 0.2)
+                    : AppColors.surfaceElevated),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isDisabled
@@ -525,8 +684,10 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                 color: isDisabled
                     ? AppColors.textMuted.withValues(alpha: 0.35)
                     : (isActive ? color : AppColors.textSecondary),
-                fontSize: 11,
-                fontWeight: isActive && !isDisabled ? FontWeight.w800 : FontWeight.w500,
+                fontSize: 14,
+                fontWeight: isActive && !isDisabled
+                    ? FontWeight.w800
+                    : FontWeight.w500,
               ),
             ),
           ],

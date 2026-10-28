@@ -11,9 +11,9 @@ class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
   static Future<void> navigate(BuildContext context) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const EditProfileScreen()));
   }
 
   @override
@@ -55,11 +55,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController = TextEditingController(text: auth.phoneNumber ?? '');
     _emailController = TextEditingController(text: auth.email);
     _gymNameController = TextEditingController(text: gym.settings.gymName);
-    _gymTaglineController = TextEditingController(text: gym.settings.gymTagline);
-    _gymAddressController = TextEditingController(text: gym.settings.gymAddress);
+    _gymTaglineController = TextEditingController(
+      text: gym.settings.gymTagline,
+    );
+    _gymAddressController = TextEditingController(
+      text: gym.settings.gymAddress,
+    );
     _gymPhoneController = TextEditingController(text: gym.settings.gymPhone);
     _gymEmailController = TextEditingController(text: gym.settings.gymEmail);
-    _gymTimingsController = TextEditingController(text: gym.settings.gymTimings);
+    _gymTimingsController = TextEditingController(
+      text: gym.settings.gymTimings,
+    );
     _taxLabelController = TextEditingController(text: gym.settings.taxLabel);
     _taxRateController = TextEditingController(
       text: gym.settings.taxRatePercent.toStringAsFixed(
@@ -130,25 +136,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Collect updated package prices from controllers
       final updatedPackages = _packages.map((pkg) {
         final ctrl = _packageControllers[pkg.id];
-        final price = ctrl != null ? (double.tryParse(ctrl.text.trim()) ?? pkg.price) : pkg.price;
+        final price = ctrl != null
+            ? (double.tryParse(ctrl.text.trim()) ?? pkg.price)
+            : pkg.price;
         return pkg.copyWith(price: price);
       }).toList();
 
       final normal1m = updatedPackages.firstWhere(
         (p) => p.planType == CustomerPlan.normal && p.months == 1,
-        orElse: () => const PlanDurationPackage(id: 'pkg_norm_1', planType: CustomerPlan.normal, months: 1, price: 600.0),
+        orElse: () => const PlanDurationPackage(
+          id: 'pkg_norm_1',
+          planType: CustomerPlan.normal,
+          months: 1,
+          price: 600.0,
+        ),
       );
       final pt1m = updatedPackages.firstWhere(
         (p) => p.planType == CustomerPlan.personalTraining && p.months == 1,
-        orElse: () => const PlanDurationPackage(id: 'pkg_pt_1', planType: CustomerPlan.personalTraining, months: 1, price: 2500.0),
+        orElse: () => const PlanDurationPackage(
+          id: 'pkg_pt_1',
+          planType: CustomerPlan.personalTraining,
+          months: 1,
+          price: 2500.0,
+        ),
       );
       final ptDiet1m = updatedPackages.firstWhere(
         (p) => p.planType == CustomerPlan.personalTrainingDiet && p.months == 1,
-        orElse: () => const PlanDurationPackage(id: 'pkg_pt_diet_1', planType: CustomerPlan.personalTrainingDiet, months: 1, price: 3500.0),
+        orElse: () => const PlanDurationPackage(
+          id: 'pkg_pt_diet_1',
+          planType: CustomerPlan.personalTrainingDiet,
+          months: 1,
+          price: 3500.0,
+        ),
       );
 
       final parsedTaxRate = double.tryParse(_taxRateController.text.trim());
-      final taxRate = parsedTaxRate != null &&
+      final taxRate =
+          parsedTaxRate != null &&
               parsedTaxRate.isFinite &&
               parsedTaxRate >= 0 &&
               parsedTaxRate <= 100
@@ -186,11 +210,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   'Profile & plan pricing updated successfully!',
-                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -271,7 +302,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               onPressed: _isLoading ? null : _handleSave,
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
               ),
               icon: _isLoading
                   ? SizedBox(
@@ -279,7 +313,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
                       ),
                     )
                   : const Icon(Icons.check_rounded, size: 20),
@@ -292,99 +328,109 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ],
       ),
       body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            // Gym Brand Logo Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.surfaceBorder),
-              ),
-              child: Column(
-                children: [
-                  GymLogoSelector(
-                    initialLogoPath: _selectedImagePath,
-                    initialLogoBase64:
-                        _selectedImagePath == gym.settings.gymLogoPath
-                            ? gym.settings.gymLogoBase64
-                            : null,
-                    gymName: _gymNameController.text.isNotEmpty
-                        ? _gymNameController.text
-                        : (_nameController.text.isNotEmpty ? _nameController.text : 'Gym'),
-                    radius: 48,
-                    title: 'Gym Brand Logo',
-                    storageKey:
-                        'gym_logo_${AuthService().currentUser?.uid ?? 'local'}',
-                    onLogoSelected: (path) {
-                      setState(() {
-                        _selectedImagePath = path;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.verified_outlined, size: 15, color: AppColors.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Gym Brand Logo',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _selectedImagePath != null
-                        ? 'Tap logo to change or remove. Displayed on Member Cards & Receipts.'
-                        : 'Tap to upload gym logo. This logo appears on Member Entry Forms & Receipts.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
+              // Gym Brand Logo Section
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.surfaceBorder),
+                ),
+                child: Column(
+                  children: [
+                    GymLogoSelector(
+                      initialLogoPath: _selectedImagePath,
+                      initialLogoBase64:
+                          _selectedImagePath == gym.settings.gymLogoPath
+                          ? gym.settings.gymLogoBase64
+                          : null,
+                      gymName: _gymNameController.text.isNotEmpty
+                          ? _gymNameController.text
+                          : (_nameController.text.isNotEmpty
+                                ? _nameController.text
+                                : 'Gym'),
+                      radius: 48,
+                      title: 'Gym Brand Logo',
+                      storageKey:
+                          'gym_logo_${AuthService().currentUser?.uid ?? 'local'}',
+                      onLogoSelected: (path) {
+                        setState(() {
+                          _selectedImagePath = path;
+                        });
+                      },
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Owner Details Section
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.surfaceBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.person_rounded, color: AppColors.primary, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Owner Information',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.verified_outlined,
+                          size: 15,
+                          color: AppColors.primary,
                         ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Gym Brand Logo',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _selectedImagePath != null
+                          ? 'Tap logo to change or remove. Displayed on Member Cards & Receipts.'
+                          : 'Tap to upload gym logo. This logo appears on Member Entry Forms & Receipts.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Owner Details Section
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.surfaceBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Owner Information',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
                     // Full Name
                     _buildTextField(
@@ -419,7 +465,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       hint: 'owner@gym.com',
                       icon: Icons.email_outlined,
                       readOnly: true,
-                      helperText: 'Account email linked with your authentication credentials.',
+                      helperText:
+                          'Account email linked with your authentication credentials.',
                     ),
                   ],
                 ),
@@ -439,7 +486,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 20),
+                        Icon(
+                          Icons.fitness_center_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Gym Details',
@@ -526,7 +577,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 20),
+                        Icon(
+                          Icons.receipt_long_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Receipt & Tax Preferences',
@@ -554,7 +609,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       value: _isTaxEnabled,
                       activeTrackColor: AppColors.primary,
-                      onChanged: (value) => setState(() => _isTaxEnabled = value),
+                      onChanged: (value) =>
+                          setState(() => _isTaxEnabled = value),
                     ),
                     if (_isTaxEnabled) ...[
                       const SizedBox(height: 12),
@@ -647,7 +703,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.security_rounded, color: AppColors.primary, size: 20),
+                        Icon(
+                          Icons.security_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Security & Password',
@@ -662,24 +722,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Receive a secure link on your email address to reset or change your account password.',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: _isSendingReset ? null : _handleSendPasswordReset,
+                        onPressed: _isSendingReset
+                            ? null
+                            : _handleSendPasswordReset,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.secondary,
-                          side: BorderSide(color: AppColors.secondary.withValues(alpha: 0.5)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(
+                            color: AppColors.secondary.withValues(alpha: 0.5),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         icon: _isSendingReset
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.lock_reset_rounded, size: 18),
                         label: const Text(
@@ -712,7 +784,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryOn),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primaryOn,
+                            ),
                           ),
                         )
                       : Row(
@@ -746,7 +820,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         tierColor = AppColors.secondary;
         break;
       case CustomerPlan.personalTrainingDiet:
-        tierColor = const Color(0xFFFF9100);
+        tierColor = const Color(0xFFA66510);
         break;
       case CustomerPlan.normal:
       default:
@@ -754,7 +828,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         break;
     }
 
-    final activePackages = _packages.where((p) => p.planType == _selectedPlanTier).toList();
+    final activePackages = _packages
+        .where((p) => p.planType == _selectedPlanTier)
+        .toList();
     activePackages.sort((a, b) => a.months.compareTo(b.months));
 
     // Base 1-month price for savings calculation
@@ -762,9 +838,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       (p) => p.months == 1,
       orElse: () => activePackages.isNotEmpty
           ? activePackages.first
-          : const PlanDurationPackage(id: '', planType: '', months: 1, price: 600),
+          : const PlanDurationPackage(
+              id: '',
+              planType: '',
+              months: 1,
+              price: 600,
+            ),
     );
-    final oneMonthPrice = double.tryParse(_packageControllers[oneMonthPkg.id]?.text.trim() ?? '') ?? oneMonthPkg.price;
+    final oneMonthPrice =
+        double.tryParse(
+          _packageControllers[oneMonthPkg.id]?.text.trim() ?? '',
+        ) ??
+        oneMonthPkg.price;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -778,7 +863,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.inventory_2_rounded, color: AppColors.primary, size: 20),
+              Icon(
+                Icons.inventory_2_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -800,7 +889,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   'DURATION COMBOS',
                   style: TextStyle(
                     color: AppColors.primary,
-                    fontSize: 10,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -810,7 +899,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           const SizedBox(height: 6),
           Text(
             'Configure package fees according to duration (e.g. 1 Month ₹600, 3 Months ₹1,500) for each membership tier.',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -842,7 +935,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   planType: CustomerPlan.personalTrainingDiet,
                   label: 'PT + Diet',
                   icon: Icons.restaurant_menu_rounded,
-                  activeColor: const Color(0xFFFF9100),
+                  activeColor: const Color(0xFFA66510),
                 ),
               ],
             ),
@@ -869,20 +962,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: tierColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: tierColor.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: tierColor.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Text(
                           pkg.title.toUpperCase(),
                           style: TextStyle(
                             color: tierColor,
-                            fontSize: 11,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -890,7 +991,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       if (savings > 0) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.paid.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
@@ -899,16 +1003,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             'SAVE $currency$savings',
                             style: TextStyle(
                               color: AppColors.paid,
-                              fontSize: 10,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ],
-                      const Spacer(),
+
                       if (pkg.months > 1 || activePackages.length > 1)
                         IconButton(
-                          icon: Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 18),
+                          icon: Icon(
+                            Icons.delete_outline_rounded,
+                            color: AppColors.textMuted,
+                            size: 18,
+                          ),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -925,8 +1033,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: ctrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                     onChanged: (_) => setState(() {}),
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
@@ -954,17 +1068,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       suffixText: pkg.months > 1
                           ? 'total (~$currency${(currentVal / pkg.months).toStringAsFixed(0)}/mo)'
                           : '/ month',
-                      suffixStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      suffixStyle: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
                       filled: true,
                       fillColor: AppColors.surface,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: AppColors.surfaceBorder.withValues(alpha: 0.6)),
+                        borderSide: BorderSide(
+                          color: AppColors.surfaceBorder.withValues(alpha: 0.6),
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: AppColors.surfaceBorder.withValues(alpha: 0.6)),
+                        borderSide: BorderSide(
+                          color: AppColors.surfaceBorder.withValues(alpha: 0.6),
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -983,17 +1107,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => _showAddPackageDialog(context, _selectedPlanTier, currency),
+              onPressed: () =>
+                  _showAddPackageDialog(context, _selectedPlanTier, currency),
               style: OutlinedButton.styleFrom(
                 foregroundColor: tierColor,
-                side: BorderSide(color: tierColor.withValues(alpha: 0.4), style: BorderStyle.solid),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                side: BorderSide(
+                  color: tierColor.withValues(alpha: 0.4),
+                  style: BorderStyle.solid,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text(
                 'Add Duration Combo (e.g. 2, 3, 6, 12 Months)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ),
@@ -1016,20 +1146,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? activeColor.withValues(alpha: 0.18) : Colors.transparent,
+            color: isSelected
+                ? activeColor.withValues(alpha: 0.18)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            border: isSelected ? Border.all(color: activeColor.withValues(alpha: 0.4)) : null,
+            border: isSelected
+                ? Border.all(color: activeColor.withValues(alpha: 0.4))
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 15, color: isSelected ? activeColor : AppColors.textMuted),
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected ? activeColor : AppColors.textMuted,
+              ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? (AppColors.isDark ? Colors.white : activeColor) : AppColors.textSecondary,
-                  fontSize: 12,
+                  color: isSelected
+                      ? (AppColors.isDark ? Colors.white : activeColor)
+                      : AppColors.textSecondary,
+                  fontSize: 14,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -1040,7 +1180,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Future<void> _showAddPackageDialog(BuildContext context, String planType, String currency) async {
+  Future<void> _showAddPackageDialog(
+    BuildContext context,
+    String planType,
+    String currency,
+  ) async {
     int selectedMonths = 3;
     final monthsController = TextEditingController(text: '3');
     final priceController = TextEditingController();
@@ -1058,11 +1202,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               title: Row(
                 children: [
-                  Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 22),
+                  Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Add Duration Combo',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -1072,12 +1224,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   Text(
                     'Plan: ${CustomerPlan.getLabel(planType)}',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Text(
                     'Select Duration (Months)',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -1088,15 +1247,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       return ChoiceChip(
                         label: Text('$m ${m == 1 ? "Mo" : "Months"}'),
                         selected: isSel,
-                        selectedColor: AppColors.primary.withValues(alpha: 0.25),
+                        selectedColor: AppColors.primary.withValues(
+                          alpha: 0.25,
+                        ),
                         backgroundColor: AppColors.surfaceElevated,
                         labelStyle: TextStyle(
-                          color: isSel ? AppColors.primary : AppColors.textSecondary,
-                          fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                          fontSize: 12,
+                          color: isSel
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                          fontWeight: isSel
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontSize: 14,
                         ),
                         side: BorderSide(
-                          color: isSel ? AppColors.primary : AppColors.surfaceBorder,
+                          color: isSel
+                              ? AppColors.primary
+                              : AppColors.surfaceBorder,
                         ),
                         onSelected: (_) {
                           setDialogState(() {
@@ -1110,23 +1277,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Total Package Price ($currency)',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: priceController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'e.g. 1500',
                       prefixIcon: Container(
                         width: 36,
                         alignment: Alignment.center,
-                        child: Text(currency, style: TextStyle(color: AppColors.primary, fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          currency,
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                       filled: true,
                       fillColor: AppColors.surfaceElevated,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ],
@@ -1134,15 +1320,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogCtx),
-                  child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final months = int.tryParse(monthsController.text.trim()) ?? selectedMonths;
+                    final months =
+                        int.tryParse(monthsController.text.trim()) ??
+                        selectedMonths;
                     final price = double.tryParse(priceController.text.trim());
                     if (months <= 0 || price == null || price < 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please enter a valid month count and price')),
+                        const SnackBar(
+                          content: Text(
+                            'Please enter a valid month count and price',
+                          ),
+                        ),
                       );
                       return;
                     }
@@ -1155,9 +1350,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     );
 
                     setState(() {
-                      _packages.removeWhere((p) => p.planType == planType && p.months == months);
+                      _packages.removeWhere(
+                        (p) => p.planType == planType && p.months == months,
+                      );
                       _packages.add(newPkg);
-                      _packageControllers[newPkg.id] = TextEditingController(text: price.toStringAsFixed(2));
+                      _packageControllers[newPkg.id] = TextEditingController(
+                        text: price.toStringAsFixed(2),
+                      );
                     });
 
                     Navigator.pop(dialogCtx);
@@ -1165,9 +1364,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.primaryOn,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  child: const Text('Add Package', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Add Package',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             );
@@ -1198,7 +1402,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           label,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1220,17 +1424,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             hintText: hint,
             helperText: helperText,
             helperMaxLines: 2,
-            helperStyle: TextStyle(color: AppColors.textMuted, fontSize: 11),
+            helperStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
             prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
             filled: true,
-            fillColor: readOnly ? AppColors.surfaceElevated.withValues(alpha: 0.5) : AppColors.surfaceElevated,
+            fillColor: readOnly
+                ? AppColors.surfaceElevated.withValues(alpha: 0.5)
+                : AppColors.surfaceElevated,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.surfaceBorder.withValues(alpha: 0.6)),
+              borderSide: BorderSide(
+                color: AppColors.surfaceBorder.withValues(alpha: 0.6),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.surfaceBorder.withValues(alpha: 0.6)),
+              borderSide: BorderSide(
+                color: AppColors.surfaceBorder.withValues(alpha: 0.6),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

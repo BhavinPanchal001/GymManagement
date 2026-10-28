@@ -133,7 +133,9 @@ class _AnimatedSuccessDialogState extends State<AnimatedSuccessDialog>
                         builder: (context, _) {
                           return CustomPaint(
                             size: const Size(36, 36),
-                            painter: _CheckmarkPainter(progress: _checkAnimation.value),
+                            painter: _CheckmarkPainter(
+                              progress: _checkAnimation.value,
+                            ),
                           );
                         },
                       ),
@@ -158,7 +160,7 @@ class _AnimatedSuccessDialogState extends State<AnimatedSuccessDialog>
                   widget.message!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: AppColors.textSecondary,
                     height: 1.35,
                   ),
@@ -197,18 +199,12 @@ class _CheckmarkPainter extends CustomPainter {
     if (progress < 0.5) {
       final t = progress / 0.5;
       path.moveTo(p1.dx, p1.dy);
-      path.lineTo(
-        p1.dx + (p2.dx - p1.dx) * t,
-        p1.dy + (p2.dy - p1.dy) * t,
-      );
+      path.lineTo(p1.dx + (p2.dx - p1.dx) * t, p1.dy + (p2.dy - p1.dy) * t);
     } else {
       path.moveTo(p1.dx, p1.dy);
       path.lineTo(p2.dx, p2.dy);
       final t = (progress - 0.5) / 0.5;
-      path.lineTo(
-        p2.dx + (p3.dx - p2.dx) * t,
-        p2.dy + (p3.dy - p2.dy) * t,
-      );
+      path.lineTo(p2.dx + (p3.dx - p2.dx) * t, p2.dy + (p3.dy - p2.dy) * t);
     }
 
     canvas.drawPath(path, paint);

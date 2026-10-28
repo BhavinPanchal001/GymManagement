@@ -39,7 +39,8 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
       final monthKey = GymDateUtils.toMonthKey(monthDt);
       final summary = widget.gym.getBalanceSheetSummary(monthKey);
       final double income = (summary['totalIncome'] as num?)?.toDouble() ?? 0.0;
-      final double expense = (summary['totalExpense'] as num?)?.toDouble() ?? 0.0;
+      final double expense =
+          (summary['totalExpense'] as num?)?.toDouble() ?? 0.0;
       final double profit = income - expense;
 
       monthsData.add(
@@ -54,8 +55,14 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
     }
 
     // Totals for the selected range
-    final totalRevenue = monthsData.fold<double>(0.0, (sum, m) => sum + m.income);
-    final totalExpense = monthsData.fold<double>(0.0, (sum, m) => sum + m.expense);
+    final totalRevenue = monthsData.fold<double>(
+      0.0,
+      (sum, m) => sum + m.income,
+    );
+    final totalExpense = monthsData.fold<double>(
+      0.0,
+      (sum, m) => sum + m.expense,
+    );
     final totalProfit = totalRevenue - totalExpense;
 
     final hasData = totalRevenue > 0 || totalExpense > 0;
@@ -86,7 +93,11 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.bar_chart_rounded, color: AppColors.primary, size: 20),
+                child: Icon(
+                  Icons.bar_chart_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -106,7 +117,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                           ? 'Revenue vs Operating Expenses'
                           : 'Monthly Net Profit Trajectory',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 14,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -149,17 +160,29 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                 padding: const EdgeInsets.all(2),
                 child: Row(
                   children: [
-                    _buildModeButton(FinancialChartMode.comparison, Icons.view_column_rounded, 'Compare'),
-                    _buildModeButton(FinancialChartMode.profit, Icons.show_chart_rounded, 'Net Profit'),
+                    _buildModeButton(
+                      FinancialChartMode.comparison,
+                      Icons.view_column_rounded,
+                      'Compare',
+                    ),
+                    _buildModeButton(
+                      FinancialChartMode.profit,
+                      Icons.show_chart_rounded,
+                      'Net Profit',
+                    ),
                   ],
                 ),
               ),
 
               // Summary Chip
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
-                  color: (totalProfit >= 0 ? AppColors.paid : AppColors.absent).withValues(alpha: 0.12),
+                  color: (totalProfit >= 0 ? AppColors.paid : AppColors.absent)
+                      .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -168,7 +191,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     Text(
                       '${_monthsCount}M Net: ',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 14,
                         color: AppColors.textMuted,
                         fontWeight: FontWeight.w600,
                       ),
@@ -176,9 +199,11 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     Text(
                       '${totalProfit >= 0 ? '+' : ''}${GymDateUtils.formatCurrency(totalProfit, symbol: widget.currency)}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: totalProfit >= 0 ? AppColors.paid : AppColors.absent,
+                        color: totalProfit >= 0
+                            ? AppColors.paid
+                            : AppColors.absent,
                       ),
                     ),
                   ],
@@ -239,7 +264,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
         child: Text(
           text,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
             color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
           ),
@@ -248,7 +273,11 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
     );
   }
 
-  Widget _buildModeButton(FinancialChartMode mode, IconData icon, String label) {
+  Widget _buildModeButton(
+    FinancialChartMode mode,
+    IconData icon,
+    String label,
+  ) {
     final isSelected = _mode == mode;
     return AnimatedPressable(
       onTap: () => setState(() => _mode = mode),
@@ -257,7 +286,9 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.18) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.18)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
@@ -271,7 +302,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 14,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected ? AppColors.primary : AppColors.textMuted,
               ),
@@ -289,12 +320,16 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.query_stats_rounded, size: 40, color: AppColors.textMuted.withValues(alpha: 0.5)),
+          Icon(
+            Icons.query_stats_rounded,
+            size: 40,
+            color: AppColors.textMuted.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 8),
           Text(
             'No Financial Activity Recorded',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -303,10 +338,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
           Text(
             'Collect member dues or record expenses to populate this graph.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textMuted,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
           ),
         ],
       ),
@@ -344,23 +376,27 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                 TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 14,
                 ),
                 children: [
                   TextSpan(
-                    text: '$label: ${GymDateUtils.formatCurrency(val, symbol: widget.currency)}\n',
+                    text:
+                        '$label: ${GymDateUtils.formatCurrency(val, symbol: widget.currency)}\n',
                     style: TextStyle(
                       color: color,
                       fontWeight: FontWeight.w700,
-                      fontSize: 11,
+                      fontSize: 14,
                     ),
                   ),
                   TextSpan(
-                    text: 'Net: ${point.profit >= 0 ? '+' : ''}${GymDateUtils.formatCurrency(point.profit, symbol: widget.currency)}',
+                    text:
+                        'Net: ${point.profit >= 0 ? '+' : ''}${GymDateUtils.formatCurrency(point.profit, symbol: widget.currency)}',
                     style: TextStyle(
-                      color: point.profit >= 0 ? AppColors.paid : AppColors.absent,
+                      color: point.profit >= 0
+                          ? AppColors.paid
+                          : AppColors.absent,
                       fontWeight: FontWeight.w600,
-                      fontSize: 10,
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -381,14 +417,20 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (double value, TitleMeta meta) {
                 final index = value.toInt();
-                if (index < 0 || index >= data.length) return const SizedBox.shrink();
+                if (index < 0 || index >= data.length) {
+                  return const SizedBox.shrink();
+                }
                 final isTouched = index == _touchedGroupIndex;
                 return SideTitleWidget(
                   meta: meta,
@@ -396,9 +438,11 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                   child: Text(
                     data[index].label,
                     style: TextStyle(
-                      color: isTouched ? AppColors.primary : AppColors.textSecondary,
+                      color: isTouched
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
                       fontWeight: isTouched ? FontWeight.bold : FontWeight.w600,
-                      fontSize: 11,
+                      fontSize: 14,
                     ),
                   ),
                 );
@@ -418,7 +462,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     _formatCompact(value),
                     style: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 10,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -472,9 +516,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                   topLeft: Radius.circular(5),
                   topRight: Radius.circular(5),
                 ),
-                backDrawRodData: BackgroundBarChartRodData(
-                  show: false,
-                ),
+                backDrawRodData: BackgroundBarChartRodData(show: false),
               ),
             ],
             barsSpace: 4,
@@ -497,8 +539,10 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
       maxProfit = 1000;
     }
 
-    final effectiveMaxY = (maxProfit > 0 ? maxProfit * 1.25 : 100).ceilToDouble();
-    final effectiveMinY = (minProfit < 0 ? minProfit * 1.25 : 0).floorToDouble();
+    final effectiveMaxY = (maxProfit > 0 ? maxProfit * 1.25 : 100)
+        .ceilToDouble();
+    final effectiveMinY = (minProfit < 0 ? minProfit * 1.25 : 0)
+        .floorToDouble();
 
     final spots = <FlSpot>[];
     for (int i = 0; i < data.length; i++) {
@@ -523,15 +567,16 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                   TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 14,
                   ),
                   children: [
                     TextSpan(
-                      text: '${isPositive ? '+' : ''}${GymDateUtils.formatCurrency(point.profit, symbol: widget.currency)}',
+                      text:
+                          '${isPositive ? '+' : ''}${GymDateUtils.formatCurrency(point.profit, symbol: widget.currency)}',
                       style: TextStyle(
                         color: isPositive ? AppColors.paid : AppColors.absent,
                         fontWeight: FontWeight.w800,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                     ),
                   ],
@@ -556,14 +601,20 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (double value, TitleMeta meta) {
                 final index = value.toInt();
-                if (index < 0 || index >= data.length) return const SizedBox.shrink();
+                if (index < 0 || index >= data.length) {
+                  return const SizedBox.shrink();
+                }
                 return SideTitleWidget(
                   meta: meta,
                   space: 6,
@@ -572,7 +623,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 11,
+                      fontSize: 14,
                     ),
                   ),
                 );
@@ -591,7 +642,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     _formatCompact(value),
                     style: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 10,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -614,7 +665,9 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
               show: true,
               getDotPainter: (spot, percent, barData, index) {
                 final point = data[index];
-                final color = point.profit >= 0 ? AppColors.paid : AppColors.absent;
+                final color = point.profit >= 0
+                    ? AppColors.paid
+                    : AppColors.absent;
                 return FlDotCirclePainter(
                   radius: 5,
                   color: color,
@@ -667,7 +720,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 14,
             color: AppColors.textSecondary,
             fontWeight: FontWeight.w600,
           ),

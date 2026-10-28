@@ -6,10 +6,7 @@ import '../utils/date_utils.dart';
 class BalanceSheetKPICard extends StatelessWidget {
   final String monthYear;
 
-  const BalanceSheetKPICard({
-    super.key,
-    required this.monthYear,
-  });
+  const BalanceSheetKPICard({super.key, required this.monthYear});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +21,10 @@ class BalanceSheetKPICard extends StatelessWidget {
     final double oer = kpi['oer'] as double;
     final int breakEvenMembers = kpi['breakEvenMembers'] as int;
     final int memberBuffer = kpi['memberBuffer'] as int;
-    final double breakEvenLoadPct = (kpi['breakEvenLoadPct'] as double).clamp(0.0, 100.0);
+    final double breakEvenLoadPct = (kpi['breakEvenLoadPct'] as double).clamp(
+      0.0,
+      100.0,
+    );
 
     final double fixedCosts = kpi['fixedCosts'] as double;
     final double variableCosts = kpi['variableCosts'] as double;
@@ -55,7 +55,7 @@ class BalanceSheetKPICard extends StatelessWidget {
         tierIcon = Icons.warning_amber_rounded;
         break;
       case 'deficit':
-        tierColor = const Color(0xFFD50000); // Red
+        tierColor = const Color(0xFFB42318); // Red
         tierIcon = Icons.error_outline;
         break;
       default:
@@ -108,7 +108,10 @@ class BalanceSheetKPICard extends StatelessWidget {
                     ),
                     Text(
                       'Unit Economics & Operational Sustainability',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textMuted,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -117,7 +120,10 @@ class BalanceSheetKPICard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: tierColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
@@ -129,13 +135,16 @@ class BalanceSheetKPICard extends StatelessWidget {
                     Container(
                       width: 7,
                       height: 7,
-                      decoration: BoxDecoration(color: tierColor, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                        color: tierColor,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 5),
                     Text(
                       healthTitle,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: tierColor,
                       ),
@@ -164,7 +173,11 @@ class BalanceSheetKPICard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     healthAdvice,
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.35),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                      height: 1.35,
+                    ),
                   ),
                 ),
               ],
@@ -220,8 +233,12 @@ class BalanceSheetKPICard extends StatelessWidget {
                 child: _buildKPICell(
                   title: 'Break-Even Target',
                   value: '$breakEvenMembers Members',
-                  subtitle: memberBuffer >= 0 ? '+$memberBuffer Buffer' : '${memberBuffer.abs()} Deficit',
-                  subColor: memberBuffer >= 0 ? AppColors.paid : AppColors.absent,
+                  subtitle: memberBuffer >= 0
+                      ? '+$memberBuffer Buffer'
+                      : '${memberBuffer.abs()} Deficit',
+                  subColor: memberBuffer >= 0
+                      ? AppColors.paid
+                      : AppColors.absent,
                   icon: Icons.flag_outlined,
                   color: AppColors.primary,
                   extra: ClipRRect(
@@ -231,7 +248,9 @@ class BalanceSheetKPICard extends StatelessWidget {
                       minHeight: 4,
                       backgroundColor: AppColors.surfaceBorder,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        breakEvenLoadPct <= 85 ? AppColors.paid : AppColors.pending,
+                        breakEvenLoadPct <= 85
+                            ? AppColors.paid
+                            : AppColors.pending,
                       ),
                     ),
                   ),
@@ -285,11 +304,14 @@ class BalanceSheetKPICard extends StatelessWidget {
               Expanded(
                 child: _buildKPICell(
                   title: 'Cost Per Member',
-                  value: GymDateUtils.formatCurrency(costPerMember, symbol: currency),
+                  value: GymDateUtils.formatCurrency(
+                    costPerMember,
+                    symbol: currency,
+                  ),
                   subtitle: 'Overhead / active member',
                   subColor: AppColors.textMuted,
                   icon: Icons.price_check_outlined,
-                  color: const Color(0xFFFF9100),
+                  color: const Color(0xFFA66510),
                 ),
               ),
             ],
@@ -306,7 +328,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                   child: Text(
                     'Cost Structure Analysis',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textSecondary,
                     ),
@@ -317,7 +339,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   'Fixed: ${fixedCostPct.toStringAsFixed(0)}% • Variable: ${variableCostPct.toStringAsFixed(0)}%',
-                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 14, color: AppColors.textMuted),
                 ),
               ],
             ),
@@ -332,11 +354,15 @@ class BalanceSheetKPICard extends StatelessWidget {
                   children: [
                     Flexible(
                       flex: fixedCostPct.toInt().clamp(1, 100),
-                      child: Container(color: const Color(0xFF6366F1)), // Indigo for Fixed
+                      child: Container(
+                        color: const Color(0xFF6366F1),
+                      ), // Indigo for Fixed
                     ),
                     Flexible(
                       flex: variableCostPct.toInt().clamp(1, 100),
-                      child: Container(color: const Color(0xFFF59E0B)), // Amber for Variable
+                      child: Container(
+                        color: const Color(0xFFF59E0B),
+                      ), // Amber for Variable
                     ),
                   ],
                 ),
@@ -362,7 +388,10 @@ class BalanceSheetKPICard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'Fixed (Rent, Salaries, Power): ${GymDateUtils.formatCurrency(fixedCosts, symbol: currency)}',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -380,7 +409,10 @@ class BalanceSheetKPICard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'Variable: ${GymDateUtils.formatCurrency(variableCosts, symbol: currency)}',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -417,7 +449,7 @@ class BalanceSheetKPICard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textMuted,
                 ),
@@ -443,17 +475,14 @@ class BalanceSheetKPICard extends StatelessWidget {
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: subColor,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          if (extra != null) ...[
-            const SizedBox(height: 6),
-            extra,
-          ],
+          if (extra != null) ...[const SizedBox(height: 6), extra],
         ],
       ),
     );
@@ -472,7 +501,7 @@ class BalanceSheetKPICard extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+          style: TextStyle(fontSize: 14, color: AppColors.textMuted),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -489,7 +518,7 @@ class BalanceSheetKPICard extends StatelessWidget {
             Text(
               '${pct.abs().toStringAsFixed(1)}%',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color: color,
               ),

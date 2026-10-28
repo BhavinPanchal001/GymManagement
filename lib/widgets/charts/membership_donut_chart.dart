@@ -17,7 +17,8 @@ class MembershipDonutChart extends StatefulWidget {
     List<Customer> members,
     Color color,
     IconData icon,
-  )? onSelectStage;
+  )?
+  onSelectStage;
 
   const MembershipDonutChart({
     super.key,
@@ -40,7 +41,8 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
 
   @override
   Widget build(BuildContext context) {
-    final totalActive = widget.liveMembers.length +
+    final totalActive =
+        widget.liveMembers.length +
         widget.expiring1to3.length +
         widget.expiring4to7.length +
         widget.expiring8to15.length;
@@ -61,7 +63,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
         title: 'Expiring in 1–3 Days',
         subtitle: 'Urgent renewal needed within 72h',
         count: widget.expiring1to3.length,
-        color: const Color(0xFFFF5252),
+        color: const Color(0xFFC94A46),
         icon: Icons.alarm_rounded,
         members: widget.expiring1to3,
       ),
@@ -69,7 +71,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
         title: 'Expiring in 4–7 Days',
         subtitle: 'Expiring this week',
         count: widget.expiring4to7.length,
-        color: const Color(0xFFFF9100),
+        color: const Color(0xFFA66510),
         icon: Icons.upcoming_rounded,
         members: widget.expiring4to7,
       ),
@@ -85,7 +87,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
         title: 'Expired',
         subtitle: 'Past renewal date',
         count: widget.expiredMembers.length,
-        color: const Color(0xFFD50000),
+        color: const Color(0xFFB42318),
         icon: Icons.cancel_rounded,
         members: widget.expiredMembers,
       ),
@@ -128,7 +130,11 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.pie_chart_rounded, color: AppColors.primary, size: 20),
+                child: Icon(
+                  Icons.pie_chart_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -146,7 +152,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                     Text(
                       'Health Breakdown & Renewal Urgency',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 14,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -162,7 +168,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                 child: Text(
                   '$activePct% Active',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppColors.paid,
                   ),
@@ -193,7 +199,9 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                               _touchedIndex = -1;
                               return;
                             }
-                            _touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                            _touchedIndex = pieTouchResponse
+                                .touchedSection!
+                                .touchedSectionIndex;
                           });
                         },
                       ),
@@ -208,7 +216,8 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                         return PieChartSectionData(
                           color: segment.color,
                           value: segment.count.toDouble(),
-                          title: '', // Kept clean, numbers displayed in center or legend
+                          title:
+                              '', // Kept clean, numbers displayed in center or legend
                           radius: radius,
                         );
                       }),
@@ -216,7 +225,11 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                   ),
 
                   // Center Text Info
-                  _buildCenterInfo(nonZeroSegments, totalActive, widget.totalMembers),
+                  _buildCenterInfo(
+                    nonZeroSegments,
+                    totalActive,
+                    widget.totalMembers,
+                  ),
                 ],
               ),
             ),
@@ -235,21 +248,25 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
               return InkWell(
                 onTap: seg.members.isNotEmpty && widget.onSelectStage != null
                     ? () => widget.onSelectStage!(
-                          seg.title,
-                          seg.subtitle,
-                          seg.members,
-                          seg.color,
-                          seg.icon,
-                        )
+                        seg.title,
+                        seg.subtitle,
+                        seg.members,
+                        seg.color,
+                        seg.icon,
+                      )
                     : null,
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceElevated,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: seg.count > 0 && seg.color == const Color(0xFFFF5252)
+                      color:
+                          seg.count > 0 && seg.color == const Color(0xFFC94A46)
                           ? seg.color.withValues(alpha: 0.5)
                           : AppColors.surfaceBorder,
                     ),
@@ -269,14 +286,17 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                       Text(
                         seg.title,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: seg.color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
@@ -284,7 +304,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                         child: Text(
                           '${seg.count} ($pct%)',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 14,
                             fontWeight: FontWeight.w800,
                             color: seg.color,
                           ),
@@ -308,7 +328,9 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
   ) {
     if (_touchedIndex >= 0 && _touchedIndex < nonZeroSegments.length) {
       final touched = nonZeroSegments[_touchedIndex];
-      final pct = totalMembers > 0 ? (touched.count / totalMembers * 100).round() : 0;
+      final pct = totalMembers > 0
+          ? (touched.count / totalMembers * 100).round()
+          : 0;
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -323,7 +345,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
           Text(
             '$pct% of Total',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
             ),
@@ -346,7 +368,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
         Text(
           'Active / $totalMembers',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: AppColors.textMuted,
           ),
@@ -362,12 +384,16 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.groups_outlined, size: 40, color: AppColors.textMuted.withValues(alpha: 0.5)),
+          Icon(
+            Icons.groups_outlined,
+            size: 40,
+            color: AppColors.textMuted.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 8),
           Text(
             'No Members Registered',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -376,10 +402,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
           Text(
             'Add members to view live membership health and expiry funnel distributions.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textMuted,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
           ),
         ],
       ),

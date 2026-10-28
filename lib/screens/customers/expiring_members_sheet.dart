@@ -113,22 +113,30 @@ class ExpiringMembersSheet extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             subtitle,
-                            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: accentColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+                        border: Border.all(
+                          color: accentColor.withValues(alpha: 0.4),
+                        ),
                       ),
                       child: Text(
                         '${members.length} Members',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: accentColor,
                         ),
@@ -146,7 +154,11 @@ class ExpiringMembersSheet extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_circle_outline, size: 52, color: AppColors.paid),
+                            Icon(
+                              Icons.check_circle_outline,
+                              size: 52,
+                              color: AppColors.paid,
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               'No members in this category',
@@ -159,7 +171,10 @@ class ExpiringMembersSheet extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               'All members in this bucket are up to date.',
-                              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ],
                         ),
@@ -170,7 +185,9 @@ class ExpiringMembersSheet extends StatelessWidget {
                         itemCount: members.length,
                         itemBuilder: (context, index) {
                           final customer = members[index];
-                          final expiryDate = gym.getCustomerExpiryDate(customer);
+                          final expiryDate = gym.getCustomerExpiryDate(
+                            customer,
+                          );
                           final daysLeft = gym.getDaysUntilExpiry(customer);
                           final renewalFee = gym.settings.getPriceForDuration(
                             customer.planType,
@@ -180,11 +197,13 @@ class ExpiringMembersSheet extends StatelessWidget {
                           final String expiryLabel;
                           if (daysLeft < 0) {
                             final d = daysLeft.abs();
-                            expiryLabel = 'Expired $d ${d == 1 ? "day" : "days"} ago';
+                            expiryLabel =
+                                'Expired $d ${d == 1 ? "day" : "days"} ago';
                           } else if (daysLeft == 0) {
                             expiryLabel = 'Expires Today!';
                           } else {
-                            expiryLabel = 'Expires in $daysLeft ${daysLeft == 1 ? "day" : "days"}';
+                            expiryLabel =
+                                'Expires in $daysLeft ${daysLeft == 1 ? "day" : "days"}';
                           }
 
                           return Card(
@@ -204,7 +223,8 @@ class ExpiringMembersSheet extends StatelessWidget {
                                 children: [
                                   // Top Row: Avatar, Name, Expiry Pill
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       CustomerAvatar(
                                         imagePath: customer.imagePath,
@@ -215,7 +235,8 @@ class ExpiringMembersSheet extends StatelessWidget {
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               customer.name,
@@ -226,67 +247,89 @@ class ExpiringMembersSheet extends StatelessWidget {
                                               ),
                                             ),
                                             const SizedBox(height: 2),
-                                             InkWell(
-                                               onTap: () {
-                                                 PhoneService().makeCall(
-                                                   customer.phone,
-                                                   context: context,
-                                                   memberName: customer.name,
-                                                 );
-                                               },
-                                               borderRadius: BorderRadius.circular(6),
-                                               child: Row(
-                                                 mainAxisSize: MainAxisSize.min,
-                                                 children: [
-                                                   Icon(Icons.phone_outlined, size: 12, color: AppColors.primary),
-                                                   const SizedBox(width: 4),
-                                                   Text(
-                                                     customer.phone,
-                                                     style: TextStyle(
-                                                       fontSize: 12,
-                                                       color: AppColors.textSecondary,
-                                                     ),
-                                                   ),
-                                                 ],
-                                               ),
-                                             ),
+                                            InkWell(
+                                              onTap: () {
+                                                PhoneService().makeCall(
+                                                  customer.phone,
+                                                  context: context,
+                                                  memberName: customer.name,
+                                                );
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.phone_outlined,
+                                                    size: 12,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    customer.phone,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                             const SizedBox(height: 4),
                                             Wrap(
                                               spacing: 6,
                                               children: [
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 7,
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 7,
                                                         vertical: 2,
-                                                  ),
+                                                      ),
                                                   decoration: BoxDecoration(
-                                                    color: AppColors.surfaceBorder,
-                                                    borderRadius: BorderRadius.circular(6),
+                                                    color:
+                                                        AppColors.surfaceBorder,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
                                                   ),
                                                   child: Text(
-                                                    CustomerPlan.getShortLabel(customer.planType),
+                                                    CustomerPlan.getShortLabel(
+                                                      customer.planType,
+                                                    ),
                                                     style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: AppColors.textSecondary,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: AppColors
+                                                          .textSecondary,
                                                     ),
                                                   ),
                                                 ),
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 7,
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 7,
                                                         vertical: 2,
-                                                  ),
+                                                      ),
                                                   decoration: BoxDecoration(
-                                                    color: accentColor.withValues(
-                                                          alpha: 0.15),
-                                                    borderRadius: BorderRadius.circular(6),
+                                                    color: accentColor
+                                                        .withValues(
+                                                          alpha: 0.15,
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
                                                   ),
                                                   child: Text(
                                                     expiryLabel,
                                                     style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w700,
                                                       color: accentColor,
                                                     ),
                                                   ),
@@ -298,18 +341,22 @@ class ExpiringMembersSheet extends StatelessWidget {
                                       ),
                                       // Renewal Fee
                                       Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
                                         children: [
                                           Text(
                                             'Renewal Fee',
                                             style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 14,
                                               color: AppColors.textMuted,
                                             ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            GymDateUtils.formatCurrency(renewalFee, symbol: currency),
+                                            GymDateUtils.formatCurrency(
+                                              renewalFee,
+                                              symbol: currency,
+                                            ),
                                             style: TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.w800,
@@ -317,9 +364,11 @@ class ExpiringMembersSheet extends StatelessWidget {
                                             ),
                                           ),
                                           Text(
-                                            GymDateUtils.formatDisplayDate(expiryDate),
+                                            GymDateUtils.formatDisplayDate(
+                                              expiryDate,
+                                            ),
                                             style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 14,
                                               color: AppColors.textMuted,
                                             ),
                                           ),
@@ -329,7 +378,10 @@ class ExpiringMembersSheet extends StatelessWidget {
                                   ),
 
                                   const SizedBox(height: 12),
-                                  Divider(color: AppColors.surfaceBorder, height: 1),
+                                  Divider(
+                                    color: AppColors.surfaceBorder,
+                                    height: 1,
+                                  ),
                                   const SizedBox(height: 10),
 
                                   // Action Buttons Row (WhatsApp & Collect Fee)
@@ -339,13 +391,14 @@ class ExpiringMembersSheet extends StatelessWidget {
                                       Expanded(
                                         child: ElevatedButton.icon(
                                           onPressed: () {
-                                            final msg = WhatsAppService().buildMembershipExpiryMessage(
-                                              customer: customer,
-                                              expiryDate: expiryDate,
-                                              daysLeft: daysLeft,
-                                              renewalAmount: renewalFee,
-                                              currency: currency,
-                                            );
+                                            final msg = WhatsAppService()
+                                                .buildMembershipExpiryMessage(
+                                                  customer: customer,
+                                                  expiryDate: expiryDate,
+                                                  daysLeft: daysLeft,
+                                                  renewalAmount: renewalFee,
+                                                  currency: currency,
+                                                );
                                             WhatsAppService().openWhatsApp(
                                               phone: customer.phone,
                                               message: msg,
@@ -353,19 +406,26 @@ class ExpiringMembersSheet extends StatelessWidget {
                                             );
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.whatsappDark,
+                                            backgroundColor:
+                                                AppColors.whatsappDark,
                                             foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(vertical: 9),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 9,
+                                            ),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                             ),
                                             elevation: 0,
                                           ),
-                                          icon: const Icon(Icons.chat_bubble_outline, size: 15),
+                                          icon: const Icon(
+                                            Icons.chat_bubble_outline,
+                                            size: 15,
+                                          ),
                                           label: const Text(
                                             'WhatsApp',
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 14,
                                               fontWeight: FontWeight.w700,
                                             ),
                                             maxLines: 1,
@@ -386,17 +446,26 @@ class ExpiringMembersSheet extends StatelessWidget {
                                           },
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: AppColors.primary,
-                                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                                            padding: const EdgeInsets.symmetric(vertical: 9),
+                                            side: BorderSide(
+                                              color: AppColors.primary
+                                                  .withValues(alpha: 0.5),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 9,
+                                            ),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                             ),
                                           ),
-                                          icon: const Icon(Icons.check_circle_outline, size: 15),
+                                          icon: const Icon(
+                                            Icons.check_circle_outline,
+                                            size: 15,
+                                          ),
                                           label: const Text(
                                             'Renew',
                                             style: TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 14,
                                               fontWeight: FontWeight.w700,
                                             ),
                                             maxLines: 1,
@@ -407,38 +476,53 @@ class ExpiringMembersSheet extends StatelessWidget {
 
                                       const SizedBox(width: 4),
 
-                                       // Call Member Button
-                                       IconButton(
-                                         padding: EdgeInsets.zero,
-                                         constraints: const BoxConstraints(minWidth: 36,
-                                          minHeight: 36),
-                                         icon: Icon(Icons.call_rounded, size: 18, color: AppColors.primary),
-                                         tooltip: 'Call Member',
-                                         onPressed: () {
-                                           PhoneService().makeCall(
-                                             customer.phone,
-                                             context: context,
-                                             memberName: customer.name,
-                                           );
-                                         },
-                                       ),
+                                      // Call Member Button
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 36,
+                                          minHeight: 36,
+                                        ),
+                                        icon: Icon(
+                                          Icons.call_rounded,
+                                          size: 18,
+                                          color: AppColors.primary,
+                                        ),
+                                        tooltip: 'Call Member',
+                                        onPressed: () {
+                                          PhoneService().makeCall(
+                                            customer.phone,
+                                            context: context,
+                                            memberName: customer.name,
+                                          );
+                                        },
+                                      ),
 
-                                       // Member Detail Profile Button
-                                       IconButton(
-                                         padding: EdgeInsets.zero,
-                                         constraints: const BoxConstraints(minWidth: 36,
-                                          minHeight: 36),
-                                         icon: Icon(Icons.person_outline, size: 18, color: AppColors.textSecondary),
-                                         tooltip: 'View Member Profile',
-                                         onPressed: () {
-                                           Navigator.push(
-                                             context,
-                                             MaterialPageRoute(
-                                               builder: (_) => CustomerDetailScreen(customerId: customer.id),
-                                             ),
-                                           );
-                                         },
-                                       ),
+                                      // Member Detail Profile Button
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 36,
+                                          minHeight: 36,
+                                        ),
+                                        icon: Icon(
+                                          Icons.person_outline,
+                                          size: 18,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        tooltip: 'View Member Profile',
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  CustomerDetailScreen(
+                                                    customerId: customer.id,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ],
                                   ),
                                 ],

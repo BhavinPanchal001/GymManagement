@@ -15,7 +15,8 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   // Sign In controllers
@@ -161,7 +162,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
       // Step 3: Attach with isNewUser: true to guarantee completely empty, clean state
       if (newUserId != null) {
-        await GymService().attachUser(newUserId, isNewUser: true, initialSettings: freshSettings);
+        await GymService().attachUser(
+          newUserId,
+          isNewUser: true,
+          initialSettings: freshSettings,
+        );
       }
       // Navigation is automatically handled by AuthGate
     } catch (e) {
@@ -199,7 +204,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   AnimatedSize(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeInOut,
-                    child: _tabController.index == 0 ? _buildSignInCard() : _buildSignUpCard(),
+                    child: _tabController.index == 0
+                        ? _buildSignInCard()
+                        : _buildSignUpCard(),
                   ),
                 ],
               ),
@@ -219,16 +226,22 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           decoration: BoxDecoration(
             color: AppColors.primary,
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(color: AppColors.primary.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 8)),
-            ],
           ),
-          child: Icon(Icons.fitness_center_rounded, color: AppColors.primaryOn, size: 38),
+          child: Icon(
+            Icons.fitness_center_rounded,
+            color: AppColors.primaryOn,
+            size: 38,
+          ),
         ),
         const SizedBox(height: 18),
         Text(
           'GYM MANAGER',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+          ),
         ),
         const SizedBox(height: 6),
         Text(
@@ -256,13 +269,19 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         indicator: BoxDecoration(
           color: AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.2),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.5),
+            width: 1.2,
+          ),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.textSecondary,
         labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
         tabs: const [
           Tab(text: 'Sign In'),
           Tab(text: 'Create Account'),
@@ -285,7 +304,10 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_signInError != null) ...[_buildErrorBanner(_signInError!), const SizedBox(height: 18)],
+              if (_signInError != null) ...[
+                _buildErrorBanner(_signInError!),
+                const SizedBox(height: 18),
+              ],
 
               // Email input
               _buildTextField(
@@ -299,7 +321,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   if (val == null || val.trim().isEmpty) {
                     return 'Please enter your email';
                   }
-                  if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(val.trim())) {
+                  if (!RegExp(
+                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                  ).hasMatch(val.trim())) {
                     return 'Please enter a valid email address';
                   }
                   return null;
@@ -317,7 +341,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 autofillHints: const [AutofillHints.password],
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _signInObscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    _signInObscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     color: AppColors.textMuted,
                     size: 20,
                   ),
@@ -337,8 +363,10 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               const SizedBox(height: 8),
 
               // Remember Me & Forgot Password
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   InkWell(
                     onTap: () {
@@ -351,7 +379,10 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 4,
+                        horizontal: 2,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -365,7 +396,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                   _rememberMe = val ?? false;
                                 });
                                 if (!_rememberMe) {
-                                  AuthService().saveCredentials(rememberMe: false);
+                                  AuthService().saveCredentials(
+                                    rememberMe: false,
+                                  );
                                 }
                               },
                               activeColor: AppColors.primary,
@@ -374,10 +407,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               side: BorderSide(
-                                color: AppColors.textMuted.withValues(alpha: 0.6),
+                                color: AppColors.textMuted.withValues(
+                                  alpha: 0.6,
+                                ),
                                 width: 1.5,
                               ),
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                               visualDensity: VisualDensity.compact,
                             ),
                           ),
@@ -386,7 +422,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                             'Remember Me',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -400,7 +436,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                         context,
                         initialEmail: _signInEmailController.text.trim(),
                       );
-                      if (resetEmail != null && resetEmail.trim().isNotEmpty && mounted) {
+                      if (resetEmail != null &&
+                          resetEmail.trim().isNotEmpty &&
+                          mounted) {
                         setState(() {
                           _signInEmailController.text = resetEmail.trim();
                         });
@@ -408,11 +446,20 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                     },
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.secondary,
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 8,
+                      ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('Forgot Password?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -426,7 +473,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.primaryOn,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     elevation: 0,
                   ),
                   child: _isSignInLoading
@@ -435,7 +484,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryOn),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primaryOn,
+                            ),
                           ),
                         )
                       : Row(
@@ -443,7 +494,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           children: [
                             const Icon(Icons.login_rounded, size: 20),
                             const SizedBox(width: 8),
-                            Text('Sign In', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                            Text(
+                              'Sign In',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ],
                         ),
                 ),
@@ -469,7 +526,10 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_signUpError != null) ...[_buildErrorBanner(_signUpError!), const SizedBox(height: 18)],
+              if (_signUpError != null) ...[
+                _buildErrorBanner(_signUpError!),
+                const SizedBox(height: 18),
+              ],
 
               // Gym Brand Logo Selector
               Center(
@@ -479,7 +539,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                       initialLogoPath: _signUpSelectedImagePath,
                       gymName: _signUpGymNameController.text.trim().isNotEmpty
                           ? _signUpGymNameController.text.trim()
-                          : (_signUpNameController.text.trim().isNotEmpty ? _signUpNameController.text.trim() : 'Gym'),
+                          : (_signUpNameController.text.trim().isNotEmpty
+                                ? _signUpNameController.text.trim()
+                                : 'Gym'),
                       title: 'Upload Gym Logo',
                       radius: 44,
                       allowRemove: true,
@@ -496,15 +558,20 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           ? 'Gym logo selected (Tap to change)'
                           : 'Upload Gym Logo (Optional)',
                       style: TextStyle(
-                        color: _signUpSelectedImagePath != null ? AppColors.primary : AppColors.textPrimary,
-                        fontSize: 13,
+                        color: _signUpSelectedImagePath != null
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       'Will appear on Member Entry Cards & Receipts',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -557,7 +624,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   if (val == null || val.trim().isEmpty) {
                     return 'Please enter your email';
                   }
-                  if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(val.trim())) {
+                  if (!RegExp(
+                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                  ).hasMatch(val.trim())) {
                     return 'Please enter a valid email address';
                   }
                   return null;
@@ -575,7 +644,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 autofillHints: const [AutofillHints.newPassword],
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _signUpObscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    _signUpObscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     color: AppColors.textMuted,
                     size: 20,
                   ),
@@ -606,13 +677,16 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 obscureText: _signUpObscureConfirmPassword,
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _signUpObscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    _signUpObscureConfirmPassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     color: AppColors.textMuted,
                     size: 20,
                   ),
                   onPressed: () {
                     setState(() {
-                      _signUpObscureConfirmPassword = !_signUpObscureConfirmPassword;
+                      _signUpObscureConfirmPassword =
+                          !_signUpObscureConfirmPassword;
                     });
                   },
                 ),
@@ -636,7 +710,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.primaryOn,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     elevation: 0,
                   ),
                   child: _isSignUpLoading
@@ -645,7 +721,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryOn),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primaryOn,
+                            ),
                           ),
                         )
                       : Row(
@@ -653,7 +731,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           children: [
                             const Icon(Icons.person_add_rounded, size: 20),
                             const SizedBox(width: 8),
-                            Text('Create Account', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                            Text(
+                              'Create Account',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ],
                         ),
                 ),
@@ -676,11 +760,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     Widget? suffixIcon,
     String? Function(String?)? validator,
   }) {
-    final isName = controller == _signUpNameController ||
+    final isName =
+        controller == _signUpNameController ||
         controller == _signUpGymNameController;
     return TextFormField(
       controller: controller,
-      textCapitalization: isName ? TextCapitalization.words : TextCapitalization.none,
+      textCapitalization: isName
+          ? TextCapitalization.words
+          : TextCapitalization.none,
       inputFormatters: isName ? [NameInputFormatter()] : null,
       obscureText: obscureText,
       keyboardType: keyboardType,
@@ -695,7 +782,10 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: AppColors.surfaceElevated,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: AppColors.surfaceBorder),
@@ -733,7 +823,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: AppColors.absent, fontSize: 13, fontWeight: FontWeight.w500, height: 1.3),
+              style: TextStyle(
+                color: AppColors.absent,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                height: 1.3,
+              ),
             ),
           ),
         ],

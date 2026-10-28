@@ -63,7 +63,8 @@ class DangerConfirmationDialog extends StatefulWidget {
   }
 
   @override
-  State<DangerConfirmationDialog> createState() => _DangerConfirmationDialogState();
+  State<DangerConfirmationDialog> createState() =>
+      _DangerConfirmationDialogState();
 }
 
 class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
@@ -102,7 +103,10 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: BorderSide(color: AppColors.absent.withValues(alpha: 0.4), width: 1.5),
+        side: BorderSide(
+          color: AppColors.absent.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
       ),
       contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -126,7 +130,10 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.absent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
@@ -135,7 +142,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
                     'DANGER ZONE',
                     style: TextStyle(
                       color: AppColors.absent,
-                      fontSize: 10,
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.8,
                     ),
@@ -164,7 +171,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
               widget.description,
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 13,
+                fontSize: 14,
                 height: 1.4,
               ),
             ),
@@ -174,7 +181,9 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF221115) : const Color(0xFFFFF1F2),
+                color: isDark
+                    ? const Color(0xFF221115)
+                    : const Color(0xFFFFF1F2),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: AppColors.absent.withValues(alpha: 0.3),
@@ -185,13 +194,19 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.info_outline_rounded, color: AppColors.absent, size: 16),
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.absent,
+                        size: 16,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Records that will be permanently lost:',
                         style: TextStyle(
-                          color: isDark ? const Color(0xFFFF8A80) : const Color(0xFFBE123C),
-                          fontSize: 12,
+                          color: isDark
+                              ? const Color(0xFFFF8A80)
+                              : const Color(0xFFBE123C),
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -202,11 +217,31 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
                     spacing: 8,
                     runSpacing: 6,
                     children: [
-                      _buildCountBadge('Members', widget.memberCount, Icons.people_outline_rounded),
-                      _buildCountBadge('Attendance', widget.attendanceCount, Icons.event_available_rounded),
-                      _buildCountBadge('Payments', widget.paymentCount, Icons.receipt_long_rounded),
-                      _buildCountBadge('Invoices', widget.billCount, Icons.description_outlined),
-                      _buildCountBadge('Expenses', widget.expenseCount, Icons.account_balance_wallet_outlined),
+                      _buildCountBadge(
+                        'Members',
+                        widget.memberCount,
+                        Icons.people_outline_rounded,
+                      ),
+                      _buildCountBadge(
+                        'Attendance',
+                        widget.attendanceCount,
+                        Icons.event_available_rounded,
+                      ),
+                      _buildCountBadge(
+                        'Payments',
+                        widget.paymentCount,
+                        Icons.receipt_long_rounded,
+                      ),
+                      _buildCountBadge(
+                        'Invoices',
+                        widget.billCount,
+                        Icons.description_outlined,
+                      ),
+                      _buildCountBadge(
+                        'Expenses',
+                        widget.expenseCount,
+                        Icons.account_balance_wallet_outlined,
+                      ),
                     ],
                   ),
                 ],
@@ -217,7 +252,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
             // Confirmation phrase prompt
             RichText(
               text: TextSpan(
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                 children: [
                   const TextSpan(text: 'To confirm, type '),
                   TextSpan(
@@ -252,7 +287,10 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
                 ),
                 filled: true,
                 fillColor: AppColors.surfaceElevated,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: AppColors.surfaceBorder),
@@ -263,7 +301,10 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.absent, width: 2),
+                  borderSide: const BorderSide(
+                    color: AppColors.absent,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
@@ -276,18 +317,27 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
           onPressed: () => Navigator.of(context).pop(false),
           child: Text(
             'Cancel',
-            style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: _isConfirmed ? AppColors.absent : AppColors.surfaceBorder,
+            backgroundColor: _isConfirmed
+                ? AppColors.absent
+                : AppColors.surfaceBorder,
             foregroundColor: _isConfirmed ? Colors.white : AppColors.textMuted,
             elevation: _isConfirmed ? 2 : 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           ),
-          onPressed: _isConfirmed ? () => Navigator.of(context).pop(true) : null,
+          onPressed: _isConfirmed
+              ? () => Navigator.of(context).pop(true)
+              : null,
           child: Text(
             widget.actionLabel,
             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -314,7 +364,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
             '$count $label',
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 11,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),

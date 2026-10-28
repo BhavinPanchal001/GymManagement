@@ -37,10 +37,12 @@ class CollectionHistoryReportScreen extends StatefulWidget {
   const CollectionHistoryReportScreen({super.key});
 
   @override
-  State<CollectionHistoryReportScreen> createState() => _CollectionHistoryReportScreenState();
+  State<CollectionHistoryReportScreen> createState() =>
+      _CollectionHistoryReportScreenState();
 }
 
-class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportScreen> {
+class _CollectionHistoryReportScreenState
+    extends State<CollectionHistoryReportScreen> {
   CollectionDatePreset _selectedPreset = CollectionDatePreset.thisMonth;
   late DateTime _startDate;
   late DateTime _endDate;
@@ -127,29 +129,42 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
     }
   }
 
-  List<MemberCollectionSummary> _filterAndSortMembers(List<MemberCollectionSummary> original) {
+  List<MemberCollectionSummary> _filterAndSortMembers(
+    List<MemberCollectionSummary> original,
+  ) {
     var list = original;
 
     // Search query filter
     if (_searchQuery.trim().isNotEmpty) {
       final q = _searchQuery.toLowerCase().trim();
       list = list.where((m) {
-        return m.customer.name.toLowerCase().contains(q) || m.customer.phone.contains(q);
+        return m.customer.name.toLowerCase().contains(q) ||
+            m.customer.phone.contains(q);
       }).toList();
     }
 
     // Sort
     switch (_sortOrder) {
       case CollectionSortOrder.highestCollection:
-        list.sort((a, b) => b.totalCollectedAmount.compareTo(a.totalCollectedAmount));
+        list.sort(
+          (a, b) => b.totalCollectedAmount.compareTo(a.totalCollectedAmount),
+        );
         break;
       case CollectionSortOrder.nameAZ:
-        list.sort((a, b) => a.customer.name.toLowerCase().compareTo(b.customer.name.toLowerCase()));
+        list.sort(
+          (a, b) => a.customer.name.toLowerCase().compareTo(
+            b.customer.name.toLowerCase(),
+          ),
+        );
         break;
       case CollectionSortOrder.mostRecent:
         list.sort((a, b) {
-          final latestA = a.paidRecords.isNotEmpty ? a.paidRecords.first.paidAt ?? DateTime(2000) : DateTime(2000);
-          final latestB = b.paidRecords.isNotEmpty ? b.paidRecords.first.paidAt ?? DateTime(2000) : DateTime(2000);
+          final latestA = a.paidRecords.isNotEmpty
+              ? a.paidRecords.first.paidAt ?? DateTime(2000)
+              : DateTime(2000);
+          final latestB = b.paidRecords.isNotEmpty
+              ? b.paidRecords.first.paidAt ?? DateTime(2000)
+              : DateTime(2000);
           return latestB.compareTo(latestA);
         });
         break;
@@ -158,23 +173,31 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
     return list;
   }
 
-  List<MonthCollectionGroup> _filterMonthGroups(List<MonthCollectionGroup> original) {
+  List<MonthCollectionGroup> _filterMonthGroups(
+    List<MonthCollectionGroup> original,
+  ) {
     if (_searchQuery.trim().isEmpty) return original;
     final q = _searchQuery.toLowerCase().trim();
 
     final filteredGroups = <MonthCollectionGroup>[];
     for (final group in original) {
       final matchingItems = group.items.where((it) {
-        return it.customer.name.toLowerCase().contains(q) || it.customer.phone.contains(q);
+        return it.customer.name.toLowerCase().contains(q) ||
+            it.customer.phone.contains(q);
       }).toList();
 
       if (matchingItems.isNotEmpty) {
-        final groupTotal = matchingItems.fold<double>(0.0, (s, it) => s + it.payment.amount);
-        filteredGroups.add(MonthCollectionGroup(
-          monthKey: group.monthKey,
-          items: matchingItems,
-          totalAmount: groupTotal,
-        ));
+        final groupTotal = matchingItems.fold<double>(
+          0.0,
+          (s, it) => s + it.payment.amount,
+        );
+        filteredGroups.add(
+          MonthCollectionGroup(
+            monthKey: group.monthKey,
+            items: matchingItems,
+            totalAmount: groupTotal,
+          ),
+        );
       }
     }
     return filteredGroups;
@@ -183,8 +206,9 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
   void _viewReceipt(Customer customer, PaymentRecord payment) {
     // Find the bill for this payment
     final gym = GymService();
-    final bills = gym.billsMap.values.where((b) =>
-        b.paymentId == payment.id && b.isPaid).toList();
+    final bills = gym.billsMap.values
+        .where((b) => b.paymentId == payment.id && b.isPaid)
+        .toList();
 
     if (bills.isNotEmpty) {
       BillReceiptDialog.show(context, bill: bills.first);
@@ -207,11 +231,20 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
         final gym = GymService();
         final currency = gym.settings.currencySymbol;
 
-        final rawMemberSummaries = gym.getCollectionsByMember(_startDate, _endDate);
+        final rawMemberSummaries = gym.getCollectionsByMember(
+          _startDate,
+          _endDate,
+        );
         final rawMonthGroups = gym.getCollectionsByMonth(_startDate, _endDate);
 
-        final totalCollected = rawMemberSummaries.fold<double>(0.0, (s, m) => s + m.totalCollectedAmount);
-        final totalPayments = rawMemberSummaries.fold<int>(0, (s, m) => s + m.paidRecords.length);
+        final totalCollected = rawMemberSummaries.fold<double>(
+          0.0,
+          (s, m) => s + m.totalCollectedAmount,
+        );
+        final totalPayments = rawMemberSummaries.fold<int>(
+          0,
+          (s, m) => s + m.paidRecords.length,
+        );
 
         final memberSummaries = _filterAndSortMembers(rawMemberSummaries);
         final monthGroups = _filterMonthGroups(rawMonthGroups);
@@ -220,32 +253,35 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
           backgroundColor: AppColors.background,
           appBar: AppBar(
             title: const Text('Collection History'),
-            actions: const [
-              SizedBox(width: 4),
-            ],
+            actions: const [SizedBox(width: 4)],
           ),
           body: Column(
-              children: [
-                // Presets Filter Chips
-                _buildPresetChips(),
+            children: [
+              // Presets Filter Chips
+              _buildPresetChips(),
 
-                // Date Range Active Indicator
-                _buildDateRangeHeader(),
+              // Date Range Active Indicator
+              _buildDateRangeHeader(),
 
-                // Top KPI Summary Cards
-                _buildKpiSection(totalCollected, rawMemberSummaries.length, totalPayments, currency),
+              // Top KPI Summary Cards
+              _buildKpiSection(
+                totalCollected,
+                rawMemberSummaries.length,
+                totalPayments,
+                currency,
+              ),
 
-                // Search, Sort & View Mode Bar
-                _buildFilterAndModeBar(rawMemberSummaries.length),
+              // Search, Sort & View Mode Bar
+              _buildFilterAndModeBar(rawMemberSummaries.length),
 
-                // Main Content List
-                Expanded(
-                  child: _viewMode == CollectionViewMode.byMember
-                      ? _buildByMemberView(memberSummaries, currency)
-                      : _buildByMonthView(monthGroups, currency),
-                ),
-              ],
-            ),
+              // Main Content List
+              Expanded(
+                child: _viewMode == CollectionViewMode.byMember
+                    ? _buildByMemberView(memberSummaries, currency)
+                    : _buildByMonthView(monthGroups, currency),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -273,14 +309,18 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
               backgroundColor: AppColors.surfaceElevated,
               selectedColor: AppColors.primary,
               labelStyle: TextStyle(
-                color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primaryOn
+                    : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 12,
+                fontSize: 14,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
                 side: BorderSide(
-                  color: isSelected ? AppColors.primary : AppColors.surfaceBorder,
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.surfaceBorder,
                 ),
               ),
               showCheckmark: false,
@@ -314,7 +354,7 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
-                fontSize: 13,
+                fontSize: 14,
               ),
             ),
           ),
@@ -330,9 +370,19 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
               ),
               child: Row(
                 children: [
-                  Icon(Icons.edit_calendar_rounded, color: AppColors.textSecondary, size: 14),
+                  Icon(
+                    Icons.edit_calendar_rounded,
+                    color: AppColors.textSecondary,
+                    size: 14,
+                  ),
                   const SizedBox(width: 4),
-                  Text('Change', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                  Text(
+                    'Change',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -342,7 +392,12 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
     );
   }
 
-  Widget _buildKpiSection(double totalCollected, int membersCount, int paymentsCount, String currency) {
+  Widget _buildKpiSection(
+    double totalCollected,
+    int membersCount,
+    int paymentsCount,
+    String currency,
+  ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -374,7 +429,7 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                       'TOTAL COLLECTED',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 10,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
@@ -404,7 +459,7 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                   'MEMBERS',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 10,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),
@@ -432,7 +487,7 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                   'PAYMENTS',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 10,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),
@@ -468,11 +523,21 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                   child: TextField(
                     controller: _searchController,
                     onChanged: (val) => setState(() => _searchQuery = val),
-                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Search member or phone...',
-                      hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                      prefixIcon: Icon(Icons.search_rounded, color: AppColors.textMuted, size: 18),
+                      hintStyle: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        color: AppColors.textMuted,
+                        size: 18,
+                      ),
                       suffixIcon: VoiceSearchSuffix(
                         controller: _searchController,
                         voiceHint: 'Say member name or phone number...',
@@ -480,7 +545,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                         onChanged: (val) => setState(() => _searchQuery = val),
                         onClear: () => setState(() => _searchQuery = ''),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 0,
+                        horizontal: 12,
+                      ),
                       filled: true,
                       fillColor: AppColors.surface,
                       border: OutlineInputBorder(
@@ -493,7 +561,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: AppColors.primary, width: 1.2),
+                        borderSide: BorderSide(
+                          color: AppColors.primary,
+                          width: 1.2,
+                        ),
                       ),
                     ),
                   ),
@@ -517,12 +588,22 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                     child: Row(
                       children: [
                         Icon(
-                          order == _sortOrder ? Icons.radio_button_checked : Icons.radio_button_off,
-                          color: order == _sortOrder ? AppColors.primary : AppColors.textSecondary,
+                          order == _sortOrder
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: order == _sortOrder
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
                           size: 16,
                         ),
                         const SizedBox(width: 8),
-                        Text(order.label, style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                        Text(
+                          order.label,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -537,7 +618,11 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.sort_rounded, color: AppColors.textSecondary, size: 18),
+                      Icon(
+                        Icons.sort_rounded,
+                        color: AppColors.textSecondary,
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
@@ -551,10 +636,12 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
             children: [
               Expanded(
                 child: Text(
-                  totalCount == 1 ? '1 member paid' : '$totalCount members paid',
+                  totalCount == 1
+                      ? '1 member paid'
+                      : '$totalCount members paid',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -573,8 +660,16 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildViewToggleButton('By Member', CollectionViewMode.byMember, Icons.person_rounded),
-                    _buildViewToggleButton('By Month', CollectionViewMode.byMonth, Icons.calendar_view_month_rounded),
+                    _buildViewToggleButton(
+                      'By Member',
+                      CollectionViewMode.byMember,
+                      Icons.person_rounded,
+                    ),
+                    _buildViewToggleButton(
+                      'By Month',
+                      CollectionViewMode.byMonth,
+                      Icons.calendar_view_month_rounded,
+                    ),
                   ],
                 ),
               ),
@@ -585,7 +680,11 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
     );
   }
 
-  Widget _buildViewToggleButton(String title, CollectionViewMode mode, IconData icon) {
+  Widget _buildViewToggleButton(
+    String title,
+    CollectionViewMode mode,
+    IconData icon,
+  ) {
     final isSelected = _viewMode == mode;
     return GestureDetector(
       onTap: () => setState(() => _viewMode = mode),
@@ -607,8 +706,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
             Text(
               title,
               style: TextStyle(
-                color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
-                fontSize: 11,
+                color: isSelected
+                    ? AppColors.primaryOn
+                    : AppColors.textSecondary,
+                fontSize: 14,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
@@ -618,7 +719,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
     );
   }
 
-  Widget _buildByMemberView(List<MemberCollectionSummary> list, String currency) {
+  Widget _buildByMemberView(
+    List<MemberCollectionSummary> list,
+    String currency,
+  ) {
     if (list.isEmpty) {
       return _buildEmptyState();
     }
@@ -678,12 +782,19 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.phone_rounded, color: AppColors.primary, size: 12),
+                              Icon(
+                                Icons.phone_rounded,
+                                color: AppColors.primary,
+                                size: 12,
+                              ),
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
                                   customer.phone,
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 14,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -700,7 +811,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        GymDateUtils.formatCurrency(item.totalCollectedAmount, symbol: currency),
+                        GymDateUtils.formatCurrency(
+                          item.totalCollectedAmount,
+                          symbol: currency,
+                        ),
                         style: const TextStyle(
                           color: AppColors.paid,
                           fontSize: 16,
@@ -711,7 +825,7 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                         '${item.paidRecords.length} ${item.paidRecords.length == 1 ? 'payment' : 'payments'}',
                         style: TextStyle(
                           color: AppColors.textMuted,
-                          fontSize: 11,
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -728,11 +842,16 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                   return GestureDetector(
                     onTap: () => _viewReceipt(customer, rec),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.paid.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.paid.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppColors.paid.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -741,16 +860,19 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                             GymDateUtils.formatMonthYearKey(rec.monthYear),
                             style: const TextStyle(
                               color: AppColors.paid,
-                              fontSize: 11,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            GymDateUtils.formatCurrency(rec.amount, symbol: currency),
+                            GymDateUtils.formatCurrency(
+                              rec.amount,
+                              symbol: currency,
+                            ),
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 10,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -770,7 +892,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
               ),
 
               const SizedBox(height: 12),
-              Divider(color: AppColors.surfaceBorder.withValues(alpha: 0.6), height: 1),
+              Divider(
+                color: AppColors.surfaceBorder.withValues(alpha: 0.6),
+                height: 1,
+              ),
               const SizedBox(height: 10),
 
               // Action Buttons Row
@@ -792,9 +917,15 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                         decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                          ),
                         ),
-                        child: Icon(Icons.call_rounded, size: 17, color: AppColors.primary),
+                        child: Icon(
+                          Icons.call_rounded,
+                          size: 17,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -805,18 +936,24 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                     child: SizedBox(
                       height: 38,
                       child: ElevatedButton.icon(
-                        onPressed: () => _viewReceipt(customer, item.paidRecords.first),
+                        onPressed: () =>
+                            _viewReceipt(customer, item.paidRecords.first),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.paid,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         icon: const Icon(Icons.receipt_long_rounded, size: 15),
                         label: const Text(
                           'View Receipt',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -857,15 +994,26 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
             children: [
               // Month Group Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                  border: Border(bottom: BorderSide(color: AppColors.surfaceBorder)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(15),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(color: AppColors.surfaceBorder),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 18),
+                    Icon(
+                      Icons.calendar_month_rounded,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       formattedMonth,
@@ -877,7 +1025,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.paid.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
@@ -886,7 +1037,7 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                         '${GymDateUtils.formatCurrency(group.totalAmount, symbol: currency)} collected (${group.items.length})',
                         style: const TextStyle(
                           color: AppColors.paid,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -901,7 +1052,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(12),
                 itemCount: group.items.length,
-                separatorBuilder: (context, index) => Divider(color: AppColors.surfaceBorder.withValues(alpha: 0.5), height: 16),
+                separatorBuilder: (context, index) => Divider(
+                  color: AppColors.surfaceBorder.withValues(alpha: 0.5),
+                  height: 16,
+                ),
                 itemBuilder: (context, j) {
                   final item = group.items[j];
                   final customer = item.customer;
@@ -934,7 +1088,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                               children: [
                                 Text(
                                   customer.phone,
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 14,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -948,7 +1105,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                                   const SizedBox(width: 2),
                                   Text(
                                     PaymentRecord.methodLabel(payment.method),
-                                    style: TextStyle(color: AppColors.textMuted, fontSize: 10),
+                                    style: TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ],
                               ],
@@ -958,22 +1118,32 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        GymDateUtils.formatCurrency(payment.amount, symbol: currency),
+                        GymDateUtils.formatCurrency(
+                          payment.amount,
+                          symbol: currency,
+                        ),
                         style: const TextStyle(
                           color: AppColors.paid,
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
                       const SizedBox(width: 6),
 
                       // Quick Call Icon
                       IconButton(
-                        icon: Icon(Icons.call_rounded, color: AppColors.primary, size: 18),
+                        icon: Icon(
+                          Icons.call_rounded,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
                         tooltip: 'Call Member',
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
                         onPressed: () => PhoneService().makeCall(
                           customer.phone,
                           context: context,
@@ -983,11 +1153,18 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
 
                       // View Receipt Icon
                       IconButton(
-                        icon: Icon(Icons.receipt_long_rounded, color: AppColors.paid, size: 18),
+                        icon: Icon(
+                          Icons.receipt_long_rounded,
+                          color: AppColors.paid,
+                          size: 18,
+                        ),
                         tooltip: 'View Receipt',
                         visualDensity: VisualDensity.compact,
                         padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
                         onPressed: () => _viewReceipt(customer, payment),
                       ),
                     ],
@@ -1031,7 +1208,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
             ),
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1039,18 +1219,28 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: (isSearching ? AppColors.textMuted : AppColors.textSecondary).withValues(alpha: 0.15),
+                        color:
+                            (isSearching
+                                    ? AppColors.textMuted
+                                    : AppColors.textSecondary)
+                                .withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isSearching ? Icons.search_off_rounded : Icons.receipt_long_rounded,
-                        color: isSearching ? AppColors.textSecondary : AppColors.textMuted,
+                        isSearching
+                            ? Icons.search_off_rounded
+                            : Icons.receipt_long_rounded,
+                        color: isSearching
+                            ? AppColors.textSecondary
+                            : AppColors.textMuted,
                         size: 40,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      isSearching ? 'No Matching Members' : 'No Collections Found',
+                      isSearching
+                          ? 'No Matching Members'
+                          : 'No Collections Found',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
@@ -1063,7 +1253,10 @@ class _CollectionHistoryReportScreenState extends State<CollectionHistoryReportS
                           ? 'No payments found matching "$_searchQuery".'
                           : 'No payment collections found for this selected date range.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),

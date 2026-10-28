@@ -8,7 +8,7 @@ class ThemeService extends ChangeNotifier with WidgetsBindingObserver {
 
   static const String _keyThemeMode = 'gym_theme_mode_v1';
 
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.light;
   bool _isInitialized = false;
 
   ThemeMode get themeMode => _themeMode;
@@ -18,7 +18,8 @@ class ThemeService extends ChangeNotifier with WidgetsBindingObserver {
   bool get isDarkMode {
     if (_themeMode == ThemeMode.dark) return true;
     if (_themeMode == ThemeMode.light) return false;
-    final platformBrightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final platformBrightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
     return platformBrightness == Brightness.dark;
   }
 

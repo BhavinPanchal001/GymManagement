@@ -138,7 +138,8 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
           _isListening = false;
           if (error.errorMsg.toLowerCase().contains('denied') ||
               error.errorMsg.toLowerCase().contains('permission')) {
-            _errorMessage = 'Microphone permission denied. Please allow microphone access in settings.';
+            _errorMessage =
+                'Microphone permission denied. Please allow microphone access in settings.';
           } else {
             _errorMessage = 'Speech recognition error: ${error.errorMsg}';
           }
@@ -162,7 +163,9 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
     if (mounted) {
       setState(() {
         _isListening = false;
-        _statusText = _words.isNotEmpty ? 'Tap Search or speak again' : 'Tap mic to speak';
+        _statusText = _words.isNotEmpty
+            ? 'Tap Search or speak again'
+            : 'Tap mic to speak';
       });
     }
   }
@@ -239,7 +242,7 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                     Text(
                       widget.hint,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         color: AppColors.textMuted,
                       ),
                       maxLines: 1,
@@ -276,12 +279,19 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                 if (_errorMessage != null) ...[
                   Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.orange,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: Colors.orange, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],
@@ -310,11 +320,12 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                 ],
                 const SizedBox(height: 8),
                 Text(
-                  _isListening ? 'Speak now...' : (_words.isNotEmpty ? 'Tap search to apply' : 'Tap mic below to try again'),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                  ),
+                  _isListening
+                      ? 'Speak now...'
+                      : (_words.isNotEmpty
+                            ? 'Tap search to apply'
+                            : 'Tap mic below to try again'),
+                  style: TextStyle(fontSize: 14, color: AppColors.textMuted),
                 ),
               ],
             ),
@@ -337,7 +348,10 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: primary.withValues(
-                            alpha: (0.28 * (1.3 - _pulseAnimation.value)).clamp(0.05, 0.3),
+                            alpha: (0.28 * (1.3 - _pulseAnimation.value)).clamp(
+                              0.05,
+                              0.3,
+                            ),
                           ),
                         ),
                       );
@@ -359,9 +373,13 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                       height: 76,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _isListening ? primary : AppColors.surfaceElevated,
+                        color: _isListening
+                            ? primary
+                            : AppColors.surfaceElevated,
                         border: Border.all(
-                          color: _isListening ? primary : AppColors.surfaceBorder,
+                          color: _isListening
+                              ? primary
+                              : AppColors.surfaceBorder,
                           width: 2,
                         ),
                         boxShadow: [
@@ -374,8 +392,12 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                         ],
                       ),
                       child: Icon(
-                        _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                        color: _isListening ? AppColors.primaryOn : AppColors.textPrimary,
+                        _isListening
+                            ? Icons.mic_rounded
+                            : Icons.mic_none_rounded,
+                        color: _isListening
+                            ? AppColors.primaryOn
+                            : AppColors.textPrimary,
                         size: 34,
                       ),
                     ),
@@ -395,8 +417,11 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(7, (index) {
                   final factors = [0.4, 0.7, 1.0, 0.85, 0.5, 0.9, 0.35];
-                  final levelMultiplier = (_soundLevel > 0 ? (_soundLevel / 10).clamp(0.5, 1.5) : 0.8);
-                  final barHeight = (18 * factors[index] * levelMultiplier).clamp(4.0, 22.0);
+                  final levelMultiplier = (_soundLevel > 0
+                      ? (_soundLevel / 10).clamp(0.5, 1.5)
+                      : 0.8);
+                  final barHeight = (18 * factors[index] * levelMultiplier)
+                      .clamp(4.0, 22.0);
 
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
@@ -446,7 +471,8 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                   child: ElevatedButton.icon(
                     onPressed: () => _submitQuery(_words.trim()),
                     icon: Icon(
-                      widget.submitLabel != null && widget.submitLabel != 'Search'
+                      widget.submitLabel != null &&
+                              widget.submitLabel != 'Search'
                           ? Icons.check_rounded
                           : Icons.search_rounded,
                       size: 20,

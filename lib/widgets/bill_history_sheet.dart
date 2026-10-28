@@ -11,11 +11,7 @@ class BillHistorySheet extends StatelessWidget {
   final Customer customer;
   final String? paymentId;
 
-  const BillHistorySheet({
-    super.key,
-    required this.customer,
-    this.paymentId,
-  });
+  const BillHistorySheet({super.key, required this.customer, this.paymentId});
 
   static Future<void> show(
     BuildContext context, {
@@ -26,7 +22,8 @@ class BillHistorySheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => BillHistorySheet(customer: customer, paymentId: paymentId),
+      builder: (ctx) =>
+          BillHistorySheet(customer: customer, paymentId: paymentId),
     );
   }
 
@@ -88,7 +85,11 @@ class BillHistorySheet extends StatelessWidget {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 20),
+                    Icon(
+                      Icons.receipt_long_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -104,7 +105,10 @@ class BillHistorySheet extends StatelessWidget {
                     ),
                     Text(
                       '${bills.length}',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -115,7 +119,10 @@ class BillHistorySheet extends StatelessWidget {
                     child: Center(
                       child: Text(
                         'No bills issued yet.',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   )
@@ -124,7 +131,8 @@ class BillHistorySheet extends StatelessWidget {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: bills.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
                       itemBuilder: (context, i) =>
                           _buildBillRow(context, bills[i], currency),
                     ),
@@ -166,7 +174,7 @@ class BillHistorySheet extends StatelessWidget {
                     bill.billNumber,
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
@@ -175,7 +183,10 @@ class BillHistorySheet extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     '${GymDateUtils.formatMonthYearKey(bill.monthYear)} · Issued ${GymDateUtils.formatShortDate(bill.issuedAt)}',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -189,11 +200,12 @@ class BillHistorySheet extends StatelessWidget {
                 Text(
                   GymDateUtils.formatCurrency(bill.amount, symbol: currency),
                   style: TextStyle(
-                    color: isCancelled ? AppColors.textMuted : AppColors.textPrimary,
+                    color: isCancelled
+                        ? AppColors.textMuted
+                        : AppColors.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
-                    decoration:
-                        isCancelled ? TextDecoration.lineThrough : null,
+                    decoration: isCancelled ? TextDecoration.lineThrough : null,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -225,7 +237,7 @@ class BillHistorySheet extends StatelessWidget {
         label,
         style: TextStyle(
           color: color,
-          fontSize: 9,
+          fontSize: 14,
           fontWeight: FontWeight.w900,
         ),
       ),

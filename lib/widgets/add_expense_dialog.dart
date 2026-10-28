@@ -11,11 +11,18 @@ class AddExpenseDialog extends StatefulWidget {
 
   const AddExpenseDialog({super.key, this.expenseToEdit, this.initialDate});
 
-  static Future<void> show(BuildContext context, {ExpenseRecord? expenseToEdit, DateTime? initialDate}) {
+  static Future<void> show(
+    BuildContext context, {
+    ExpenseRecord? expenseToEdit,
+    DateTime? initialDate,
+  }) {
     return showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AddExpenseDialog(expenseToEdit: expenseToEdit, initialDate: initialDate),
+      builder: (_) => AddExpenseDialog(
+        expenseToEdit: expenseToEdit,
+        initialDate: initialDate,
+      ),
     );
   }
 
@@ -41,7 +48,9 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
     super.initState();
     final edit = widget.expenseToEdit;
     _titleController = TextEditingController(text: edit?.title ?? '');
-    _amountController = TextEditingController(text: edit != null ? edit.amount.toStringAsFixed(0) : '');
+    _amountController = TextEditingController(
+      text: edit != null ? edit.amount.toStringAsFixed(0) : '',
+    );
     _notesController = TextEditingController(text: edit?.notes ?? '');
 
     _selectedCategory = edit?.category ?? ExpenseCategory.rent;
@@ -90,7 +99,9 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
 
     final amount = double.tryParse(_amountController.text.trim());
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid expense amount')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid expense amount')),
+      );
       return;
     }
 
@@ -105,7 +116,9 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
           category: _selectedCategory,
           date: _selectedDate,
           paymentMethod: _selectedPaymentMethod,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         );
         await gym.updateExpense(updated);
       } else {
@@ -115,7 +128,9 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
           category: _selectedCategory,
           date: _selectedDate,
           paymentMethod: _selectedPaymentMethod,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         );
       }
 
@@ -123,16 +138,23 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isEditing ? 'Expense updated successfully' : 'Expense recorded successfully'),
+            content: Text(
+              _isEditing
+                  ? 'Expense updated successfully'
+                  : 'Expense recorded successfully',
+            ),
             backgroundColor: AppColors.paid,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error saving expense: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving expense: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -148,7 +170,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
         backgroundColor: AppColors.surfaceElevated,
         title: Text(
           'Delete Expense?',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: Text(
           'Are you sure you want to delete "${widget.expenseToEdit!.title}"?',
@@ -164,7 +189,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text(
               'Delete',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -175,9 +203,12 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
       await GymService().deleteExpense(widget.expenseToEdit!.id);
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Expense deleted'), backgroundColor: Colors.orange));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Expense deleted'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     }
   }
@@ -212,7 +243,11 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                         color: _selectedCategory.color.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(_selectedCategory.icon, color: _selectedCategory.color, size: 24),
+                      child: Icon(
+                        _selectedCategory.icon,
+                        color: _selectedCategory.color,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -221,11 +256,18 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                         children: [
                           Text(
                             _isEditing ? 'Edit Gym Expense' : 'Add Gym Expense',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                           Text(
                             'Track operating costs & overheads',
-                            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -243,7 +285,11 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                 // Category Grid / Selector
                 Text(
                   'Expense Category',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -254,20 +300,33 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     return ChoiceChip(
                       selected: isSelected,
                       showCheckmark: false,
-                      avatar: Icon(cat.icon, size: 16, color: isSelected ? Colors.black : cat.color),
+                      avatar: Icon(
+                        cat.icon,
+                        size: 16,
+                        color: isSelected ? Colors.black : cat.color,
+                      ),
                       label: Text(
                         cat.label,
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? Colors.black : AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.black
+                              : AppColors.textPrimary,
                         ),
                       ),
                       selectedColor: cat.color,
                       backgroundColor: AppColors.surfaceElevated,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: isSelected ? cat.color : AppColors.surfaceBorder, width: 1),
+                        side: BorderSide(
+                          color: isSelected
+                              ? cat.color
+                              : AppColors.surfaceBorder,
+                          width: 1,
+                        ),
                       ),
                       onSelected: (selected) {
                         if (selected) {
@@ -292,11 +351,17 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                   decoration: InputDecoration(
                     labelText: 'Expense Title / Description',
                     hintText: 'e.g. Gym Rent, Electricity, Treadmill Belt',
-                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    hintStyle: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 14,
+                    ),
                     labelStyle: TextStyle(color: AppColors.textSecondary),
                     filled: true,
                     fillColor: AppColors.surfaceElevated,
-                    prefixIcon: Icon(Icons.edit_note, color: AppColors.textSecondary),
+                    prefixIcon: Icon(
+                      Icons.edit_note,
+                      color: AppColors.textSecondary,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: AppColors.surfaceBorder),
@@ -307,7 +372,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                      borderSide: BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                   validator: (val) {
@@ -327,28 +395,45 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     Expanded(
                       child: TextFormField(
                         controller: _amountController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Amount ($currency)',
                           hintText: '0',
                           hintStyle: TextStyle(color: AppColors.textMuted),
                           labelStyle: TextStyle(color: AppColors.textSecondary),
                           prefixText: '$currency ',
-                          prefixStyle: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 16),
+                          prefixStyle: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                           filled: true,
                           fillColor: AppColors.surfaceElevated,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.surfaceBorder),
+                            borderSide: BorderSide(
+                              color: AppColors.surfaceBorder,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.surfaceBorder),
+                            borderSide: BorderSide(
+                              color: AppColors.surfaceBorder,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
                         validator: (val) {
@@ -370,7 +455,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                         onTap: _pickDate,
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 15,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.surfaceElevated,
                             borderRadius: BorderRadius.circular(12),
@@ -378,18 +466,30 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
+                              Icon(
+                                Icons.calendar_today,
+                                size: 18,
+                                color: AppColors.primary,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text('Date', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
                                     Text(
-                                      GymDateUtils.formatDisplayDate(_selectedDate),
+                                      'Date',
                                       style: TextStyle(
-                                        fontSize: 13,
+                                        fontSize: 14,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                    Text(
+                                      GymDateUtils.formatDisplayDate(
+                                        _selectedDate,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                         color: AppColors.textPrimary,
                                       ),
@@ -416,7 +516,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     labelStyle: TextStyle(color: AppColors.textSecondary),
                     filled: true,
                     fillColor: AppColors.surfaceElevated,
-                    prefixIcon: Icon(Icons.account_balance_wallet_outlined, color: AppColors.textSecondary),
+                    prefixIcon: Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: AppColors.textSecondary,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: AppColors.surfaceBorder),
@@ -431,7 +534,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                       value: method,
                       child: Text(
                         PaymentRecord.methodLabel(method),
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                        ),
                       ),
                     );
                   }).toList(),
@@ -451,11 +557,17 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                   decoration: InputDecoration(
                     labelText: 'Notes / Vendor / Bill # (Optional)',
                     hintText: 'e.g. Paid to Landlord, Bill No #4829',
-                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    hintStyle: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 14,
+                    ),
                     labelStyle: TextStyle(color: AppColors.textSecondary),
                     filled: true,
                     fillColor: AppColors.surfaceElevated,
-                    prefixIcon: Icon(Icons.description_outlined, color: AppColors.textSecondary),
+                    prefixIcon: Icon(
+                      Icons.description_outlined,
+                      color: AppColors.textSecondary,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: AppColors.surfaceBorder),
@@ -473,7 +585,10 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                   children: [
                     if (_isEditing) ...[
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.redAccent,
+                        ),
                         tooltip: 'Delete Expense',
                         onPressed: _isSaving ? null : _delete,
                       ),
@@ -481,13 +596,20 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     ] else ...[
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                          onPressed: _isSaving
+                              ? null
+                              : () => Navigator.of(context).pop(),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             side: BorderSide(color: AppColors.surfaceBorder),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                          child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -499,19 +621,29 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.primaryOn,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           elevation: 0,
                         ),
                         child: _isSaving
                             ? SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryOn),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primaryOn,
+                                ),
                               )
                             : Text(
                                 _isEditing ? 'Update Expense' : 'Save Expense',
-                                style: const TextStyle(fontWeight: FontWeight.w700),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                       ),
                     ),

@@ -12,7 +12,11 @@ class BillPdfPreviewScreen extends StatelessWidget {
 
   const BillPdfPreviewScreen({super.key, required this.bill, this.customer});
 
-  static Future<void> show(BuildContext context, {required BillRecord bill, Customer? customer}) {
+  static Future<void> show(
+    BuildContext context, {
+    required BillRecord bill,
+    Customer? customer,
+  }) {
     return Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => BillPdfPreviewScreen(bill: bill, customer: customer),
@@ -22,7 +26,9 @@ class BillPdfPreviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sanitizedCustomer = bill.customerName.replaceAll(RegExp(r'[^\w\s]+'), '').replaceAll(' ', '_');
+    final sanitizedCustomer = bill.customerName
+        .replaceAll(RegExp(r'[^\w\s]+'), '')
+        .replaceAll(' ', '_');
     final filename = 'Receipt_${bill.billNumber}_$sanitizedCustomer.pdf';
 
     return Scaffold(
@@ -31,10 +37,17 @@ class BillPdfPreviewScreen extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Official Payment Bill', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const Text(
+              'Official Payment Bill',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
             Text(
               '#${bill.billNumber} • ${bill.customerName}',
-              style: TextStyle(fontSize: 12, color: AppColors.dynamicTextSecondary(), fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.dynamicTextSecondary(),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),

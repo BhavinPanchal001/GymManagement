@@ -265,7 +265,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                 : 'Resend email',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 13,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -278,7 +278,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                             'Try another email',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -318,7 +318,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                 'Enter your registered email address',
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
-                                  fontSize: 13,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
@@ -364,7 +364,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                 _errorMessage!,
                                 style: const TextStyle(
                                   color: AppColors.absent,
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   height: 1.3,
                                 ),

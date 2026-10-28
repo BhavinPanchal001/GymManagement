@@ -39,9 +39,11 @@ class BalanceSheetTab extends StatelessWidget {
 
         // Income payment method breakdown (PAID bills collected this month)
         final monthBills = gym.billsMap.values
-            .where((b) =>
-                b.status == 'PAID' &&
-                GymDateUtils.toMonthKey(b.paidAt) == monthKey)
+            .where(
+              (b) =>
+                  b.status == 'PAID' &&
+                  GymDateUtils.toMonthKey(b.paidAt) == monthKey,
+            )
             .toList();
 
         final methodIncome = <PaymentMethod, double>{};
@@ -72,7 +74,8 @@ class BalanceSheetTab extends StatelessWidget {
                 // Revenue Inflows Section
                 _buildSectionHeader(
                   title: 'Revenue Inflow (Collections)',
-                  subtitle: '${monthBills.length} payments collected this month',
+                  subtitle:
+                      '${monthBills.length} payments collected this month',
                   icon: Icons.savings_outlined,
                   color: AppColors.paid,
                 ),
@@ -91,13 +94,18 @@ class BalanceSheetTab extends StatelessWidget {
                           child: Center(
                             child: Text(
                               'No payments collected yet for ${GymDateUtils.formatMonthHeader(monthKey)}',
-                              style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ),
                         ),
                       ] else ...[
                         ...methodIncome.entries.map((entry) {
-                          final pct = totalIncome > 0 ? (entry.value / totalIncome * 100) : 0.0;
+                          final pct = totalIncome > 0
+                              ? (entry.value / totalIncome * 100)
+                              : 0.0;
                           return ListTile(
                             dense: true,
                             leading: Container(
@@ -106,18 +114,31 @@ class BalanceSheetTab extends StatelessWidget {
                                 color: AppColors.paid.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.arrow_downward, size: 16, color: AppColors.paid),
+                              child: Icon(
+                                Icons.arrow_downward,
+                                size: 16,
+                                color: AppColors.paid,
+                              ),
                             ),
                             title: Text(
                               PaymentRecord.methodLabel(entry.key),
-                              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                             subtitle: Text(
                               '${pct.toStringAsFixed(1)}% of total inflow',
-                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                             trailing: Text(
-                              GymDateUtils.formatCurrency(entry.value, symbol: currency),
+                              GymDateUtils.formatCurrency(
+                                entry.value,
+                                symbol: currency,
+                              ),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -129,14 +150,20 @@ class BalanceSheetTab extends StatelessWidget {
                       ],
                       Divider(color: AppColors.surfaceBorder, height: 1),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Text(
                                 'Total Collections',
-                                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -145,7 +172,10 @@ class BalanceSheetTab extends StatelessWidget {
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                GymDateUtils.formatCurrency(totalIncome, symbol: currency),
+                                GymDateUtils.formatCurrency(
+                                  totalIncome,
+                                  symbol: currency,
+                                ),
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
@@ -186,18 +216,28 @@ class BalanceSheetTab extends StatelessWidget {
                               children: [
                                 Text(
                                   'No expenses logged for this month',
-                                  style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors.textMuted,
+                                  ),
                                 ),
                                 const SizedBox(height: 10),
                                 OutlinedButton.icon(
                                   onPressed: () {
-                                    AddExpenseDialog.show(context, initialDate: selectedMonth);
+                                    AddExpenseDialog.show(
+                                      context,
+                                      initialDate: selectedMonth,
+                                    );
                                   },
                                   icon: const Icon(Icons.add, size: 16),
                                   label: const Text('Add Expense'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppColors.primary,
-                                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                                    side: BorderSide(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -206,7 +246,9 @@ class BalanceSheetTab extends StatelessWidget {
                         ),
                       ] else ...[
                         ...breakdown.entries.map((entry) {
-                          final pct = totalExpense > 0 ? (entry.value / totalExpense * 100) : 0.0;
+                          final pct = totalExpense > 0
+                              ? (entry.value / totalExpense * 100)
+                              : 0.0;
                           return ListTile(
                             dense: true,
                             leading: Container(
@@ -215,18 +257,31 @@ class BalanceSheetTab extends StatelessWidget {
                                 color: entry.key.color.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(entry.key.icon, size: 16, color: entry.key.color),
+                              child: Icon(
+                                entry.key.icon,
+                                size: 16,
+                                color: entry.key.color,
+                              ),
                             ),
                             title: Text(
                               entry.key.label,
-                              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                             subtitle: Text(
                               '${pct.toStringAsFixed(1)}% of expenses',
-                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                             trailing: Text(
-                              GymDateUtils.formatCurrency(entry.value, symbol: currency),
+                              GymDateUtils.formatCurrency(
+                                entry.value,
+                                symbol: currency,
+                              ),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -238,14 +293,20 @@ class BalanceSheetTab extends StatelessWidget {
                       ],
                       Divider(color: AppColors.surfaceBorder, height: 1),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Text(
                                 'Total Operating Expenses',
-                                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -254,7 +315,10 @@ class BalanceSheetTab extends StatelessWidget {
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                GymDateUtils.formatCurrency(totalExpense, symbol: currency),
+                                GymDateUtils.formatCurrency(
+                                  totalExpense,
+                                  symbol: currency,
+                                ),
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
@@ -293,12 +357,16 @@ class BalanceSheetTab extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isProfit ? 'NET OPERATING PROFIT' : 'NET OPERATING DEFICIT',
+                              isProfit
+                                  ? 'NET OPERATING PROFIT'
+                                  : 'NET OPERATING DEFICIT',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5,
-                                color: isProfit ? AppColors.paid : AppColors.absent,
+                                color: isProfit
+                                    ? AppColors.paid
+                                    : AppColors.absent,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -306,7 +374,10 @@ class BalanceSheetTab extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               'Margin: ${profitMargin.toStringAsFixed(1)}% • ${isProfit ? 'Healthy gym surplus' : 'Expenses exceed income'}',
-                              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                              ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -317,7 +388,10 @@ class BalanceSheetTab extends StatelessWidget {
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          GymDateUtils.formatCurrency(netProfit.abs(), symbol: currency),
+                          GymDateUtils.formatCurrency(
+                            netProfit.abs(),
+                            symbol: currency,
+                          ),
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
@@ -363,7 +437,7 @@ class BalanceSheetTab extends StatelessWidget {
               ),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                style: TextStyle(fontSize: 14, color: AppColors.textMuted),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

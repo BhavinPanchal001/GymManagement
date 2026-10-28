@@ -38,10 +38,7 @@ class _AnimatedEmptyStateState extends State<AnimatedEmptyState>
     );
 
     _floatAnimation = Tween<double>(begin: 0.0, end: -6.0).animate(
-      CurvedAnimation(
-        parent: _floatController,
-        curve: Curves.easeInOutSine,
-      ),
+      CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
     );
 
     _floatController.repeat(reverse: true);
@@ -95,7 +92,7 @@ class _AnimatedEmptyStateState extends State<AnimatedEmptyState>
                   widget.subtitle!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: AppColors.textMuted,
                     height: 1.4,
                   ),
@@ -119,10 +116,7 @@ class _AnimatedEmptyStateState extends State<AnimatedEmptyState>
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated,
         shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColors.surfaceBorder,
-          width: 1.5,
-        ),
+        border: Border.all(color: AppColors.surfaceBorder, width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),

@@ -95,7 +95,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       customerId: widget.customer.id,
       startDate: _startDate,
       endDate: _endDate,
-      excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+      excludePaymentId: widget.currentRecord.isPaid
+          ? widget.currentRecord.id
+          : null,
     );
   }
 
@@ -119,7 +121,10 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
 
     _totalDue = widget.currentRecord.isPaid || widget.currentRecord.totalDue > 0
         ? widget.currentRecord.totalDue
-        : GymService().settings.getPriceForDuration(widget.customer.planType, _selectedDurationMonths);
+        : GymService().settings.getPriceForDuration(
+            widget.customer.planType,
+            _selectedDurationMonths,
+          );
     if (widget.currentRecord.isPaid &&
         widget.currentRecord.amount > _totalDue + 0.005) {
       _legacyFeeController = TextEditingController(
@@ -134,8 +139,12 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       text: initialAmount.toStringAsFixed(2),
     );
     _amountController.addListener(() => setState(() {}));
-    _refController = TextEditingController(text: widget.currentRecord.transactionRef ?? '');
-    _notesController = TextEditingController(text: widget.currentRecord.notes ?? '');
+    _refController = TextEditingController(
+      text: widget.currentRecord.transactionRef ?? '',
+    );
+    _notesController = TextEditingController(
+      text: widget.currentRecord.notes ?? '',
+    );
     _selectedMethod = widget.currentRecord.method ?? PaymentMethod.gpay;
     _selectedDate = widget.currentRecord.paidAt ?? DateTime.now();
     _initialReceivedDate = _selectedDate;
@@ -154,7 +163,10 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       _cycleModeIndex = 2; // custom
     } else if (_isCurrentlyActive) {
       _startDate = latestExpiry.add(const Duration(days: 1));
-      _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+      _endDate = GymDateUtils.computeAnniversaryEndDate(
+        _startDate,
+        _selectedDurationMonths,
+      );
       _cycleModeIndex = 1; // advance from expiry
     } else {
       final monthParts = widget.monthYear.split('-');
@@ -164,33 +176,54 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         final monthStart = DateTime(y, m, 1);
         final isPastOrFuture = y != today.year || m != today.month;
 
-        final attSummary = GymService().getMonthlyAttendanceSummary(widget.customer.id, widget.monthYear);
+        final attSummary = GymService().getMonthlyAttendanceSummary(
+          widget.customer.id,
+          widget.monthYear,
+        );
         final presentDays = attSummary['present'] ?? 0;
-        final joinDay = DateTime(widget.customer.joinDate.year, widget.customer.joinDate.month, widget.customer.joinDate.day);
+        final joinDay = DateTime(
+          widget.customer.joinDate.year,
+          widget.customer.joinDate.month,
+          widget.customer.joinDate.day,
+        );
         final joinedBeforeToday = joinDay.isBefore(today);
 
         if (isPastOrFuture) {
           // If paying for a past or future specific month, anchor from that month's start
           _startDate = monthStart;
-          _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+          _endDate = GymDateUtils.computeAnniversaryEndDate(
+            _startDate,
+            _selectedDurationMonths,
+          );
           _cycleModeIndex = 2;
         } else if (presentDays > 0 || joinedBeforeToday) {
           // Pay-later member settling current month with existing attendance or earlier start
-          if (joinDay.year == y && joinDay.month == m && joinDay.isAfter(monthStart)) {
+          if (joinDay.year == y &&
+              joinDay.month == m &&
+              joinDay.isAfter(monthStart)) {
             _startDate = joinDay;
           } else {
             _startDate = monthStart;
           }
-          _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+          _endDate = GymDateUtils.computeAnniversaryEndDate(
+            _startDate,
+            _selectedDurationMonths,
+          );
           _cycleModeIndex = 2;
         } else {
           _startDate = today;
-          _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+          _endDate = GymDateUtils.computeAnniversaryEndDate(
+            _startDate,
+            _selectedDurationMonths,
+          );
           _cycleModeIndex = 0; // fresh start from today
         }
       } else {
         _startDate = today;
-        _endDate = GymDateUtils.computeAnniversaryEndDate(_startDate, _selectedDurationMonths);
+        _endDate = GymDateUtils.computeAnniversaryEndDate(
+          _startDate,
+          _selectedDurationMonths,
+        );
         _cycleModeIndex = 0; // fresh start from today
       }
     }
@@ -209,14 +242,13 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate.isAfter(DateTime.now()) ? DateTime.now() : _selectedDate,
+      initialDate: _selectedDate.isAfter(DateTime.now())
+          ? DateTime.now()
+          : _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) {
-        return Theme(
-          data: Theme.of(context),
-          child: child!,
-        );
+        return Theme(data: Theme.of(context), child: child!);
       },
     );
     if (!mounted) return;
@@ -235,17 +267,23 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       initialDate: _startDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) => Theme(data: Theme.of(context), child: child!),
+      builder: (context, child) =>
+          Theme(data: Theme.of(context), child: child!),
     );
     if (!mounted) return;
     FocusManager.instance.primaryFocus?.unfocus();
     if (picked != null) {
-      final newEnd = GymDateUtils.computeAnniversaryEndDate(picked, _selectedDurationMonths);
+      final newEnd = GymDateUtils.computeAnniversaryEndDate(
+        picked,
+        _selectedDurationMonths,
+      );
       final overlapping = GymService().findOverlappingPaidPayment(
         customerId: widget.customer.id,
         startDate: picked,
         endDate: newEnd,
-        excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+        excludePaymentId: widget.currentRecord.isPaid
+            ? widget.currentRecord.id
+            : null,
       );
       setState(() {
         _startDate = picked;
@@ -264,10 +302,13 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _endDate.isAfter(_startDate) ? _endDate : _startDate.add(const Duration(days: 1)),
+      initialDate: _endDate.isAfter(_startDate)
+          ? _endDate
+          : _startDate.add(const Duration(days: 1)),
       firstDate: _startDate,
       lastDate: DateTime.now().add(const Duration(days: 730)),
-      builder: (context, child) => Theme(data: Theme.of(context), child: child!),
+      builder: (context, child) =>
+          Theme(data: Theme.of(context), child: child!),
     );
     if (!mounted) return;
     FocusManager.instance.primaryFocus?.unfocus();
@@ -276,7 +317,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         customerId: widget.customer.id,
         startDate: _startDate,
         endDate: picked,
-        excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+        excludePaymentId: widget.currentRecord.isPaid
+            ? widget.currentRecord.id
+            : null,
       );
       setState(() {
         _endDate = picked;
@@ -293,7 +336,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   Future<void> _submitPayment() async {
     if (_isLoading) return;
     final attendanceError = GymService().paymentPeriodAttendanceError(
-      customerId: widget.customer.id, startDate: _startDate, endDate: _endDate,
+      customerId: widget.customer.id,
+      startDate: _startDate,
+      endDate: _endDate,
       existingPeriod: widget.isRenewal ? null : widget.currentRecord,
     );
     if (attendanceError != null) {
@@ -324,37 +369,46 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
     setState(() => _isLoading = true);
     try {
       final bill = isUpdate
-        ? await GymService().updatePayment(
-            paymentId: widget.currentRecord.id,
-            amount: amount,
-            totalDue: _totalDue,
-            method: _selectedMethod,
-            paidAt: _selectedDate == _initialReceivedDate
-                ? widget.currentRecord.paidAt : _selectedDate,
-            startDate: _startDate,
-            endDate: _endDate,
-            durationMonths: _selectedDurationMonths,
-            notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
-            transactionRef: _refController.text.trim().isNotEmpty
-                  ? _refController.text.trim() : null,
-          )
-        : await GymService().markPaymentAsPaid(
-            customerId: widget.customer.id,
-            monthYear: widget.monthYear,
-            method: _selectedMethod,
-            amount: amount,
-            totalDue: _totalDue,
-            durationMonths: _selectedDurationMonths,
-            startDate: _startDate,
-            endDate: _endDate,
-            notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
-            transactionRef: _refController.text.trim().isNotEmpty ? _refController.text.trim() : null,
-            paidAt: _selectedDate,
-            operationId: _operationId,
-            agreementId: widget.currentRecord.isMembershipAgreement
-                ? widget.currentRecord.id : null,
-            updateFutureRenewalDefault: _updateFutureRenewalDefault,
-          );
+          ? await GymService().updatePayment(
+              paymentId: widget.currentRecord.id,
+              amount: amount,
+              totalDue: _totalDue,
+              method: _selectedMethod,
+              paidAt: _selectedDate == _initialReceivedDate
+                  ? widget.currentRecord.paidAt
+                  : _selectedDate,
+              startDate: _startDate,
+              endDate: _endDate,
+              durationMonths: _selectedDurationMonths,
+              notes: _notesController.text.trim().isNotEmpty
+                  ? _notesController.text.trim()
+                  : null,
+              transactionRef: _refController.text.trim().isNotEmpty
+                  ? _refController.text.trim()
+                  : null,
+            )
+          : await GymService().markPaymentAsPaid(
+              customerId: widget.customer.id,
+              monthYear: widget.monthYear,
+              method: _selectedMethod,
+              amount: amount,
+              totalDue: _totalDue,
+              durationMonths: _selectedDurationMonths,
+              startDate: _startDate,
+              endDate: _endDate,
+              notes: _notesController.text.trim().isNotEmpty
+                  ? _notesController.text.trim()
+                  : null,
+              transactionRef: _refController.text.trim().isNotEmpty
+                  ? _refController.text.trim()
+                  : null,
+              paidAt: _selectedDate,
+              operationId: _operationId,
+              agreementId: widget.currentRecord.isMembershipAgreement
+                  ? widget.currentRecord.id
+                  : null,
+              updateFutureRenewalDefault: _updateFutureRenewalDefault,
+            );
 
       if (mounted) {
         await AnimatedSuccessDialog.show(
@@ -381,12 +435,20 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   }
 
   void _showError(String message) {
-    showDialog<void>(context: context, builder: (context) => AlertDialog(
-      scrollable: true,
-      title: const Text('Check payment details'),
-      content: Text(message),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
-    ));
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: const Text('Check payment details'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _collectBalance() async {
@@ -462,7 +524,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
       case PaymentMethod.paytm:
         return const Color(0xFF00B0FF);
       case PaymentMethod.upi:
-        return const Color(0xFFFF9100);
+        return const Color(0xFFA66510);
       case PaymentMethod.card:
         return const Color(0xFFFF4081);
       case PaymentMethod.netBanking:
@@ -480,14 +542,17 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         left: 20,
         right: 20,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom +
+        bottom:
+            MediaQuery.of(context).viewInsets.bottom +
             MediaQuery.of(context).viewPadding.bottom +
             24,
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: AppColors.surfaceBorder, width: 1.5)),
+        border: Border(
+          top: BorderSide(color: AppColors.surfaceBorder, width: 1.5),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -515,7 +580,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAlreadyPaid ? 'Update Payment' : widget.isRenewal
+                        isAlreadyPaid
+                            ? 'Update Payment'
+                            : widget.isRenewal
                             ? 'Renew Membership'
                             : 'Record Payment',
                         style: TextStyle(
@@ -525,24 +592,32 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Builder(builder: (context) {
-                        final summary = GymService().getMonthlyAttendanceSummary(widget.customer.id, widget.monthYear);
-                        final attendedDays = summary['present'] ?? 0;
-                        return Text(
-                          '${widget.customer.name} • ${GymDateUtils.formatMonthYearKey(widget.monthYear)} ($attendedDays days attended)',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        );
-                      }),
+                      Builder(
+                        builder: (context) {
+                          final summary = GymService()
+                              .getMonthlyAttendanceSummary(
+                                widget.customer.id,
+                                widget.monthYear,
+                              );
+                          final attendedDays = summary['present'] ?? 0;
+                          return Text(
+                            '${widget.customer.name} • ${GymDateUtils.formatMonthYearKey(widget.monthYear)} ($attendedDays days attended)',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10,
-                    vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: isAlreadyPaid
                         ? AppColors.paid.withValues(alpha: 0.15)
@@ -557,7 +632,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     isAlreadyPaid ? 'PAID' : 'PENDING',
                     style: TextStyle(
                       color: isAlreadyPaid ? AppColors.paid : AppColors.pending,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -577,7 +652,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             const SizedBox(height: 8),
             Text(
               'Paid late? Keep the membership dates and set the payment received date below.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 14),
 
@@ -585,7 +660,8 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             _buildDurationPackageSelector(currency),
             const SizedBox(height: 18),
             if (!isAlreadyPaid &&
-                _selectedDurationMonths != widget.customer.planDurationMonths) ...[
+                _selectedDurationMonths !=
+                    widget.customer.planDurationMonths) ...[
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
@@ -607,12 +683,20 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               children: [
                 Text(
                   'Total Due',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const Spacer(),
                 Text(
                   GymDateUtils.formatCurrency(_totalDue, symbol: currency),
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),
@@ -638,60 +722,96 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
 
             // Amount field
             Text(
-              isAlreadyPaid ? 'Total received for this membership' : 'Amount received now',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+              isAlreadyPaid
+                  ? 'Total received for this membership'
+                  : 'Amount received now',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
               decoration: InputDecoration(
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 14, right: 8, top: 12),
                   child: Text(
                     currency,
-                    style: TextStyle(color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
                 hintText: 'Enter amount',
               ),
             ),
-            Builder(builder: (context) {
-              final amountNow = double.tryParse(_amountController.text.trim()) ?? 0;
-              final balance = _totalDue - amountNow;
-              if (balance <= 0.005) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Row(
-                  children: [
-                    Text(
-                      'Balance: ${GymDateUtils.formatCurrency(balance, symbol: currency)}',
-                      style: TextStyle(color: AppColors.pending, fontSize: 13, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.pending.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.pending.withValues(alpha: 0.4)),
+            Builder(
+              builder: (context) {
+                final amountNow =
+                    double.tryParse(_amountController.text.trim()) ?? 0;
+                final balance = _totalDue - amountNow;
+                if (balance <= 0.005) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Balance: ${GymDateUtils.formatCurrency(balance, symbol: currency)}',
+                        style: TextStyle(
+                          color: AppColors.pending,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      child: Text(
-                        'Will be recorded as PARTIAL payment',
-                        style: TextStyle(color: AppColors.pending, fontSize: 10, fontWeight: FontWeight.w700),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.pending.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: AppColors.pending.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Text(
+                          'Will be recorded as PARTIAL payment',
+                          style: TextStyle(
+                            color: AppColors.pending,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }),
+                    ],
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 20),
 
             // Payment Mode selector
             Text(
               'Payment Method',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -709,9 +829,14 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? color.withValues(alpha: 0.2) : AppColors.surfaceElevated,
+                      color: isSelected
+                          ? color.withValues(alpha: 0.2)
+                          : AppColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected ? color : AppColors.surfaceBorder,
@@ -730,9 +855,13 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         Text(
                           method.label,
                           style: TextStyle(
-                            color: isSelected ? (AppColors.isDark ? Colors.white : color) : AppColors.textSecondary,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            fontSize: 13,
+                            color: isSelected
+                                ? (AppColors.isDark ? Colors.white : color)
+                                : AppColors.textSecondary,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            fontSize: 14,
                           ),
                         ),
                       ],
@@ -751,8 +880,13 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAlreadyPaid ? 'Original payment date' : 'Payment received date',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600,
+                        isAlreadyPaid
+                            ? 'Original payment date'
+                            : 'Payment received date',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -760,7 +894,10 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         onTap: _pickDate,
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 13,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.surfaceElevated,
                             borderRadius: BorderRadius.circular(12),
@@ -768,12 +905,21 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 20),
+                              Icon(
+                                Icons.calendar_month_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
                               const SizedBox(width: 10),
-                              Flexible(child: Text(
-                                GymDateUtils.formatDate(_selectedDate),
-                                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-                              )),
+                              Flexible(
+                                child: Text(
+                                  GymDateUtils.formatDate(_selectedDate),
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -788,12 +934,19 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     children: [
                       Text(
                         'Ref / Txn ID (Optional)',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _refController,
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                        ),
                         decoration: const InputDecoration(
                           hintText: 'e.g. UPI-9821...',
                         ),
@@ -808,7 +961,11 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             // Notes
             Text(
               'Remarks / Notes',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -838,36 +995,57 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         _submitPayment();
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _overlappingPayment != null ? AppColors.absent : AppColors.primary,
+                  backgroundColor: _overlappingPayment != null
+                      ? AppColors.absent
+                      : AppColors.primary,
                   foregroundColor: AppColors.primaryOn,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
                 child: _isLoading
                     ? SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primaryOn),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.primaryOn,
+                        ),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(_overlappingPayment != null ? Icons.block_rounded : Icons.check_circle_rounded, size: 20),
-                          const SizedBox(width: 8),
-                          Flexible(child: Text(
+                          Icon(
                             _overlappingPayment != null
-                                ? 'Dates Overlap With Paid Plan'
-                                : (isAlreadyPaid
-                                    ? 'Update Payment Record'
-                                    : ((double.tryParse(_amountController.text.trim()) ?? 0) + 0.005 < _totalDue
-                                        ? 'Record Partial Payment'
-                                        : 'Confirm & Mark as Paid')),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
+                                ? Icons.block_rounded
+                                : Icons.check_circle_rounded,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              _overlappingPayment != null
+                                  ? 'Dates Overlap With Paid Plan'
+                                  : (isAlreadyPaid
+                                        ? 'Update Payment Record'
+                                        : ((double.tryParse(
+                                                            _amountController
+                                                                .text
+                                                                .trim(),
+                                                          ) ??
+                                                          0) +
+                                                      0.005 <
+                                                  _totalDue
+                                              ? 'Record Partial Payment'
+                                              : 'Confirm & Mark as Paid')),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                              ),
                             ),
-                          )),
+                          ),
                         ],
                       ),
               ),
@@ -880,7 +1058,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    final currentAmount = double.tryParse(_amountController.text.trim()) ?? widget.currentRecord.amount;
+                    final currentAmount =
+                        double.tryParse(_amountController.text.trim()) ??
+                        widget.currentRecord.amount;
                     WhatsAppService().showReminderSheet(
                       context: context,
                       customer: widget.customer,
@@ -891,10 +1071,18 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   style: OutlinedButton.styleFrom(
                     backgroundColor: AppColors.whatsapp.withValues(alpha: 0.1),
                     foregroundColor: AppColors.whatsapp,
-                    side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.4)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    side: BorderSide(
+                      color: AppColors.whatsapp.withValues(alpha: 0.4),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
-                  icon: const Icon(Icons.chat_bubble_rounded, size: 18, color: AppColors.whatsapp),
+                  icon: const Icon(
+                    Icons.chat_bubble_rounded,
+                    size: 18,
+                    color: AppColors.whatsapp,
+                  ),
                   label: const Text(
                     'Send WhatsApp Fee Reminder',
                     style: TextStyle(
@@ -918,7 +1106,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.pending,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       elevation: 0,
                     ),
                     icon: const Icon(Icons.payments_rounded, size: 20),
@@ -947,10 +1137,18 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   style: OutlinedButton.styleFrom(
                     backgroundColor: AppColors.paid.withValues(alpha: 0.1),
                     foregroundColor: AppColors.paid,
-                    side: BorderSide(color: AppColors.paid.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    side: BorderSide(
+                      color: AppColors.paid.withValues(alpha: 0.5),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
-                  icon: const Icon(Icons.receipt_long_rounded, size: 20, color: AppColors.paid),
+                  icon: const Icon(
+                    Icons.receipt_long_rounded,
+                    size: 20,
+                    color: AppColors.paid,
+                  ),
                   label: const Text(
                     'View Payment Bill / Receipt',
                     style: TextStyle(
@@ -965,10 +1163,17 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               Center(
                 child: TextButton.icon(
                   onPressed: _isLoading ? null : _revertPayment,
-                  icon: const Icon(Icons.undo_rounded, color: AppColors.absent, size: 18),
+                  icon: const Icon(
+                    Icons.undo_rounded,
+                    color: AppColors.absent,
+                    size: 18,
+                  ),
                   label: const Text(
                     'Revert to Pending',
-                    style: TextStyle(color: AppColors.absent, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: AppColors.absent,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -1001,7 +1206,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               decoration: BoxDecoration(
                 color: AppColors.paid.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.paid.withValues(alpha: 0.35)),
+                border: Border.all(
+                  color: AppColors.paid.withValues(alpha: 0.35),
+                ),
               ),
               child: Row(
                 children: [
@@ -1013,7 +1220,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       style: TextStyle(
                         color: AppColors.paid,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: 14,
                       ),
                     ),
                   ),
@@ -1027,7 +1234,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               'Membership period:',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 11,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1038,13 +1245,19 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 Expanded(
                   child: InkWell(
                     onTap: () {
-                      final newEnd = GymDateUtils.computeAnniversaryEndDate(today, _selectedDurationMonths);
-                      final overlapping = GymService().findOverlappingPaidPayment(
-                        customerId: widget.customer.id,
-                        startDate: today,
-                        endDate: newEnd,
-                        excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+                      final newEnd = GymDateUtils.computeAnniversaryEndDate(
+                        today,
+                        _selectedDurationMonths,
                       );
+                      final overlapping = GymService()
+                          .findOverlappingPaidPayment(
+                            customerId: widget.customer.id,
+                            startDate: today,
+                            endDate: newEnd,
+                            excludePaymentId: widget.currentRecord.isPaid
+                                ? widget.currentRecord.id
+                                : null,
+                          );
                       setState(() {
                         _cycleModeIndex = 0;
                         _startDate = today;
@@ -1058,7 +1271,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 8,
                       ),
                       decoration: BoxDecoration(
                         color: _cycleModeIndex == 0
@@ -1066,7 +1281,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             : AppColors.surface,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: _cycleModeIndex == 0 ? AppColors.paid : AppColors.surfaceBorder,
+                          color: _cycleModeIndex == 0
+                              ? AppColors.paid
+                              : AppColors.surfaceBorder,
                           width: _cycleModeIndex == 0 ? 1.6 : 1,
                         ),
                       ),
@@ -1079,15 +1296,19 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                               Icon(
                                 Icons.fiber_new_rounded,
                                 size: 15,
-                                color: _cycleModeIndex == 0 ? AppColors.paid : AppColors.textSecondary,
+                                color: _cycleModeIndex == 0
+                                    ? AppColors.paid
+                                    : AppColors.textSecondary,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'Fresh Start',
                                 style: TextStyle(
-                                  color: _cycleModeIndex == 0 ? AppColors.paid : AppColors.textPrimary,
+                                  color: _cycleModeIndex == 0
+                                      ? AppColors.paid
+                                      : AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
@@ -1097,7 +1318,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             'From Today (${GymDateUtils.formatShortDate(today)})',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 10,
+                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -1115,13 +1336,19 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         _lastExpiryDate.month,
                         _lastExpiryDate.day + 1,
                       );
-                      final newEnd = GymDateUtils.computeAnniversaryEndDate(nextStart, _selectedDurationMonths);
-                      final overlapping = GymService().findOverlappingPaidPayment(
-                        customerId: widget.customer.id,
-                        startDate: nextStart,
-                        endDate: newEnd,
-                        excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+                      final newEnd = GymDateUtils.computeAnniversaryEndDate(
+                        nextStart,
+                        _selectedDurationMonths,
                       );
+                      final overlapping = GymService()
+                          .findOverlappingPaidPayment(
+                            customerId: widget.customer.id,
+                            startDate: nextStart,
+                            endDate: newEnd,
+                            excludePaymentId: widget.currentRecord.isPaid
+                                ? widget.currentRecord.id
+                                : null,
+                          );
                       setState(() {
                         _cycleModeIndex = 1;
                         _startDate = nextStart;
@@ -1135,7 +1362,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     },
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 8,
                       ),
                       decoration: BoxDecoration(
                         color: _cycleModeIndex == 1
@@ -1143,7 +1372,9 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             : AppColors.surface,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: _cycleModeIndex == 1 ? AppColors.primary : AppColors.surfaceBorder,
+                          color: _cycleModeIndex == 1
+                              ? AppColors.primary
+                              : AppColors.surfaceBorder,
                           width: _cycleModeIndex == 1 ? 1.6 : 1,
                         ),
                       ),
@@ -1156,15 +1387,19 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                               Icon(
                                 Icons.replay_rounded,
                                 size: 14,
-                                color: _cycleModeIndex == 1 ? AppColors.primary : AppColors.textSecondary,
+                                color: _cycleModeIndex == 1
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'Continuous',
                                 style: TextStyle(
-                                  color: _cycleModeIndex == 1 ? AppColors.primary : AppColors.textPrimary,
+                                  color: _cycleModeIndex == 1
+                                      ? AppColors.primary
+                                      : AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
@@ -1174,7 +1409,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             'From ${GymDateUtils.formatShortDate(_lastExpiryDate.add(const Duration(days: 1)))}',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 10,
+                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -1188,215 +1423,279 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           ],
 
           // Exact Start & End Date Pickers Row
-          Builder(builder: (context) {
-            final overlapping = _overlappingPayment;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: _pickStartDate,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: overlapping != null ? AppColors.absent : AppColors.surfaceBorder,
-                              width: overlapping != null ? 1.5 : 1.0,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(child: Text(
-                                    'START DATE',
-                                    style: TextStyle(
-                                      color: overlapping != null ? AppColors.absent : AppColors.textSecondary,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  )),
-                                  Icon(Icons.edit_calendar_rounded, size: 13, color: overlapping != null ? AppColors.absent : AppColors.primary),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                GymDateUtils.formatDate(_startDate),
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.textSecondary),
-                    ),
-                    Expanded(
-                      child: InkWell(
-                        onTap: _pickEndDate,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: overlapping != null ? AppColors.absent : AppColors.surfaceBorder,
-                              width: overlapping != null ? 1.5 : 1.0,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(child: Text(
-                                    'EXPIRY DATE',
-                                    style: TextStyle(
-                                      color: overlapping != null ? AppColors.absent : AppColors.textSecondary,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  )),
-                                  Icon(Icons.edit_calendar_rounded, size: 13, color: overlapping != null ? AppColors.absent : AppColors.primary),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                GymDateUtils.formatDate(_endDate),
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (overlapping != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.absent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.absent.withValues(alpha: 0.45)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.error_outline_rounded, color: AppColors.absent, size: 16),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Overlaps with paid plan (${overlapping.formattedDateRange})',
-                                style: const TextStyle(
-                                  color: AppColors.absent,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'This member has already paid for dates within this period. Please select a non-overlapping start date.',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () {
-                            final nextStart = DateTime(
-                              overlapping.effectiveEndDate.year,
-                              overlapping.effectiveEndDate.month,
-                              overlapping.effectiveEndDate.day + 1,
-                            );
-                            setState(() {
-                              _startDate = nextStart;
-                              _endDate = GymDateUtils.computeAnniversaryEndDate(nextStart, _selectedDurationMonths);
-                              _cycleModeIndex = 2;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(8),
+          Builder(
+            builder: (context) {
+              final overlapping = _overlappingPayment;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: _pickStartDate,
+                          borderRadius: BorderRadius.circular(10),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: overlapping != null
+                                    ? AppColors.absent
+                                    : AppColors.surfaceBorder,
+                                width: overlapping != null ? 1.5 : 1.0,
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.auto_fix_high_rounded, size: 14, color: AppColors.primary),
-                                const SizedBox(width: 6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'START DATE',
+                                        style: TextStyle(
+                                          color: overlapping != null
+                                              ? AppColors.absent
+                                              : AppColors.textSecondary,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.edit_calendar_rounded,
+                                      size: 13,
+                                      color: overlapping != null
+                                          ? AppColors.absent
+                                          : AppColors.primary,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
                                 Text(
-                                  'Start after paid plan (${GymDateUtils.formatShortDate(DateTime(overlapping.effectiveEndDate.year, overlapping.effectiveEndDate.month, overlapping.effectiveEndDate.day + 1))})',
+                                  GymDateUtils.formatDate(_startDate),
                                   style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 11,
+                                    color: AppColors.textPrimary,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ] else ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.date_range_rounded, size: 14, color: AppColors.primary),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Plan Validity: ${GymDateUtils.formatDateRange(_startDate, _endDate)} ($_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"})',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          onTap: _pickEndDate,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: overlapping != null
+                                    ? AppColors.absent
+                                    : AppColors.surfaceBorder,
+                                width: overlapping != null ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'EXPIRY DATE',
+                                        style: TextStyle(
+                                          color: overlapping != null
+                                              ? AppColors.absent
+                                              : AppColors.textSecondary,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.edit_calendar_rounded,
+                                      size: 13,
+                                      color: overlapping != null
+                                          ? AppColors.absent
+                                          : AppColors.primary,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  GymDateUtils.formatDate(_endDate),
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  if (overlapping != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.absent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.absent.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppColors.absent,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Overlaps with paid plan (${overlapping.formattedDateRange})',
+                                  style: const TextStyle(
+                                    color: AppColors.absent,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'This member has already paid for dates within this period. Please select a non-overlapping start date.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () {
+                              final nextStart = DateTime(
+                                overlapping.effectiveEndDate.year,
+                                overlapping.effectiveEndDate.month,
+                                overlapping.effectiveEndDate.day + 1,
+                              );
+                              setState(() {
+                                _startDate = nextStart;
+                                _endDate =
+                                    GymDateUtils.computeAnniversaryEndDate(
+                                      nextStart,
+                                      _selectedDurationMonths,
+                                    );
+                                _cycleModeIndex = 2;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.auto_fix_high_rounded,
+                                    size: 14,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Start after paid plan (${GymDateUtils.formatShortDate(DateTime(overlapping.effectiveEndDate.year, overlapping.effectiveEndDate.month, overlapping.effectiveEndDate.day + 1))})',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.date_range_rounded,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Plan Validity: ${GymDateUtils.formatDateRange(_startDate, _endDate)} ($_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"})',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            );
-          }),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -1412,7 +1711,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
         accentColor = AppColors.secondary;
         break;
       case CustomerPlan.personalTrainingDiet:
-        accentColor = const Color(0xFFFF9100);
+        accentColor = const Color(0xFFA66510);
         break;
       case CustomerPlan.normal:
       default:
@@ -1430,8 +1729,11 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
           children: [
             Text(
               'Package Duration',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13,
-                fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(width: 8),
             Container(
@@ -1442,12 +1744,20 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               ),
               child: Text(
                 CustomerPlan.getShortLabel(widget.customer.planType),
-                style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: accentColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             Text(
               '$_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"}',
-              style: TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: accentColor,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -1463,12 +1773,17 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 padding: const EdgeInsets.only(right: 8),
                 child: InkWell(
                   onTap: () {
-                    final newEnd = GymDateUtils.computeAnniversaryEndDate(_startDate, pkg.months);
+                    final newEnd = GymDateUtils.computeAnniversaryEndDate(
+                      _startDate,
+                      pkg.months,
+                    );
                     final overlapping = GymService().findOverlappingPaidPayment(
                       customerId: widget.customer.id,
                       startDate: _startDate,
                       endDate: newEnd,
-                      excludePaymentId: widget.currentRecord.isPaid ? widget.currentRecord.id : null,
+                      excludePaymentId: widget.currentRecord.isPaid
+                          ? widget.currentRecord.id
+                          : null,
                     );
                     setState(() {
                       _selectedDurationMonths = pkg.months;
@@ -1484,12 +1799,19 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? accentColor.withValues(alpha: 0.18) : AppColors.surfaceElevated,
+                      color: isSelected
+                          ? accentColor.withValues(alpha: 0.18)
+                          : AppColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isSelected ? accentColor : AppColors.surfaceBorder,
+                        color: isSelected
+                            ? accentColor
+                            : AppColors.surfaceBorder,
                         width: isSelected ? 1.6 : 1,
                       ),
                     ),
@@ -1499,18 +1821,26 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         Text(
                           pkg.title,
                           style: TextStyle(
-                            color: isSelected ? (AppColors.isDark ? Colors.white : accentColor) : AppColors.textPrimary,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                            fontSize: 12,
+                            color: isSelected
+                                ? (AppColors.isDark
+                                      ? Colors.white
+                                      : accentColor)
+                                : AppColors.textPrimary,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                            fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           '$currency${payablePrice.toStringAsFixed(payablePrice.truncateToDouble() == payablePrice ? 0 : 2)}',
                           style: TextStyle(
-                            color: isSelected ? accentColor : AppColors.textSecondary,
+                            color: isSelected
+                                ? accentColor
+                                : AppColors.textSecondary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                            fontSize: 14,
                           ),
                         ),
                       ],
@@ -1537,7 +1867,11 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 Expanded(
                   child: Text(
                     'Covers ${_getCoveragePeriodPreview()} • Next bill in ${_getNextBillMonthPreview()}',
-                    style: TextStyle(color: AppColors.paid, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: AppColors.paid,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -1551,17 +1885,29 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
   String _getCoveragePeriodPreview() {
     final parts = widget.monthYear.split('-');
     final startYear = int.tryParse(parts[0]) ?? DateTime.now().year;
-    final startMonth = parts.length > 1 ? (int.tryParse(parts[1]) ?? DateTime.now().month) : DateTime.now().month;
+    final startMonth = parts.length > 1
+        ? (int.tryParse(parts[1]) ?? DateTime.now().month)
+        : DateTime.now().month;
     final startDate = DateTime(startYear, startMonth, 1);
-    final endDate = DateTime(startYear, startMonth + _selectedDurationMonths - 1, 1);
+    final endDate = DateTime(
+      startYear,
+      startMonth + _selectedDurationMonths - 1,
+      1,
+    );
     return "${GymDateUtils.formatMonthYearKey(GymDateUtils.toMonthKey(startDate))} to ${GymDateUtils.formatMonthYearKey(GymDateUtils.toMonthKey(endDate))}";
   }
 
   String _getNextBillMonthPreview() {
     final parts = widget.monthYear.split('-');
     final startYear = int.tryParse(parts[0]) ?? DateTime.now().year;
-    final startMonth = parts.length > 1 ? (int.tryParse(parts[1]) ?? DateTime.now().month) : DateTime.now().month;
-    final nextDate = DateTime(startYear, startMonth + _selectedDurationMonths, 1);
+    final startMonth = parts.length > 1
+        ? (int.tryParse(parts[1]) ?? DateTime.now().month)
+        : DateTime.now().month;
+    final nextDate = DateTime(
+      startYear,
+      startMonth + _selectedDurationMonths,
+      1,
+    );
     return GymDateUtils.formatMonthYearKey(GymDateUtils.toMonthKey(nextDate));
   }
 }

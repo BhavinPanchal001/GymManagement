@@ -51,10 +51,7 @@ class _CustomersTabState extends State<CustomersTab> {
         final gymService = GymService();
         final currentMonth = GymDateUtils.toMonthKey(DateTime.now());
         final owingIds = _selectedFilter == CustomerFilter.pendingPayment
-            ? gymService
-                .getAllPendingDues()
-                .map((s) => s.customer.id)
-                .toSet()
+            ? gymService.getAllPendingDues().map((s) => s.customer.id).toSet()
             : <String>{};
         var list = gymService.searchCustomers(_searchController.text);
 
@@ -75,18 +72,23 @@ class _CustomersTabState extends State<CustomersTab> {
             actions: [
               Container(
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: Text(
-                  '${gymService.customers.length} Members',
+                  '${gymService.customers.length}',
                   style: TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 14,
                   ),
                 ),
               ),
@@ -101,14 +103,20 @@ class _CustomersTabState extends State<CustomersTab> {
 
               // Search Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: TextField(
                   controller: _searchController,
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     hintText: 'Search by name, phone, or card #...',
-                    prefixIcon: Icon(Icons.search_rounded, color: AppColors.textSecondary),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: AppColors.textSecondary,
+                    ),
                     suffixIcon: VoiceSearchSuffix(
                       controller: _searchController,
                       voiceHint: 'Say member name, phone, or card number...',
@@ -121,10 +129,16 @@ class _CustomersTabState extends State<CustomersTab> {
               // Filter Chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: Row(
                   children: [
-                    _buildFilterChip('All (${gymService.customers.length})', CustomerFilter.all),
+                    _buildFilterChip(
+                      'All (${gymService.customers.length})',
+                      CustomerFilter.all,
+                    ),
                     const SizedBox(width: 8),
                     _buildFilterChip(
                       'Active (${gymService.customers.where((c) => c.isActive).length})',
@@ -156,35 +170,61 @@ class _CustomersTabState extends State<CustomersTab> {
                       )
                     : ListView.separated(
                         physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                         itemCount: list.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 10),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final customer = list[index];
-                          final payment = gymService.getPaymentRecord(customer.id, currentMonth);
-                          final attendanceSummary = gymService.getMonthlyAttendanceSummary(customer.id, currentMonth);
+                          final payment = gymService.getPaymentRecord(
+                            customer.id,
+                            currentMonth,
+                          );
+                          final attendanceSummary = gymService
+                              .getMonthlyAttendanceSummary(
+                                customer.id,
+                                currentMonth,
+                              );
                           final presentDays = attendanceSummary['present'] ?? 0;
 
                           return AnimatedFadeSlide.staggered(
                             index: index,
                             maxStaggerIndex: 6,
-                            child: _buildCustomerCard(customer, payment, currentMonth, presentDays),
+                            child: _buildCustomerCard(
+                              customer,
+                              payment,
+                              currentMonth,
+                              presentDays,
+                            ),
                           );
                         },
                       ),
               ),
             ],
           ),
-          floatingActionButton: AnimatedPressable(
-            onTap: () => AddCustomerSheet.show(context),
-            child: FloatingActionButton.extended(
-              onPressed: () => AddCustomerSheet.show(context),
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.primaryOn,
-              icon: const Icon(Icons.person_add_rounded),
-              label: const Text(
-                'Add Member',
-                style: TextStyle(fontWeight: FontWeight.w800),
+          bottomNavigationBar: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: FilledButton.icon(
+                onPressed: () => AddCustomerSheet.show(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.primaryOn,
+                  minimumSize: const Size.fromHeight(56),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: const Icon(Icons.person_add_outlined),
+                label: const Text(
+                  'Add Member',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ),
@@ -202,10 +242,10 @@ class _CustomersTabState extends State<CustomersTab> {
       child: AnimatedContainer(
         duration: AppAnimations.microDuration,
         curve: AppAnimations.curveEaseInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.surfaceBorder,
           ),
@@ -215,7 +255,7 @@ class _CustomersTabState extends State<CustomersTab> {
           style: TextStyle(
             color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-            fontSize: 12,
+            fontSize: 14,
           ),
         ),
       ),
@@ -245,16 +285,11 @@ class _CustomersTabState extends State<CustomersTab> {
       child: AnimatedContainer(
         duration: AppAnimations.normalDuration,
         curve: AppAnimations.curveEaseInOut,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isPaid
-                ? AppColors.surfaceBorder
-                : (isNew ? const Color(0xFF00B4D8).withValues(alpha: 0.35) : AppColors.pending.withValues(alpha: 0.3)),
-            width: isPaid ? 1 : 1.2,
-          ),
+          border: Border.all(color: AppColors.surfaceBorder, width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -277,11 +312,9 @@ class _CustomersTabState extends State<CustomersTab> {
                         customer.name,
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 15,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 3),
                       InkWell(
@@ -298,12 +331,19 @@ class _CustomersTabState extends State<CustomersTab> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.phone_outlined, color: AppColors.secondary, size: 13),
+                              Icon(
+                                Icons.phone_outlined,
+                                color: AppColors.secondary,
+                                size: 13,
+                              ),
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
                                   customer.phone,
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 14,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -318,8 +358,10 @@ class _CustomersTabState extends State<CustomersTab> {
                         runSpacing: 4,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6,
-                              vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(4),
@@ -328,68 +370,99 @@ class _CustomersTabState extends State<CustomersTab> {
                               '$presentDays days',
                               style: TextStyle(
                                 color: AppColors.primary,
-                                fontSize: 11,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6,
-                              vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: customer.planType == CustomerPlan.personalTrainingDiet
-                                  ? const Color(0xFFFF9100).withValues(alpha: 0.15)
-                                  : (customer.planType == CustomerPlan.personalTraining
-                                      ? AppColors.secondary.withValues(alpha: 0.15)
-                                      : AppColors.surfaceElevated),
+                              color:
+                                  customer.planType ==
+                                      CustomerPlan.personalTrainingDiet
+                                  ? const Color(
+                                      0xFFA66510,
+                                    ).withValues(alpha: 0.15)
+                                  : (customer.planType ==
+                                            CustomerPlan.personalTraining
+                                        ? AppColors.secondary.withValues(
+                                            alpha: 0.15,
+                                          )
+                                        : AppColors.surfaceElevated),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                color: customer.planType == CustomerPlan.personalTrainingDiet
-                                    ? const Color(0xFFFF9100).withValues(alpha: 0.4)
-                                    : (customer.planType == CustomerPlan.personalTraining
-                                        ? AppColors.secondary.withValues(alpha: 0.4)
-                                        : AppColors.surfaceBorder),
+                                color:
+                                    customer.planType ==
+                                        CustomerPlan.personalTrainingDiet
+                                    ? const Color(
+                                        0xFFA66510,
+                                      ).withValues(alpha: 0.4)
+                                    : (customer.planType ==
+                                              CustomerPlan.personalTraining
+                                          ? AppColors.secondary.withValues(
+                                              alpha: 0.4,
+                                            )
+                                          : AppColors.surfaceBorder),
                               ),
                             ),
                             child: Text(
                               customer.planDurationMonths > 1
                                   ? '${CustomerPlan.getShortLabel(customer.planType)} • ${customer.planDurationMonths}M'
-                                  : CustomerPlan.getShortLabel(customer.planType),
+                                  : CustomerPlan.getShortLabel(
+                                      customer.planType,
+                                    ),
                               style: TextStyle(
-                                color: customer.planType == CustomerPlan.personalTrainingDiet
-                                    ? const Color(0xFFFF9100)
-                                    : (customer.planType == CustomerPlan.personalTraining
-                                        ? AppColors.secondary
-                                        : AppColors.textSecondary),
-                                fontSize: 10,
+                                color:
+                                    customer.planType ==
+                                        CustomerPlan.personalTrainingDiet
+                                    ? const Color(0xFFA66510)
+                                    : (customer.planType ==
+                                              CustomerPlan.personalTraining
+                                          ? AppColors.secondary
+                                          : AppColors.textSecondary),
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                           Builder(
                             builder: (context) {
-                              final days = GymService().getDaysUntilExpiry(customer);
+                              final days = GymService().getDaysUntilExpiry(
+                                customer,
+                              );
                               if (days > 15) return const SizedBox.shrink();
                               final isUrgent = days <= 3;
                               final color = days < 0
-                                  ? const Color(0xFFD50000)
-                                  : (isUrgent ? const Color(0xFFFF5252) : const Color(0xFFFF9100));
+                                  ? const Color(0xFFB42318)
+                                  : (isUrgent
+                                        ? const Color(0xFFC94A46)
+                                        : const Color(0xFFA66510));
                               final text = days < 0
                                   ? 'Expired'
-                                  : (days == 0 ? 'Exp Today' : '${days}d left');
+                                  : (days == 0
+                                        ? 'Expires today'
+                                        : 'Expires in $days days');
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6,
-                                  vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: color.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: color.withValues(alpha: 0.4)),
+                                  border: Border.all(
+                                    color: color.withValues(alpha: 0.4),
+                                  ),
                                 ),
                                 child: Text(
                                   text,
                                   style: TextStyle(
                                     color: color,
-                                    fontSize: 10,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -401,17 +474,33 @@ class _CustomersTabState extends State<CustomersTab> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 4),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  icon: Icon(Icons.call_rounded, color: AppColors.primary, size: 16),
+                  constraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
+                  icon: Icon(
+                    Icons.call_rounded,
+                    color: AppColors.primary,
+                    size: 16,
+                  ),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                     padding: const EdgeInsets.all(6),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
-                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.35)),
+                      side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                      ),
                     ),
                   ),
                   tooltip: 'Call Member',
@@ -427,14 +516,25 @@ class _CustomersTabState extends State<CustomersTab> {
                 if (isPaid) ...[
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    icon: const Icon(Icons.receipt_long_rounded, color: AppColors.paid, size: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    icon: Icon(
+                      Icons.receipt_long_rounded,
+                      color: AppColors.dynamicPaid,
+                      size: 16,
+                    ),
                     style: IconButton.styleFrom(
-                      backgroundColor: AppColors.paid.withValues(alpha: 0.15),
+                      backgroundColor: AppColors.dynamicPaid.withValues(
+                        alpha: 0.15,
+                      ),
                       padding: const EdgeInsets.all(6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: AppColors.paid.withValues(alpha: 0.35)),
+                        side: BorderSide(
+                          color: AppColors.dynamicPaid.withValues(alpha: 0.35),
+                        ),
                       ),
                     ),
                     tooltip: 'View Bill / Receipt',
@@ -450,14 +550,25 @@ class _CustomersTabState extends State<CustomersTab> {
                 ] else if (isNew) ...[
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    icon: const Icon(Icons.waving_hand_rounded, color: Color(0xFF00B4D8), size: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    icon: Icon(
+                      Icons.waving_hand_rounded,
+                      color: AppColors.secondary,
+                      size: 16,
+                    ),
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFF00B4D8).withValues(alpha: 0.15),
+                      backgroundColor: AppColors.secondary.withValues(
+                        alpha: 0.15,
+                      ),
                       padding: const EdgeInsets.all(6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: const Color(0xFF00B4D8).withValues(alpha: 0.35)),
+                        side: BorderSide(
+                          color: AppColors.secondary.withValues(alpha: 0.35),
+                        ),
                       ),
                     ),
                     tooltip: 'Send Welcome Message',
@@ -472,14 +583,25 @@ class _CustomersTabState extends State<CustomersTab> {
                 ] else ...[
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    icon: const Icon(Icons.chat_bubble_rounded, color: AppColors.whatsapp, size: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    icon: const Icon(
+                      Icons.chat_bubble_rounded,
+                      color: AppColors.whatsapp,
+                      size: 16,
+                    ),
                     style: IconButton.styleFrom(
-                      backgroundColor: AppColors.whatsapp.withValues(alpha: 0.15),
+                      backgroundColor: AppColors.whatsapp.withValues(
+                        alpha: 0.15,
+                      ),
                       padding: const EdgeInsets.all(6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.35)),
+                        side: BorderSide(
+                          color: AppColors.whatsapp.withValues(alpha: 0.35),
+                        ),
                       ),
                     ),
                     tooltip: 'Send WhatsApp Reminder',
@@ -499,8 +621,12 @@ class _CustomersTabState extends State<CustomersTab> {
                 InkWell(
                   onTap: () async {
                     if (isPaid && payment.balanceDue > 0) {
-                      final current = GymService().getPaymentById(payment.id) ?? payment;
-                      final bill = await CollectBalanceDialog.show(context, current);
+                      final current =
+                          GymService().getPaymentById(payment.id) ?? payment;
+                      final bill = await CollectBalanceDialog.show(
+                        context,
+                        current,
+                      );
                       if (bill != null && mounted) {
                         await BillReceiptDialog.show(context, bill: bill);
                       }
@@ -515,16 +641,25 @@ class _CustomersTabState extends State<CustomersTab> {
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: isPaid
-                          ? AppColors.paid.withValues(alpha: 0.15)
-                          : (isNew ? const Color(0xFF00B4D8).withValues(alpha: 0.15) : AppColors.pending.withValues(alpha: 0.15)),
+                          ? AppColors.dynamicPaid.withValues(alpha: 0.15)
+                          : (isNew
+                                ? AppColors.secondary.withValues(alpha: 0.15)
+                                : AppColors.dynamicPending.withValues(
+                                    alpha: 0.15,
+                                  )),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: isPaid
-                            ? AppColors.paid
-                            : (isNew ? const Color(0xFF00B4D8) : AppColors.pending),
+                            ? AppColors.dynamicPaid
+                            : (isNew
+                                  ? AppColors.secondary
+                                  : AppColors.dynamicPending),
                       ),
                     ),
                     child: Column(
@@ -533,23 +668,28 @@ class _CustomersTabState extends State<CustomersTab> {
                         Text(
                           isPaid
                               ? (payment.isPartiallyPaid
-                                  ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
-                                  : 'PAID')
+                                    ? 'PARTIAL · BAL ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}'
+                                    : 'PAID')
                               : (isNew ? 'NEW' : 'DUE'),
                           style: TextStyle(
                             color: isPaid
-                                ? AppColors.paid
-                                : (isNew ? const Color(0xFF00B4D8) : AppColors.pending),
-                            fontSize: 11,
+                                ? AppColors.dynamicPaid
+                                : (isNew
+                                      ? AppColors.secondary
+                                      : AppColors.dynamicPending),
+                            fontSize: 14,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          GymDateUtils.formatCurrency(payment.displayAmount, symbol: currency),
+                          GymDateUtils.formatCurrency(
+                            payment.displayAmount,
+                            symbol: currency,
+                          ),
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -564,35 +704,48 @@ class _CustomersTabState extends State<CustomersTab> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.pending.withValues(alpha: 0.08),
+                  color: AppColors.dynamicPending.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.pending.withValues(alpha: 0.25)),
+                  border: Border.all(
+                    color: AppColors.dynamicPending.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () async {
-                          final current = GymService().getPaymentById(payment.id) ?? payment;
-                          final bill = await CollectBalanceDialog.show(context, current);
+                          final current =
+                              GymService().getPaymentById(payment.id) ??
+                              payment;
+                          final bill = await CollectBalanceDialog.show(
+                            context,
+                            current,
+                          );
                           if (bill != null && mounted) {
                             await BillReceiptDialog.show(context, bill: bill);
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.pending,
+                          backgroundColor: AppColors.dynamicPending,
                           foregroundColor: Colors.white,
                           elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          minimumSize: const Size(0, 32),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          minimumSize: const Size(0, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         icon: const Icon(Icons.payments_rounded, size: 15),
                         label: Text(
                           'Collect Balance ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -610,14 +763,22 @@ class _CustomersTabState extends State<CustomersTab> {
                         backgroundColor: AppColors.surfaceElevated,
                         foregroundColor: AppColors.textSecondary,
                         side: BorderSide(color: AppColors.surfaceBorder),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                        minimumSize: const Size(0, 32),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       icon: const Icon(Icons.edit_note_rounded, size: 14),
                       label: const Text(
                         'Edit',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],

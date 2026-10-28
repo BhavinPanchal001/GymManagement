@@ -25,15 +25,14 @@ class MarkMonthAttendanceDialog extends StatefulWidget {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => MarkMonthAttendanceDialog(
-        customer: customer,
-        month: month,
-      ),
+      builder: (ctx) =>
+          MarkMonthAttendanceDialog(customer: customer, month: month),
     );
   }
 
   @override
-  State<MarkMonthAttendanceDialog> createState() => _MarkMonthAttendanceDialogState();
+  State<MarkMonthAttendanceDialog> createState() =>
+      _MarkMonthAttendanceDialogState();
 }
 
 class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
@@ -54,7 +53,8 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
     return monthStart.isAfter(currentMonthStart);
   }
 
-  int get _totalDaysInMonth => GymDateUtils.daysInMonth(widget.month.year, widget.month.month);
+  int get _totalDaysInMonth =>
+      GymDateUtils.daysInMonth(widget.month.year, widget.month.month);
 
   int get _targetMaxDay {
     if (_isFutureMonth) return 0;
@@ -72,7 +72,9 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
     final maxDay = _targetMaxDay;
     for (int day = 1; day <= maxDay; day++) {
       final date = DateTime(widget.month.year, widget.month.month, day);
-      if (_selectedStatus == AttendanceStatus.present && _excludeSundays && date.weekday == DateTime.sunday) {
+      if (_selectedStatus == AttendanceStatus.present &&
+          _excludeSundays &&
+          date.weekday == DateTime.sunday) {
         rest++;
       } else if (_selectedStatus == AttendanceStatus.present) {
         present++;
@@ -116,19 +118,24 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
           year: year,
           month: month,
           status: _selectedStatus,
-          excludeSundays: _selectedStatus == AttendanceStatus.present && _excludeSundays,
+          excludeSundays:
+              _selectedStatus == AttendanceStatus.present && _excludeSundays,
           sundayStatus: AttendanceStatus.rest,
           upToTodayOnly: _isCurrentMonth ? true : _upToTodayOnly,
         );
       } else {
         // Bulk for all active members
-        final activeCustomerIds = gym.customers.where((c) => c.isActive).map((c) => c.id).toList();
+        final activeCustomerIds = gym.customers
+            .where((c) => c.isActive)
+            .map((c) => c.id)
+            .toList();
         await gym.setMonthAttendanceForMultiple(
           customerIds: activeCustomerIds,
           year: year,
           month: month,
           status: _selectedStatus,
-          excludeSundays: _selectedStatus == AttendanceStatus.present && _excludeSundays,
+          excludeSundays:
+              _selectedStatus == AttendanceStatus.present && _excludeSundays,
           sundayStatus: AttendanceStatus.rest,
           upToTodayOnly: _isCurrentMonth ? true : _upToTodayOnly,
         );
@@ -152,24 +159,31 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final monthName = GymDateUtils.formatMonthYearKey(GymDateUtils.toMonthKey(widget.month));
+    final monthName = GymDateUtils.formatMonthYearKey(
+      GymDateUtils.toMonthKey(widget.month),
+    );
     final preview = _calculatePreview();
     final isSingleCustomer = widget.customer != null;
-    final totalMembers = isSingleCustomer ? 1 : GymService().customers.where((c) => c.isActive).length;
+    final totalMembers = isSingleCustomer
+        ? 1
+        : GymService().customers.where((c) => c.isActive).length;
 
     return Container(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom +
+        bottom:
+            MediaQuery.of(context).viewInsets.bottom +
             MediaQuery.of(context).viewPadding.bottom +
             24,
       ),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: AppColors.surfaceBorder, width: 1.5)),
+        border: Border(
+          top: BorderSide(color: AppColors.surfaceBorder, width: 1.5),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -239,16 +253,26 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                 decoration: BoxDecoration(
                   color: AppColors.pending.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.pending.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.pending.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded, color: AppColors.pending, size: 20),
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.pending,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Attendance cannot be marked for future months.',
-                        style: TextStyle(color: AppColors.pending, fontSize: 13, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: AppColors.pending,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -262,7 +286,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
               'SELECT STATUS TO MARK',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
               ),
@@ -306,7 +330,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
               'RULES & RANGE',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
               ),
@@ -326,37 +350,60 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                     Material(
                       color: Colors.transparent,
                       child: SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      title: Text(
-                        'Keep Sundays as Rest Day',
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        'Sundays are marked as Rest instead of Present',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                      ),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.rest.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
                         ),
-                        child: const Icon(Icons.bed_rounded, color: AppColors.rest, size: 20),
+                        title: Text(
+                          'Keep Sundays as Rest Day',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Sundays are marked as Rest instead of Present',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        secondary: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.rest.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.bed_rounded,
+                            color: AppColors.rest,
+                            size: 20,
+                          ),
+                        ),
+                        // ignore: deprecated_member_use
+                        activeColor: AppColors.primary,
+                        value: _excludeSundays,
+                        onChanged: (val) =>
+                            setState(() => _excludeSundays = val),
                       ),
-                      // ignore: deprecated_member_use
-                      activeColor: AppColors.primary,
-                      value: _excludeSundays,
-                      onChanged: (val) => setState(() => _excludeSundays = val),
-                    ),
                     ),
                     if (_isCurrentMonth)
-                      Divider(height: 1, color: AppColors.surfaceBorder, indent: 16, endIndent: 16),
+                      Divider(
+                        height: 1,
+                        color: AppColors.surfaceBorder,
+                        indent: 16,
+                        endIndent: 16,
+                      ),
                   ],
 
                   // Current Month Range Banner
                   if (_isCurrentMonth) ...[
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Container(
@@ -365,7 +412,11 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                               color: AppColors.primary.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.today_rounded, color: AppColors.primary, size: 20),
+                            child: Icon(
+                              Icons.today_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -374,12 +425,19 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                               children: [
                                 Text(
                                   'Marking up to today (Day 1 to ${DateTime.now().day})',
-                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   'Future dates in this month cannot be marked in advance.',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ],
                             ),
@@ -403,7 +461,11 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, color: AppColors.textSecondary, size: 20),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -413,7 +475,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                           '${preview['total']} days will be updated${!isSingleCustomer ? ' for $totalMembers members' : ''}:',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -426,7 +488,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                 '${preview['present']} Present',
                                 style: const TextStyle(
                                   color: AppColors.paid,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -435,7 +497,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                 '${preview['absent']} Absent',
                                 style: const TextStyle(
                                   color: AppColors.absent,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -444,7 +506,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                 '${preview['rest']} Rest Day',
                                 style: const TextStyle(
                                   color: AppColors.rest,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -463,17 +525,23 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _isLoading ? null : () => Navigator.pop(context, false),
+                    onPressed: _isLoading
+                        ? null
+                        : () => Navigator.pop(context, false),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       side: BorderSide(color: AppColors.surfaceBorder),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     child: const Text(
                       'Cancel',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -483,34 +551,46 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                   child: ElevatedButton.icon(
                     onPressed: (_isLoading || _isFutureMonth) ? null : _apply,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _selectedStatus == AttendanceStatus.present
+                      backgroundColor:
+                          _selectedStatus == AttendanceStatus.present
                           ? AppColors.paid
                           : _selectedStatus == AttendanceStatus.absent
-                              ? AppColors.absent
-                              : AppColors.rest,
+                          ? AppColors.absent
+                          : AppColors.rest,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: AppColors.surfaceElevated,
                       disabledForegroundColor: AppColors.textMuted,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     icon: _isLoading
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : Icon(
-                            _isFutureMonth ? Icons.block_rounded : Icons.done_all_rounded,
+                            _isFutureMonth
+                                ? Icons.block_rounded
+                                : Icons.done_all_rounded,
                             size: 20,
                           ),
                     label: Text(
                       _isLoading
                           ? 'Applying...'
-                          : (_isFutureMonth ? 'Cannot Mark Future' : 'Apply to Month'),
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                          : (_isFutureMonth
+                                ? 'Cannot Mark Future'
+                                : 'Apply to Month'),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -537,7 +617,9 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.18) : AppColors.surfaceElevated,
+          color: isSelected
+              ? color.withValues(alpha: 0.18)
+              : AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected ? color : AppColors.surfaceBorder,
@@ -555,8 +637,10 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
             Text(
               title,
               style: TextStyle(
-                color: isSelected ? (AppColors.isDark ? Colors.white : color) : AppColors.textSecondary,
-                fontSize: 12,
+                color: isSelected
+                    ? (AppColors.isDark ? Colors.white : color)
+                    : AppColors.textSecondary,
+                fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
               ),
             ),

@@ -14,10 +14,7 @@ import '../utils/date_utils.dart';
 class BillReceiptDialog extends StatefulWidget {
   final BillRecord bill;
 
-  const BillReceiptDialog({
-    super.key,
-    required this.bill,
-  });
+  const BillReceiptDialog({super.key, required this.bill});
 
   static Future<void> show(BuildContext context, {required BillRecord bill}) {
     return showModalBottomSheet<void>(
@@ -123,7 +120,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
       case PaymentMethod.paytm:
         return const Color(0xFF00B0FF);
       case PaymentMethod.upi:
-        return const Color(0xFFFF9100);
+        return const Color(0xFFA66510);
       case PaymentMethod.card:
         return const Color(0xFFFF4081);
       case PaymentMethod.netBanking:
@@ -134,13 +131,19 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
   @override
   Widget build(BuildContext context) {
     final currency = GymService().settings.currencySymbol;
-    final formattedAmount = GymDateUtils.formatCurrency(bill.amount, symbol: currency);
+    final formattedAmount = GymDateUtils.formatCurrency(
+      bill.amount,
+      symbol: currency,
+    );
     final formattedCycle = GymDateUtils.formatMonthYearKey(bill.monthYear);
     final formattedDate = GymDateUtils.formatDateTime(bill.paidAt);
     final planLabel = CustomerPlan.getLabel(bill.planType);
     final methodColor = _getMethodColor(bill.method);
     final isDark = AppColors.isDark;
-    final attSummary = GymService().getMonthlyAttendanceSummary(bill.customerId, bill.monthYear);
+    final attSummary = GymService().getMonthlyAttendanceSummary(
+      bill.customerId,
+      bill.monthYear,
+    );
     final presentDays = attSummary['present'] ?? 0;
 
     return Container(
@@ -148,14 +151,17 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
         left: 20,
         right: 20,
         top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom +
+        bottom:
+            MediaQuery.of(context).viewInsets.bottom +
             MediaQuery.of(context).viewPadding.bottom +
             24,
       ),
       decoration: BoxDecoration(
         color: AppColors.dynamicSurface(),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: AppColors.dynamicSurfaceBorder(), width: 1.5)),
+        border: Border(
+          top: BorderSide(color: AppColors.dynamicSurfaceBorder(), width: 1.5),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -207,10 +213,12 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                         Text(
                           GymService().settings.gymName.trim().isNotEmpty
                               ? GymService().settings.gymName.trim()
-                              : (bill.gymName.trim().isNotEmpty ? bill.gymName.trim() : 'Gym Management'),
+                              : (bill.gymName.trim().isNotEmpty
+                                    ? bill.gymName.trim()
+                                    : 'Gym Management'),
                           style: TextStyle(
                             color: AppColors.dynamicTextSecondary(),
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -223,10 +231,16 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                   children: [
                     // Full Screen PDF Preview Icon Button
                     IconButton(
-                      icon: Icon(Icons.picture_as_pdf_rounded, color: AppColors.primary, size: 20),
+                      icon: Icon(
+                        Icons.picture_as_pdf_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
                       tooltip: 'View PDF Preview',
                       style: IconButton.styleFrom(
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.12,
+                        ),
                       ),
                       onPressed: _handlePreviewPdf,
                     ),
@@ -247,7 +261,9 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
             // The Receipt Card
             Container(
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F141C) : const Color(0xFFF8FAFC),
+                color: isDark
+                    ? const Color(0xFF0F141C)
+                    : const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: AppColors.paid.withValues(alpha: 0.35),
@@ -265,12 +281,19 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                 children: [
                   // Receipt Header Banner
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.paid.withValues(alpha: 0.1),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(18),
+                      ),
                       border: Border(
-                        bottom: BorderSide(color: AppColors.paid.withValues(alpha: 0.2)),
+                        bottom: BorderSide(
+                          color: AppColors.paid.withValues(alpha: 0.2),
+                        ),
                       ),
                     ),
                     child: Column(
@@ -279,71 +302,94 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.dynamicSurfaceElevated(),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.dynamicSurfaceBorder()),
+                                border: Border.all(
+                                  color: AppColors.dynamicSurfaceBorder(),
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.tag_rounded, size: 13, color: AppColors.primary),
+                                  Icon(
+                                    Icons.tag_rounded,
+                                    size: 13,
+                                    color: AppColors.primary,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     bill.billNumber,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      fontSize: 12,
+                                      fontSize: 14,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            Builder(builder: (context) {
-                              final cancelled = bill.status == 'CANCELLED';
-                              final chipColor = cancelled
-                                  ? AppColors.absent
-                                  : (bill.billType == 'BALANCE'
-                                      ? AppColors.primary
-                                      : (bill.billType == 'PARTIAL'
-                                          ? AppColors.pending
-                                          : AppColors.paid));
-                              final chipLabel = bill.billType == 'REFUND' ? 'MONEY RETURNED' : cancelled
-                                  ? 'CANCELLED'
-                                  : (bill.billType == 'BALANCE'
-                                      ? 'BALANCE PAID'
-                                      : (bill.billType == 'PARTIAL' ? 'PARTIAL' : 'PAID'));
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: chipColor.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: chipColor, width: 1),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      cancelled ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                            Builder(
+                              builder: (context) {
+                                final cancelled = bill.status == 'CANCELLED';
+                                final chipColor = cancelled
+                                    ? AppColors.absent
+                                    : (bill.billType == 'BALANCE'
+                                          ? AppColors.primary
+                                          : (bill.billType == 'PARTIAL'
+                                                ? AppColors.pending
+                                                : AppColors.paid));
+                                final chipLabel = bill.billType == 'REFUND'
+                                    ? 'MONEY RETURNED'
+                                    : cancelled
+                                    ? 'CANCELLED'
+                                    : (bill.billType == 'BALANCE'
+                                          ? 'BALANCE PAID'
+                                          : (bill.billType == 'PARTIAL'
+                                                ? 'PARTIAL'
+                                                : 'PAID'));
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: chipColor.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
                                       color: chipColor,
-                                      size: 14,
+                                      width: 1,
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      chipLabel,
-                                      style: TextStyle(
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        cancelled
+                                            ? Icons.cancel_rounded
+                                            : Icons.check_circle_rounded,
                                         color: chipColor,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: 0.8,
+                                        size: 14,
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        chipLabel,
+                                        style: TextStyle(
+                                          color: chipColor,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                           ],
                         ),
                         const SizedBox(height: 14),
@@ -357,29 +403,34 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        if (bill.billType == 'PARTIAL' || bill.billType == 'BALANCE')
-                          Builder(builder: (context) {
-                            final pay = GymService().getPaymentById(bill.paymentId);
-                            final label = bill.billType == 'PARTIAL'
-                                ? 'Partial payment — balance ${GymDateUtils.formatCurrency(pay == null ? 0 : GymService().balanceAtReceipt(pay, bill), symbol: currency)}'
-                                : 'Balance payment for cycle ${bill.formattedValidityPeriod}';
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  color: AppColors.pending,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
+                        if (bill.billType == 'PARTIAL' ||
+                            bill.billType == 'BALANCE')
+                          Builder(
+                            builder: (context) {
+                              final pay = GymService().getPaymentById(
+                                bill.paymentId,
+                              );
+                              final label = bill.billType == 'PARTIAL'
+                                  ? 'Partial payment — balance ${GymDateUtils.formatCurrency(pay == null ? 0 : GymService().balanceAtReceipt(pay, bill), symbol: currency)}'
+                                  : 'Balance payment for cycle ${bill.formattedValidityPeriod}';
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: AppColors.pending,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                            );
-                          }),
+                              );
+                            },
+                          ),
                         Text(
                           'Payment completed on $formattedDate',
                           style: TextStyle(
                             color: AppColors.dynamicTextSecondary(),
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -419,27 +470,36 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                     bill.customerPhone,
                                     style: TextStyle(
                                       color: AppColors.dynamicTextPrimary(),
-                                      fontSize: 13,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.15),
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.call_rounded, size: 10, color: AppColors.primary),
+                                        Icon(
+                                          Icons.call_rounded,
+                                          size: 10,
+                                          color: AppColors.primary,
+                                        ),
                                         const SizedBox(width: 3),
                                         Text(
                                           'Call',
                                           style: TextStyle(
                                             color: AppColors.primary,
-                                            fontSize: 10,
+                                            fontSize: 14,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -454,7 +514,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                         const SizedBox(height: 12),
                         _buildReceiptRow(
                           icon: Icons.fitness_center_rounded,
-                          iconColor: const Color(0xFFFF9100),
+                          iconColor: const Color(0xFFA66510),
                           label: 'Membership Plan',
                           value: bill.durationMonths > 1
                               ? '$planLabel (${bill.durationMonths}-Mo Package)'
@@ -482,17 +542,22 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                             iconColor: AppColors.paid,
                             label: 'Attendance Linked',
                             valueWidget: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.paid.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: AppColors.paid.withValues(alpha: 0.4)),
+                                border: Border.all(
+                                  color: AppColors.paid.withValues(alpha: 0.4),
+                                ),
                               ),
                               child: Text(
                                 '✓ $presentDays Days Attended in $formattedCycle',
                                 style: const TextStyle(
                                   color: AppColors.paid,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -505,22 +570,33 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                           iconColor: methodColor,
                           label: 'Payment Method',
                           valueWidget: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: methodColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: methodColor.withValues(alpha: 0.4)),
+                              border: Border.all(
+                                color: methodColor.withValues(alpha: 0.4),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(_getMethodIcon(bill.method), size: 13, color: methodColor),
+                                Icon(
+                                  _getMethodIcon(bill.method),
+                                  size: 13,
+                                  color: methodColor,
+                                ),
                                 const SizedBox(width: 5),
                                 Text(
                                   bill.method.label,
                                   style: TextStyle(
-                                    color: isDark ? Colors.white : Colors.black87,
-                                    fontSize: 12,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -528,7 +604,8 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                             ),
                           ),
                         ),
-                        if (bill.transactionRef != null && bill.transactionRef!.trim().isNotEmpty) ...[
+                        if (bill.transactionRef != null &&
+                            bill.transactionRef!.trim().isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _buildReceiptRow(
                             icon: Icons.receipt_rounded,
@@ -537,7 +614,8 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                             value: bill.transactionRef!.trim(),
                           ),
                         ],
-                        if (bill.notes != null && bill.notes!.trim().isNotEmpty) ...[
+                        if (bill.notes != null &&
+                            bill.notes!.trim().isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _buildReceiptRow(
                             icon: Icons.note_rounded,
@@ -568,24 +646,37 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                   // Quick PDF preview tap strip
                   InkWell(
                     onTap: _handlePreviewPdf,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(18),
+                    ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 18,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.picture_as_pdf_rounded, size: 15, color: AppColors.primary),
+                          Icon(
+                            Icons.picture_as_pdf_rounded,
+                            size: 15,
+                            color: AppColors.primary,
+                          ),
                           const SizedBox(width: 7),
                           Text(
                             'View Full Tax Invoice / Bill PDF',
                             style: TextStyle(
                               color: AppColors.primary,
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 11, color: AppColors.primary),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 11,
+                            color: AppColors.primary,
+                          ),
                         ],
                       ),
                     ),
@@ -616,13 +707,16 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Icon(Icons.print_rounded, size: 18),
                       label: Text(
                         _isGeneratingPdf ? 'Preparing...' : 'Print / Save PDF',
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -649,7 +743,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                       label: const Text(
                         'Share PDF Bill',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -676,18 +770,26 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                         );
                       },
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: AppColors.whatsapp.withValues(alpha: 0.1),
+                        backgroundColor: AppColors.whatsapp.withValues(
+                          alpha: 0.1,
+                        ),
                         foregroundColor: AppColors.whatsapp,
-                        side: BorderSide(color: AppColors.whatsapp.withValues(alpha: 0.4)),
+                        side: BorderSide(
+                          color: AppColors.whatsapp.withValues(alpha: 0.4),
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      icon: const Icon(Icons.chat_bubble_rounded, size: 16, color: AppColors.whatsapp),
+                      icon: const Icon(
+                        Icons.chat_bubble_rounded,
+                        size: 16,
+                        color: AppColors.whatsapp,
+                      ),
                       label: const Text(
                         'WhatsApp Alert',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -711,8 +813,12 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                       },
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.zero,
-                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        side: BorderSide(
+                          color: AppColors.primary.withValues(alpha: 0.5),
+                        ),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -733,14 +839,17 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                   width: 46,
                   child: OutlinedButton(
                     onPressed: () {
-                      final receiptText = WhatsAppService().buildBillReceiptMessage(
-                        bill: bill,
-                        currency: currency,
-                      );
+                      final receiptText = WhatsAppService()
+                          .buildBillReceiptMessage(
+                            bill: bill,
+                            currency: currency,
+                          );
                       Clipboard.setData(ClipboardData(text: receiptText));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Bill receipt text copied to clipboard!'),
+                          content: Text(
+                            'Bill receipt text copied to clipboard!',
+                          ),
                           backgroundColor: AppColors.paid,
                           behavior: SnackBarBehavior.floating,
                           duration: Duration(seconds: 2),
@@ -804,7 +913,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
               label,
               style: TextStyle(
                 color: AppColors.dynamicTextSecondary(),
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -812,14 +921,15 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
         ),
         const SizedBox(width: 12),
         Flexible(
-          child: valueWidget ??
+          child:
+              valueWidget ??
               Text(
                 value ?? '',
                 textAlign: TextAlign.end,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-                  fontSize: 13,
+                  fontSize: 14,
                 ),
               ),
         ),

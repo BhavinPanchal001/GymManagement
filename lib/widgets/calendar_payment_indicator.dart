@@ -76,11 +76,13 @@ class CalendarPaymentIndicator extends StatelessWidget {
               Icon(status.icon, size: 14, color: status.color),
               if (showLabel) ...[
                 const SizedBox(width: 4),
-                Text(
-                  status.label,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
+                Flexible(
+                  child: Text(
+                    status.label,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],

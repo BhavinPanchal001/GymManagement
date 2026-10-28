@@ -290,7 +290,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               Text(
                                 '${customer.name} (Card #${customer.cardNumber})',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -369,7 +369,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               ? 'Remove from the active list. Keep all history.'
                               : 'Return to the active list with all history.',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             color: current != null
                                 ? AppColors.textSecondary
                                 : AppColors.textMuted,
@@ -447,7 +447,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           reason ??
                               'Permanently delete member and all payment and attendance history.',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             color: isDeleteEnabled
                                 ? AppColors.textSecondary
                                 : AppColors.textMuted,
@@ -714,7 +714,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   unselectedLabelColor: AppColors.textSecondary,
                   labelStyle: const TextStyle(
                     fontWeight: FontWeight.w800,
-                    fontSize: 13,
+                    fontSize: 14,
                   ),
                   dividerColor: Colors.transparent,
                   isScrollable: true,
@@ -736,14 +736,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                 vertical: 1,
                               ),
                               decoration: const BoxDecoration(
-                                color: Color(0xFFD50000),
+                                color: Color(0xFFB42318),
                                 shape: BoxShape.circle,
                               ),
                               child: Text(
                                 '${unpaidAttendedMonths.length}',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 10,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -955,7 +955,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               color: customer.isActive
                                   ? AppColors.paid
                                   : AppColors.textMuted,
-                              fontSize: 11,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -990,7 +990,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                 customer.phone,
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
-                                  fontSize: 13,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
@@ -1036,7 +1036,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                     'Call',
                                     style: TextStyle(
                                       color: AppColors.primary,
-                                      fontSize: 10,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1085,7 +1085,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                     'WhatsApp',
                                     style: TextStyle(
                                       color: AppColors.whatsapp,
-                                      fontSize: 10,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1097,7 +1097,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Icon(
                           Icons.event_outlined,
@@ -1109,7 +1110,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           'Joined ${GymDateUtils.formatDate(customer.joinDate)}',
                           style: TextStyle(
                             color: AppColors.textMuted,
-                            fontSize: 12,
+                            fontSize: 14,
                           ),
                         ),
                       ],
@@ -1132,7 +1133,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                             planIcon = Icons.sports_martial_arts_rounded;
                             break;
                           case CustomerPlan.personalTrainingDiet:
-                            planColor = const Color(0xFFFF9100);
+                            planColor = const Color(0xFFA66510);
                             planIcon = Icons.restaurant_menu_rounded;
                             break;
                           case CustomerPlan.normal:
@@ -1168,7 +1169,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                 CustomerPlan.getLabel(customer.planType),
                                 style: TextStyle(
                                   color: planColor,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1186,7 +1187,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                 '${GymDateUtils.formatCurrency(price, symbol: currency)} ($durationText)',
                                 style: TextStyle(
                                   color: planColor,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -1240,7 +1241,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                       : 'Membership Unpaid • Due',
                                   style: TextStyle(
                                     color: statusColor,
-                                    fontSize: 11,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1285,7 +1286,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                     : 'Valid until ${GymDateUtils.formatDate(expiry)} (${days}d left)',
                                 style: TextStyle(
                                   color: statusColor,
-                                  fontSize: 11,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1300,7 +1301,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         customer.notes,
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontStyle: FontStyle.italic,
                         ),
                         maxLines: 2,
@@ -1355,7 +1356,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                 style: TextStyle(
                                   color: Color(0xFFB71C1C),
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                                  fontSize: 14,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1374,7 +1375,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                 '#${customer.cardNumber.isNotEmpty ? customer.cardNumber : customer.id.replaceAll(RegExp(r'\D'), '').padLeft(3, '0')}',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 10,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -1386,7 +1387,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           'View physical card, 12-month dues, measurements & export PDF',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 11,
+                            fontSize: 14,
                           ),
                         ),
                       ],
@@ -1421,7 +1422,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   Text(
                     'Archived member • History preserved',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 14,
                       color: AppColors.textMuted,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1457,7 +1458,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     label: const Text(
                       'Renew Plan',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1499,7 +1500,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               ? 'Remove Member'
                               : 'Restore / Delete'),
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1562,7 +1563,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       subtitleText =
           '0 days attended in ${GymDateUtils.formatMonthYearKey(monthKey)} • Mark attendance first';
     } else if (isNew) {
-      badgeColor = const Color(0xFF00B4D8);
+      badgeColor = const Color(0xFF397665);
       badgeIcon = Icons.waving_hand_rounded;
       badgeText = 'NEW';
       subtitleText = 'New registration • 3-day grace period (0 days attended)';
@@ -1628,7 +1629,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           ? AppColors.pending.withValues(alpha: 0.35)
                           : (isNew
                                 ? const Color(
-                                    0xFF00B4D8,
+                                    0xFF397665,
                                   ).withValues(alpha: 0.45)
                                 : AppColors.pending.withValues(alpha: 0.4)))),
           width: 1.5,
@@ -1637,37 +1638,35 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${GymDateUtils.formatMonthYearKey(monthKey)} Payment',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${GymDateUtils.formatMonthYearKey(monthKey)} Payment',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitleText,
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitleText,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
                     ),
-                  ],
-                ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
+              const SizedBox(height: 10),
               InkWell(
                 onTap: (isPaid && record.balanceDue > 0)
                     ? () async {
@@ -1695,8 +1694,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       color: badgeColor.withValues(alpha: 0.5),
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Icon(badgeIcon, color: badgeColor, size: 14),
                       const SizedBox(width: 5),
@@ -1704,7 +1703,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         badgeText,
                         style: TextStyle(
                           color: badgeColor,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -1750,7 +1749,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     style: TextStyle(
                       color: AppColors.paid,
                       fontWeight: FontWeight.w700,
-                      fontSize: 11,
+                      fontSize: 14,
                     ),
                   ),
                 ),
@@ -1829,7 +1828,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       'View Bill',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
                         color: AppColors.paid,
                       ),
                       maxLines: 1,
@@ -1864,7 +1863,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       'Edit Payment',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1910,7 +1909,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       'Send Receipt on WhatsApp',
                       style: TextStyle(
                         color: AppColors.whatsapp,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1939,7 +1938,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       'This member was not enrolled in ${GymDateUtils.formatMonthYearKey(monthKey)}. Enrollment started on ${GymDateUtils.formatDate(customer.joinDate)}.',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 12,
+                        fontSize: 14,
                       ),
                     ),
                   ),
@@ -1975,7 +1974,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                            fontSize: 14,
                           ),
                         ),
                       ),
@@ -1986,7 +1985,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     'Please mark attendance first for this past month before recording payment.',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -2011,7 +2010,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       'Mark Attendance First',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                     ),
                   ),
@@ -2075,7 +2074,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   icon: const Icon(Icons.payment_rounded, size: 18),
                   label: const Text(
                     'Mark as Paid',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ),
               ],
@@ -2096,10 +2095,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00B4D8).withValues(alpha: 0.15),
+                    color: const Color(0xFF397665).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(0xFF00B4D8).withValues(alpha: 0.5),
+                      color: const Color(0xFF397665).withValues(alpha: 0.5),
                       width: 1.2,
                     ),
                   ),
@@ -2108,15 +2107,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     children: [
                       Icon(
                         Icons.waving_hand_rounded,
-                        color: Color(0xFF00B4D8),
+                        color: Color(0xFF397665),
                         size: 16,
                       ),
                       SizedBox(width: 8),
                       Text(
                         'Send Welcome Message on WhatsApp',
                         style: TextStyle(
-                          color: Color(0xFF00B4D8),
-                          fontSize: 13,
+                          color: Color(0xFF397665),
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -2158,12 +2157,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         size: 16,
                       ),
                       SizedBox(width: 8),
-                      Text(
-                        'Send WhatsApp Fee Reminder',
-                        style: TextStyle(
-                          color: AppColors.whatsapp,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                      Flexible(
+                        child: Text(
+                          'Send WhatsApp Fee Reminder',
+                          style: TextStyle(
+                            color: AppColors.whatsapp,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ],
@@ -2193,7 +2194,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       '${record.transactionRef != null && record.transactionRef!.isNotEmpty ? ' (${record.transactionRef})' : ''}',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
@@ -2211,7 +2212,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
   Widget _buildDueBreakdownCard(Customer customer, String currency) {
     final dues = GymService().getMemberDueBreakdown(customer.id);
-    const overdueColor = Color(0xFFD50000);
+    const overdueColor = Color(0xFFB42318);
     final rows = [
       (
         DueUrgency.upcoming,
@@ -2260,7 +2261,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Row(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           'Current Dues',
@@ -2285,7 +2287,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               '${dues.totalCount}',
                               style: TextStyle(
                                 color: AppColors.pending,
-                                fontSize: 10,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -2379,14 +2381,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                                   ? tone
                                                   : AppColors.textSecondary,
                                               fontWeight: FontWeight.w800,
-                                              fontSize: 12.5,
+                                              fontSize: 14,
                                             ),
                                           ),
                                           Text(
                                             detail,
                                             style: TextStyle(
                                               color: AppColors.textSecondary,
-                                              fontSize: 10.5,
+                                              fontSize: 14,
                                             ),
                                           ),
                                         ],
@@ -2413,7 +2415,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                           style: TextStyle(
                                             color: AppColors.textSecondary,
                                             fontWeight: FontWeight.w700,
-                                            fontSize: 10.5,
+                                            fontSize: 14,
                                           ),
                                         ),
                                       ],
@@ -2454,10 +2456,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFD50000).withValues(alpha: 0.12),
+        color: const Color(0xFFB42318).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFD50000).withValues(alpha: 0.4),
+          color: const Color(0xFFB42318).withValues(alpha: 0.4),
           width: 1.2,
         ),
       ),
@@ -2469,7 +2471,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD50000).withValues(alpha: 0.2),
+                  color: const Color(0xFFB42318).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -2488,14 +2490,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       style: TextStyle(
                         color: AppColors.absent,
                         fontWeight: FontWeight.w900,
-                        fontSize: 13.5,
+                        fontSize: 14,
                       ),
                     ),
                     Text(
                       "${unpaidMonths.length} Month${unpaidMonths.length > 1 ? 's' : ''} with attendance • $totalAttendedDays total attended days",
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 11.5,
+                        fontSize: 14,
                       ),
                     ),
                   ],
@@ -2540,9 +2542,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFF5252),
+                    foregroundColor: const Color(0xFFC94A46),
                     side: const BorderSide(
-                      color: Color(0xFFFF5252),
+                      color: Color(0xFFC94A46),
                       width: 1.2,
                     ),
                     shape: RoundedRectangleBorder(
@@ -2555,7 +2557,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     'Settle Dues (from ${GymDateUtils.formatMonthYearKey(earliestMonth)})',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                 ),
@@ -2652,7 +2654,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     periodLabel,
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -2697,7 +2699,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 label: Text(
                   _isCustomRangeMode ? 'Range Active' : 'Custom Range',
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -2722,7 +2724,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       '${GymDateUtils.formatShortDate(_customStartDate!)}  ➔  ${GymDateUtils.formatShortDate(_customEndDate!)}',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -2747,7 +2749,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                             'Change',
                             style: TextStyle(
                               color: AppColors.primary,
-                              fontSize: 11,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2860,7 +2862,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                           ? AppColors.pending
                                           : AppColors.textSecondary)),
                           fontWeight: FontWeight.w900,
-                          fontSize: 11.5,
+                          fontSize: 14,
                           letterSpacing: 0.3,
                         ),
                       ),
@@ -2874,7 +2876,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                         : 'Subscription fee: ${GymDateUtils.formatCurrency(fee, symbol: currency)}')),
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 11,
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -2947,7 +2949,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                           : 'Pay Now',
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
-                        fontSize: 12,
+                        fontSize: 14,
                       ),
                     ),
                   ),
@@ -2964,44 +2966,42 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     Customer customer, {
     bool showMarkMenu = true,
   }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: InkWell(
-            onTap: _pickMonth,
-            borderRadius: BorderRadius.circular(10),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_rounded,
-                    color: AppColors.primary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      GymDateUtils.formatMonthYearKey(
-                        GymDateUtils.toMonthKey(_displayedMonth),
-                      ),
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+        InkWell(
+          onTap: _pickMonth,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    GymDateUtils.formatMonthYearKey(
+                      GymDateUtils.toMonthKey(_displayedMonth),
                     ),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: AppColors.textSecondary,
-                    size: 20,
-                  ),
-                ],
-              ),
+                ),
+                Icon(
+                  Icons.arrow_drop_down,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
+              ],
             ),
           ),
         ),
@@ -3087,14 +3087,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                     ),
                     Text(
                       'Mon–Sat Present, Sundays Rest',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 11,
+                        fontSize: 14,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -3131,14 +3131,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                     ),
                     Text(
                       'All days including Sundays',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 11,
+                        fontSize: 14,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -3176,14 +3176,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                     ),
                     Text(
                       'Set all month days to Absent',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 11,
+                        fontSize: 14,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -3221,14 +3221,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
                       ),
                     ),
                     Text(
                       'Custom range, rest days & preview',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 11,
+                        fontSize: 14,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -3259,7 +3259,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               'Mark Month',
               style: TextStyle(
                 color: AppColors.primary,
-                fontSize: 11.5,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -3400,7 +3400,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 label,
                 style: TextStyle(
                   color: color,
-                  fontSize: 11,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -3462,7 +3462,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   color: isFutureMonth
                       ? AppColors.pending
                       : AppColors.textSecondary,
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -3482,8 +3482,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           SwitchListTile.adaptive(
             key: const ValueKey('show-calendar-payments'),
             contentPadding: EdgeInsets.zero,
-            title: Text('Show payment details',
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+            title: Text(
+              'Show payment details',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            ),
             value: _showCalendarPayments,
             onChanged: (value) => setState(() => _showCalendarPayments = value),
           ),
@@ -3500,7 +3502,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             Text(
               'Payment icons apply to the membership period, even on absent or rest days. '
               'Part paid means some of the period’s fee is still due.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
           ],
           const SizedBox(height: 14),
@@ -3516,7 +3518,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       color: w == 'Sun'
                           ? AppColors.rest
                           : AppColors.textSecondary,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -3661,19 +3663,24 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('$day',
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontWeight: isToday
-                                      ? FontWeight.w900
-                                      : FontWeight.w600,
-                                  fontSize: 13,
-                                )),
+                            Text(
+                              '$day',
+                              style: TextStyle(
+                                color: textColor,
+                                fontWeight: isToday
+                                    ? FontWeight.w900
+                                    : FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
                             SizedBox(
                               height: 16,
                               child: statusIcon != null && !isDisabled
-                                  ? Icon(statusIcon,
-                                      size: 10, color: borderColor)
+                                  ? Icon(
+                                      statusIcon,
+                                      size: 10,
+                                      color: borderColor,
+                                    )
                                   : null,
                             ),
                             CalendarPaymentIndicator(
@@ -3696,14 +3703,17 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                 fontWeight: isToday
                                     ? FontWeight.w900
                                     : FontWeight.w600,
-                                fontSize: 13,
+                                fontSize: 14,
                               ),
                             ),
                             if (statusIcon != null && !isDisabled)
                               Positioned(
                                 bottom: 2,
-                                child: Icon(statusIcon,
-                                    size: 10, color: borderColor),
+                                child: Icon(
+                                  statusIcon,
+                                  size: 10,
+                                  color: borderColor,
+                                ),
                               ),
                           ],
                         ),
@@ -3798,7 +3808,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               children: [
                 Text(
                   "${history.length} Record${history.length != 1 ? 's' : ''}",
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
                 ),
                 const SizedBox(width: 6),
                 TextButton.icon(
@@ -3812,7 +3822,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   icon: const Icon(Icons.receipt_long_rounded, size: 14),
                   label: Text(
                     'All Bills (${gym.getAllBillsForCustomer(customer.id).length})',
-                    style: const TextStyle(fontSize: 11),
+                    style: const TextStyle(fontSize: 14),
                   ),
                 ),
               ],
@@ -3940,7 +3950,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                     '✓ $coveredAttended Days Attended • Paid ${item.paidAt != null ? "on ${GymDateUtils.formatShortDate(item.paidAt!)}" : ""}',
                                     style: TextStyle(
                                       color: AppColors.paid,
-                                      fontSize: 11.5,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -3949,7 +3959,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                     'Active Coverage (${GymDateUtils.formatShortDate(item.effectiveStartDate)} – ${GymDateUtils.formatShortDate(item.effectiveEndDate)}) • Paid ${item.paidAt != null ? "on ${GymDateUtils.formatShortDate(item.paidAt!)}" : ""}',
                                     style: const TextStyle(
                                       color: AppColors.paid,
-                                      fontSize: 11.5,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -3959,7 +3969,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                   '⚠️ $unpaidAttended Days Attended • Payment Due',
                                   style: TextStyle(
                                     color: AppColors.pending,
-                                    fontSize: 11.5,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -3968,7 +3978,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                   '0 Days Attended • Pending',
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 11.5,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ],
@@ -3999,7 +4009,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                   'BAL ${GymDateUtils.formatCurrency(item.balanceDue, symbol: currency)}',
                                   style: TextStyle(
                                     color: AppColors.pending,
-                                    fontSize: 10,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -4011,7 +4021,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                   'DUE',
                                   style: TextStyle(
                                     color: AppColors.pending,
-                                    fontSize: 10,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -4084,7 +4094,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                             child: Text(
                               hasUnpaidDues ? 'Settle' : 'Pay',
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -4143,7 +4153,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                                   'Collect Balance ${GymDateUtils.formatCurrency(item.balanceDue, symbol: currency)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 12,
+                                    fontSize: 14,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -4180,7 +4190,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               label: const Text(
                                 'Edit',
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -4212,7 +4222,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           label,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 11,
+            fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
         ),

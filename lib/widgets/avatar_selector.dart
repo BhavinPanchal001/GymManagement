@@ -138,7 +138,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                 'Or choose a fitness avatar:',
                 style: TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -148,7 +148,8 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: 8,
-                  separatorBuilder: (context, index) => const SizedBox(width: 10),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 10),
                   itemBuilder: (context, i) {
                     final avatarKey = 'avatar:${i + 1}';
                     final isSelected = _currentSelection == avatarKey;
@@ -185,13 +186,16 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                   width: double.infinity,
                   child: TextButton.icon(
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFFF5252),
+                      foregroundColor: const Color(0xFFC94A46),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     icon: const Icon(Icons.delete_outline_rounded, size: 20),
                     label: const Text(
                       'Remove Photo',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                     onPressed: () {
                       setState(() {
@@ -265,10 +269,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.primary,
-                  width: 2.5,
-                ),
+                border: Border.all(color: AppColors.primary, width: 2.5),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withValues(alpha: 0.2),
@@ -280,7 +281,9 @@ class _AvatarSelectorState extends State<AvatarSelector> {
               child: CustomerAvatar(
                 imagePath: _currentSelection,
                 imageBase64: _currentImageBase64,
-                name: widget.customerName.isNotEmpty ? widget.customerName : 'New User',
+                name: widget.customerName.isNotEmpty
+                    ? widget.customerName
+                    : 'New User',
                 radius: widget.radius,
               ),
             ),

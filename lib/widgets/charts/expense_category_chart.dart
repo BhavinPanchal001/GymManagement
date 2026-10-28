@@ -26,10 +26,9 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
   @override
   Widget build(BuildContext context) {
     // Sort categories by spend descending
-    final activeEntries = widget.breakdown.entries
-        .where((e) => e.value > 0)
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final activeEntries =
+        widget.breakdown.entries.where((e) => e.value > 0).toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
     final hasExpenses = widget.totalExpense > 0 && activeEntries.isNotEmpty;
 
@@ -59,7 +58,11 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                   color: AppColors.absent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.donut_small_rounded, color: AppColors.absent, size: 20),
+                child: const Icon(
+                  Icons.donut_small_rounded,
+                  color: AppColors.absent,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -77,7 +80,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                     Text(
                       'Monthly Cost Allocation by Category',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 14,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -91,9 +94,12 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  GymDateUtils.formatCurrency(widget.totalExpense, symbol: widget.currency),
+                  GymDateUtils.formatCurrency(
+                    widget.totalExpense,
+                    symbol: widget.currency,
+                  ),
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppColors.absent,
                   ),
@@ -124,7 +130,9 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                               _touchedIndex = -1;
                               return;
                             }
-                            _touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                            _touchedIndex = pieTouchResponse
+                                .touchedSection!
+                                .touchedSectionIndex;
                           });
                         },
                       ),
@@ -181,14 +189,18 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                               color: category.color.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(category.icon, size: 16, color: category.color),
+                            child: Icon(
+                              category.icon,
+                              size: 16,
+                              color: category.color,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               category.label,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                               ),
@@ -200,9 +212,12 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                GymDateUtils.formatCurrency(amount, symbol: widget.currency),
+                                GymDateUtils.formatCurrency(
+                                  amount,
+                                  symbol: widget.currency,
+                                ),
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.textPrimary,
                                 ),
@@ -210,7 +225,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                               Text(
                                 '$pct% of total',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 14,
                                   color: AppColors.textMuted,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -224,9 +239,13 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(3),
                         child: LinearProgressIndicator(
-                          value: widget.totalExpense > 0 ? (amount / widget.totalExpense).clamp(0.0, 1.0) : 0,
+                          value: widget.totalExpense > 0
+                              ? (amount / widget.totalExpense).clamp(0.0, 1.0)
+                              : 0,
                           backgroundColor: AppColors.surfaceBorder,
-                          valueColor: AlwaysStoppedAnimation<Color>(category.color),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            category.color,
+                          ),
                           minHeight: 4,
                         ),
                       ),
@@ -241,7 +260,9 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
     );
   }
 
-  Widget _buildCenterInfo(List<MapEntry<ExpenseCategory, double>> activeEntries) {
+  Widget _buildCenterInfo(
+    List<MapEntry<ExpenseCategory, double>> activeEntries,
+  ) {
     if (_touchedIndex >= 0 && _touchedIndex < activeEntries.length) {
       final entry = activeEntries[_touchedIndex];
       final pct = widget.totalExpense > 0
@@ -256,7 +277,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
           Text(
             GymDateUtils.formatCurrency(entry.value, symbol: widget.currency),
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w900,
               color: entry.key.color,
             ),
@@ -264,7 +285,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
           Text(
             '$pct%',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -277,7 +298,10 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          GymDateUtils.formatCurrency(widget.totalExpense, symbol: widget.currency),
+          GymDateUtils.formatCurrency(
+            widget.totalExpense,
+            symbol: widget.currency,
+          ),
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w900,
@@ -287,7 +311,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
         Text(
           'Total Expenses',
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
             color: AppColors.textMuted,
           ),
@@ -303,12 +327,16 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.pie_chart_outline_rounded, size: 40, color: AppColors.textMuted.withValues(alpha: 0.5)),
+          Icon(
+            Icons.pie_chart_outline_rounded,
+            size: 40,
+            color: AppColors.textMuted.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 8),
           Text(
             'No Expenses Recorded This Month',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -317,10 +345,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
           Text(
             'Add rent, salaries, or utility costs to visualize category breakdown.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textMuted,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
           ),
         ],
       ),

@@ -6,10 +6,7 @@ import '../auth/auth_gate.dart';
 class IntroScreen extends StatefulWidget {
   final bool isReview;
 
-  const IntroScreen({
-    super.key,
-    this.isReview = false,
-  });
+  const IntroScreen({super.key, this.isReview = false});
 
   static const String keyHasSeenIntro = 'has_seen_intro_v1';
 
@@ -160,13 +157,16 @@ class _IntroScreenState extends State<IntroScreen> {
                       onPressed: _completeIntro,
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         visualDensity: VisualDensity.compact,
                       ),
                       child: const Text(
                         'Skip',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -226,7 +226,9 @@ class _IntroScreenState extends State<IntroScreen> {
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        item.accentColor.withValues(alpha: 0.15),
+                                        item.accentColor.withValues(
+                                          alpha: 0.15,
+                                        ),
                                         AppColors.surfaceElevated,
                                       ],
                                       begin: Alignment.topLeft,
@@ -234,12 +236,16 @@ class _IntroScreenState extends State<IntroScreen> {
                                     ),
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                      color: item.accentColor.withValues(alpha: 0.25),
+                                      color: item.accentColor.withValues(
+                                        alpha: 0.25,
+                                      ),
                                       width: 1.5,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: item.accentColor.withValues(alpha: 0.08),
+                                        color: item.accentColor.withValues(
+                                          alpha: 0.08,
+                                        ),
                                         blurRadius: 24,
                                         offset: const Offset(0, 8),
                                       ),
@@ -254,7 +260,9 @@ class _IntroScreenState extends State<IntroScreen> {
                                         height: heroHeight * 0.65,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: item.accentColor.withValues(alpha: 0.1),
+                                          color: item.accentColor.withValues(
+                                            alpha: 0.1,
+                                          ),
                                         ),
                                       ),
                                       Container(
@@ -262,7 +270,9 @@ class _IntroScreenState extends State<IntroScreen> {
                                         height: heroHeight * 0.45,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: item.accentColor.withValues(alpha: 0.18),
+                                          color: item.accentColor.withValues(
+                                            alpha: 0.18,
+                                          ),
                                         ),
                                       ),
                                       // Main Icon
@@ -279,19 +289,26 @@ class _IntroScreenState extends State<IntroScreen> {
 
                                 // Category Badge
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 5,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: item.accentColor.withValues(alpha: 0.12),
+                                    color: item.accentColor.withValues(
+                                      alpha: 0.12,
+                                    ),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: item.accentColor.withValues(alpha: 0.35),
+                                      color: item.accentColor.withValues(
+                                        alpha: 0.35,
+                                      ),
                                     ),
                                   ),
                                   child: Text(
                                     item.badge,
                                     style: TextStyle(
                                       color: item.accentColor,
-                                      fontSize: 10.5,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 1.1,
                                     ),
@@ -306,7 +323,9 @@ class _IntroScreenState extends State<IntroScreen> {
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: AppColors.textPrimary,
-                                    fontSize: isVeryShort ? 19 : (isCompact ? 22 : 25),
+                                    fontSize: isVeryShort
+                                        ? 19
+                                        : (isCompact ? 22 : 25),
                                     fontWeight: FontWeight.w900,
                                     height: 1.2,
                                     letterSpacing: -0.4,
@@ -338,17 +357,21 @@ class _IntroScreenState extends State<IntroScreen> {
                                   decoration: BoxDecoration(
                                     color: AppColors.surface,
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: AppColors.surfaceBorder),
+                                    border: Border.all(
+                                      color: AppColors.surfaceBorder,
+                                    ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: item.features.map((feat) {
                                       return Padding(
                                         padding: EdgeInsets.symmetric(
                                           vertical: isCompact ? 3.5 : 5,
                                         ),
                                         child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
                                           children: [
                                             Icon(
                                               Icons.check_circle_rounded,
@@ -388,7 +411,10 @@ class _IntroScreenState extends State<IntroScreen> {
             SafeArea(
               top: false,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   border: Border(
@@ -423,7 +449,10 @@ class _IntroScreenState extends State<IntroScreen> {
                       // Back button (if index > 0)
                       if (_currentIndex > 0) ...[
                         IconButton(
-                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
                           padding: const EdgeInsets.all(4),
                           onPressed: () {
                             _pageController.previousPage(
@@ -445,7 +474,10 @@ class _IntroScreenState extends State<IntroScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.primaryOn,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 9,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

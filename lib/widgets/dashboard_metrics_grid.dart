@@ -58,101 +58,122 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
           curve: AppAnimations.curveEaseInOut,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.isDark
+                ? AppColors.surface
+                : const Color(0xFF183B2D),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppColors.surfaceBorder),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header with Title, All Stats Button & Expand/Collapse
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: Row(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.dashboard_customize_outlined, color: AppColors.primary, size: 18),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Gym Overview',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // "All Stats" Button to open dedicated statistics page
-                    AnimatedPressable(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          AppPageRoute(
-                            builder: (_) => const GymStatisticsScreen(),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                          child: Icon(
+                            Icons.dashboard_customize_outlined,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'All Stats',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Gym Overview',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // "All Stats" Button to open dedicated statistics page
+                        AnimatedPressable(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              AppPageRoute(
+                                builder: (_) => const GymStatisticsScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
                               ),
                             ),
-                            const SizedBox(width: 3),
-                            Icon(Icons.arrow_forward_rounded, size: 13, color: AppColors.primary),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'All Stats',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
 
-                    const SizedBox(width: 6),
+                        const SizedBox(width: 6),
 
-                    // Collapse / Expand toggle button with smooth rotation
-                    IconButton(
-                      icon: AnimatedRotation(
-                        turns: _isExpanded ? 0.0 : 0.5,
-                        duration: AppAnimations.normalDuration,
-                        curve: AppAnimations.curveEaseInOut,
-                        child: Icon(
-                          Icons.keyboard_arrow_up_rounded,
-                          color: AppColors.textMuted,
-                          size: 20,
+                        // Collapse / Expand toggle button with smooth rotation
+                        IconButton(
+                          icon: AnimatedRotation(
+                            turns: _isExpanded ? 0.0 : 0.5,
+                            duration: AppAnimations.normalDuration,
+                            curve: AppAnimations.curveEaseInOut,
+                            child: Icon(
+                              Icons.keyboard_arrow_up_rounded,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                          ),
+                          onPressed: () =>
+                              setState(() => _isExpanded = !_isExpanded),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
-                      ),
-                      onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                      ],
                     ),
                   ],
                 ),
@@ -189,7 +210,8 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                                         Navigator.push(
                                           context,
                                           AppPageRoute(
-                                            builder: (_) => const GymStatisticsScreen(),
+                                            builder: (_) =>
+                                                const GymStatisticsScreen(),
                                           ),
                                         );
                                       },
@@ -206,26 +228,37 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                                       title: 'Due Soon',
                                       numericValue: dueSoonCount,
                                       value: '$dueSoonCount',
-                                      subtitle: urgentRenewalCount > 0 ? '$urgentRenewalCount urgent' : 'Next 7 days',
+                                      subtitle: urgentRenewalCount > 0
+                                          ? '$urgentRenewalCount urgent'
+                                          : 'Next 7 days',
                                       icon: Icons.alarm_rounded,
-                                      color: urgentRenewalCount > 0 ? const Color(0xFFFF5252) : const Color(0xFFFF9100),
+                                      color: urgentRenewalCount > 0
+                                          ? const Color(0xFFC94A46)
+                                          : const Color(0xFFA66510),
                                       isUrgent: urgentRenewalCount > 0,
                                       onTap: () {
-                                        final dueMembers = [...expiring1to3, ...expiring4to7];
+                                        final dueMembers = [
+                                          ...expiring1to3,
+                                          ...expiring4to7,
+                                        ];
                                         if (dueMembers.isNotEmpty) {
                                           ExpiringMembersSheet.show(
                                             context,
                                             title: 'Members Due for Renewal',
-                                            subtitle: 'Memberships expiring within 7 days',
+                                            subtitle:
+                                                'Memberships expiring within 7 days',
                                             members: dueMembers,
-                                            accentColor: urgentRenewalCount > 0 ? const Color(0xFFFF5252) : const Color(0xFFFF9100),
+                                            accentColor: urgentRenewalCount > 0
+                                                ? const Color(0xFFC94A46)
+                                                : const Color(0xFFA66510),
                                             icon: Icons.alarm_rounded,
                                           );
                                         } else {
                                           Navigator.push(
                                             context,
                                             AppPageRoute(
-                                              builder: (_) => const GymStatisticsScreen(),
+                                              builder: (_) =>
+                                                  const GymStatisticsScreen(),
                                             ),
                                           );
                                         }
@@ -243,7 +276,10 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                                       title: 'Pending Dues',
                                       numericValue: totalDues,
                                       prefix: currency,
-                                      value: GymDateUtils.formatCurrency(totalDues, symbol: currency),
+                                      value: GymDateUtils.formatCurrency(
+                                        totalDues,
+                                        symbol: currency,
+                                      ),
                                       subtitle: 'Tap for report',
                                       icon: Icons.history_rounded,
                                       color: AppColors.pending,
@@ -251,7 +287,8 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                                         Navigator.push(
                                           context,
                                           AppPageRoute(
-                                            builder: (_) => const PendingPaymentsReportScreen(),
+                                            builder: (_) =>
+                                                const PendingPaymentsReportScreen(),
                                           ),
                                         );
                                       },
@@ -291,7 +328,9 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
           color: AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isUrgent ? color.withValues(alpha: 0.6) : AppColors.surfaceBorder,
+            color: isUrgent
+                ? color.withValues(alpha: 0.6)
+                : AppColors.surfaceBorder,
             width: isUrgent ? 1.5 : 1,
           ),
         ),
@@ -324,7 +363,10 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                   ? AnimatedCounter(
                       value: numericValue,
                       prefix: prefix,
-                      decimalPlaces: (numericValue is int || numericValue % 1 == 0) ? 0 : 2,
+                      decimalPlaces:
+                          (numericValue is int || numericValue % 1 == 0)
+                          ? 0
+                          : 2,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
@@ -346,7 +388,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
             Text(
               title,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
@@ -357,7 +399,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: isUrgent ? color : AppColors.textMuted,
               ),
@@ -370,4 +412,3 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
     );
   }
 }
-

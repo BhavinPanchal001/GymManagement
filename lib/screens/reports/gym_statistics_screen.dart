@@ -58,13 +58,17 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
 
         // Current month expense breakdown
         final currentMonthKey = GymDateUtils.toMonthKey(DateTime.now());
-        final expenseBreakdown = gym.getExpenseCategoryBreakdown(currentMonthKey);
+        final expenseBreakdown = gym.getExpenseCategoryBreakdown(
+          currentMonthKey,
+        );
 
         // Daily Attendance Overview
         final todayKey = GymDateUtils.toDateKey(DateTime.now());
         final dailyAtt = gym.getDailyOverview(todayKey);
         final presentToday = dailyAtt['present'] ?? 0;
-        final attendanceRate = totalActive > 0 ? (presentToday / totalActive * 100).round() : 0;
+        final attendanceRate = totalActive > 0
+            ? (presentToday / totalActive * 100).round()
+            : 0;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -82,19 +86,25 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.bolt_rounded, size: 15, color: AppColors.primary),
+                    Icon(
+                      Icons.bolt_rounded,
+                      size: 15,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Live Metrics',
                       style: TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 11.5,
+                        fontSize: 14,
                       ),
                     ),
                   ],
@@ -133,7 +143,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     _selectedFilter == AnalyticsCategoryFilter.financials) ...[
                   _buildSectionHeader(
                     title: 'Financial Analytics & Trends',
-                    subtitle: 'Revenue vs Expenses, Profit trajectory & Cost allocation',
+                    subtitle:
+                        'Revenue vs Expenses, Profit trajectory & Cost allocation',
                     icon: Icons.account_balance_wallet_outlined,
                   ),
                   const SizedBox(height: 10),
@@ -170,12 +181,20 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     children: [
                       Expanded(
                         child: _buildFinancialMetricBox(
-                          title: currentMonthProfit >= 0 ? 'Month Net Profit' : 'Month Net Loss',
-                          subtitle: currentMonthProfit >= 0 ? 'Surplus income' : 'Operating deficit',
+                          title: currentMonthProfit >= 0
+                              ? 'Month Net Profit'
+                              : 'Month Net Loss',
+                          subtitle: currentMonthProfit >= 0
+                              ? 'Surplus income'
+                              : 'Operating deficit',
                           amount: currentMonthProfit.abs(),
                           currency: currency,
-                          color: currentMonthProfit >= 0 ? AppColors.paid : AppColors.absent,
-                          icon: currentMonthProfit >= 0 ? Icons.savings_rounded : Icons.warning_amber_rounded,
+                          color: currentMonthProfit >= 0
+                              ? AppColors.paid
+                              : AppColors.absent,
+                          icon: currentMonthProfit >= 0
+                              ? Icons.savings_rounded
+                              : Icons.warning_amber_rounded,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -185,7 +204,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const PendingPaymentsReportScreen(),
+                                builder: (_) =>
+                                    const PendingPaymentsReportScreen(),
                               ),
                             );
                           },
@@ -227,10 +247,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                   const SizedBox(height: 14),
 
                   // VISUAL GRAPH 1: Financial Trends (Bar & Line Chart)
-                  FinancialTrendsChart(
-                    gym: gym,
-                    currency: currency,
-                  ),
+                  FinancialTrendsChart(gym: gym, currency: currency),
 
                   const SizedBox(height: 14),
 
@@ -246,7 +263,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                   // Daily Operations (Today)
                   _buildSectionHeader(
                     title: 'Daily Operations (Today)',
-                    subtitle: 'Real-time daily collection and operational expenses',
+                    subtitle:
+                        'Real-time daily collection and operational expenses',
                     icon: Icons.today_rounded,
                   ),
                   const SizedBox(height: 10),
@@ -281,7 +299,10 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                   _buildNetFlowTile(
                     title: "Today's Net Cash Flow",
                     subtitle: 'Collection minus Expense today',
-                    amount: GymDateUtils.formatCurrency(todayNet.abs(), symbol: currency),
+                    amount: GymDateUtils.formatCurrency(
+                      todayNet.abs(),
+                      symbol: currency,
+                    ),
                     isPositive: todayNet >= 0,
                     currency: currency,
                   ),
@@ -318,15 +339,22 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.15),
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: Icon(Icons.people_outline_rounded, color: AppColors.primary, size: 20),
+                                    child: Icon(
+                                      Icons.people_outline_rounded,
+                                      color: AppColors.primary,
+                                      size: 20,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           '$presentToday Members Present Today',
@@ -341,7 +369,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                                         Text(
                                           'Out of $totalActive active members',
                                           style: TextStyle(
-                                            fontSize: 11,
+                                            fontSize: 14,
                                             color: AppColors.textSecondary,
                                           ),
                                           maxLines: 1,
@@ -355,7 +383,10 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.paid.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
@@ -363,7 +394,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                               child: Text(
                                 '$attendanceRate% Turnout',
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.paid,
                                 ),
@@ -377,16 +408,21 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                           child: TweenAnimationBuilder<double>(
                             tween: Tween<double>(
                               begin: 0.0,
-                              end: totalActive > 0 ? (presentToday / totalActive).clamp(0.0, 1.0) : 0.0,
+                              end: totalActive > 0
+                                  ? (presentToday / totalActive).clamp(0.0, 1.0)
+                                  : 0.0,
                             ),
                             duration: AppAnimations.contentDuration,
                             curve: Curves.easeOutCubic,
-                            builder: (context, val, _) => LinearProgressIndicator(
-                              value: val,
-                              backgroundColor: AppColors.surfaceBorder,
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                              minHeight: 8,
-                            ),
+                            builder: (context, val, _) =>
+                                LinearProgressIndicator(
+                                  value: val,
+                                  backgroundColor: AppColors.surfaceBorder,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.primary,
+                                  ),
+                                  minHeight: 8,
+                                ),
                           ),
                         ),
                       ],
@@ -438,7 +474,8 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                   _buildExpiryTile(
                     context: context,
                     title: 'Live Active Members',
-                    subtitle: 'Healthy active memberships (> 15 days remaining)',
+                    subtitle:
+                        'Healthy active memberships (> 15 days remaining)',
                     count: liveMembers.length,
                     badgeText: 'Active',
                     accentColor: AppColors.paid,
@@ -453,7 +490,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     subtitle: 'Urgent renewal needed within 72 hours',
                     count: expiring1to3.length,
                     badgeText: 'Urgent',
-                    accentColor: const Color(0xFFFF5252),
+                    accentColor: const Color(0xFFC94A46),
                     icon: Icons.alarm_rounded,
                     members: expiring1to3,
                     isUrgent: expiring1to3.isNotEmpty,
@@ -466,7 +503,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     subtitle: 'Memberships expiring within this week',
                     count: expiring4to7.length,
                     badgeText: 'This Week',
-                    accentColor: const Color(0xFFFF9100),
+                    accentColor: const Color(0xFFA66510),
                     icon: Icons.upcoming_rounded,
                     members: expiring4to7,
                   ),
@@ -490,7 +527,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     subtitle: 'Past expiry date, eligible for reactivation',
                     count: expiredMembers.length,
                     badgeText: 'Expired',
-                    accentColor: const Color(0xFFD50000),
+                    accentColor: const Color(0xFFB42318),
                     icon: Icons.cancel_rounded,
                     members: expiredMembers,
                     isUrgent: expiredMembers.isNotEmpty,
@@ -513,9 +550,21 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
   Widget _buildCategoryFilterPills() {
     final filters = [
       (AnalyticsCategoryFilter.all, 'All Analytics', Icons.dashboard_rounded),
-      (AnalyticsCategoryFilter.financials, 'Financials', Icons.bar_chart_rounded),
-      (AnalyticsCategoryFilter.attendance, 'Attendance', Icons.insights_rounded),
-      (AnalyticsCategoryFilter.memberships, 'Memberships', Icons.pie_chart_rounded),
+      (
+        AnalyticsCategoryFilter.financials,
+        'Financials',
+        Icons.bar_chart_rounded,
+      ),
+      (
+        AnalyticsCategoryFilter.attendance,
+        'Attendance',
+        Icons.insights_rounded,
+      ),
+      (
+        AnalyticsCategoryFilter.memberships,
+        'Memberships',
+        Icons.pie_chart_rounded,
+      ),
     ];
 
     return SingleChildScrollView(
@@ -530,12 +579,17 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               onTap: () => setState(() => _selectedFilter = f.$1),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primary : AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.surfaceBorder,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.surfaceBorder,
                   ),
                 ),
                 child: Row(
@@ -544,15 +598,21 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     Icon(
                       f.$3,
                       size: 14,
-                      color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
+                      color: isSelected
+                          ? AppColors.primaryOn
+                          : AppColors.textSecondary,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       f.$2,
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                        color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
+                        fontSize: 14,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w600,
+                        color: isSelected
+                            ? AppColors.primaryOn
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -575,7 +635,9 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
     required int presentToday,
     required int attendanceRate,
   }) {
-    final activeRate = totalMembers > 0 ? (activeMembers / totalMembers * 100).round() : 0;
+    final activeRate = totalMembers > 0
+        ? (activeMembers / totalMembers * 100).round()
+        : 0;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -602,7 +664,11 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 22),
+                child: Icon(
+                  Icons.fitness_center_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -622,7 +688,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     Text(
                       'Membership & Financial Intelligence',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -630,16 +696,21 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.paid.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.paid.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.paid.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Text(
                   '$activeRate% Active',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppColors.paid,
                   ),
@@ -714,7 +785,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 14,
             color: AppColors.textMuted,
             fontWeight: FontWeight.w600,
           ),
@@ -754,10 +825,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           padding: const EdgeInsets.only(left: 26),
           child: Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ),
       ],
@@ -792,7 +860,9 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isUrgent ? accentColor.withValues(alpha: 0.6) : AppColors.surfaceBorder,
+            color: isUrgent
+                ? accentColor.withValues(alpha: 0.6)
+                : AppColors.surfaceBorder,
             width: isUrgent ? 1.5 : 1,
           ),
         ),
@@ -817,7 +887,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: Text(
                           title,
                           style: TextStyle(
-                            fontSize: 13.5,
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
                           ),
@@ -827,7 +897,10 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: accentColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
@@ -835,7 +908,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: Text(
                           badgeText,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: accentColor,
                           ),
@@ -847,7 +920,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 14,
                       color: AppColors.textSecondary,
                     ),
                     maxLines: 1,
@@ -873,7 +946,11 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 18),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textMuted,
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -932,7 +1009,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
@@ -941,10 +1018,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           ),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 10,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -978,7 +1052,9 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              isPositive ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+              isPositive
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.info_outline_rounded,
               color: color,
               size: 20,
             ),
@@ -991,7 +1067,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
@@ -999,7 +1075,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 14,
                     color: AppColors.textSecondary,
                   ),
                 ),

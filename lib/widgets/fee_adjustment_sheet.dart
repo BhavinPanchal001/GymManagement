@@ -228,7 +228,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
     minimumSize: const Size(double.infinity, 46),
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
   );
 
   Widget _metric(String label, double amount, {Color? color}) => Column(
@@ -236,7 +236,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
     children: [
       Text(
         label,
-        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
       ),
       const SizedBox(height: 5),
       Text(
@@ -270,7 +270,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                     Text(
                       'Current fee',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -287,7 +287,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                     Text(
                       'Original fee: ${money(original)}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -303,7 +303,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                 child: Text(
                   settled ? 'Settled' : 'Balance due',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: statusColor,
                   ),
@@ -333,7 +333,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
             const SizedBox(height: 12),
             Text(
               'Credit applied here: ${money(_expected.creditApplied)}',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
           ],
         ],
@@ -421,7 +421,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                     label,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: selected
                           ? AppColors.primaryOn
@@ -514,7 +514,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                     Text(
                       'Available member credit',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textSecondary,
                       ),
@@ -537,7 +537,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
           Text(
             'Keep it for later, or choose an action below.',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 14,
               height: 1.5,
               color: AppColors.textSecondary,
             ),
@@ -578,7 +578,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                         child: Text(
                           '${p.formattedDateRange} (${money(p.balanceDue)} due)',
                           maxLines: 2,
-                          style: const TextStyle(fontSize: 13),
+                          style: const TextStyle(fontSize: 14),
                         ),
                       ),
                     )
@@ -621,7 +621,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
               Text(
                 'Only record money you have already returned.',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   height: 1.5,
                   color: AppColors.textSecondary,
                 ),
@@ -662,7 +662,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                 child: Text(
                   change.kind,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary,
                   ),
@@ -671,7 +671,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
               if (removed)
                 Text(
                   'Removed',
-                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 14, color: AppColors.textMuted),
                 ),
             ],
           ),
@@ -710,7 +710,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
           Text(
             change.reason,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               height: 1.4,
               color: AppColors.textSecondary,
             ),
@@ -719,7 +719,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
           Text(
             '${change.actor} • ${GymDateUtils.formatDate(date)} '
             '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
-            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
           ),
           if (latest) ...[
             const SizedBox(height: 8),
@@ -732,14 +732,14 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
               icon: const Icon(Icons.delete_outline, size: 16),
               label: const Text(
                 'Remove adjustment',
-                style: TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: 14),
               ),
             ),
             if (blocked != null)
               Text(
                 blocked,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   height: 1.4,
                   color: AppColors.textSecondary,
                 ),
@@ -815,7 +815,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                       child: Text(
                         _expected.formattedDateRange,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           color: AppColors.textSecondary,
                         ),
                       ),
@@ -860,7 +860,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                     Text(
                       _error!,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         height: 1.4,
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -885,7 +885,7 @@ class _FeeAdjustmentSheetState extends State<FeeAdjustmentSheet> {
                       Text(
                         'Change saved.',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           color: AppColors.dynamicPaid,
                         ),
                       ),

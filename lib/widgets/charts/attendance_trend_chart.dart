@@ -9,10 +9,7 @@ import '../../utils/date_utils.dart';
 class AttendanceTrendChart extends StatefulWidget {
   final GymService gym;
 
-  const AttendanceTrendChart({
-    super.key,
-    required this.gym,
-  });
+  const AttendanceTrendChart({super.key, required this.gym});
 
   @override
   State<AttendanceTrendChart> createState() => _AttendanceTrendChartState();
@@ -37,7 +34,9 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
         _AttendanceDayPoint(
           date: dt,
           dateKey: dateKey,
-          dayLabel: _daysCount <= 7 ? DateFormat('E').format(dt) : DateFormat('d/M').format(dt),
+          dayLabel: _daysCount <= 7
+              ? DateFormat('E').format(dt)
+              : DateFormat('d/M').format(dt),
           presentCount: present,
           totalActive: total,
         ),
@@ -45,7 +44,10 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
     }
 
     final totalActive = widget.gym.customers.where((c) => c.isActive).length;
-    final totalAttendanceSum = points.fold<int>(0, (sum, p) => sum + p.presentCount);
+    final totalAttendanceSum = points.fold<int>(
+      0,
+      (sum, p) => sum + p.presentCount,
+    );
     final avgAttendance = (totalAttendanceSum / _daysCount).toStringAsFixed(1);
 
     int maxTurnout = 0;
@@ -85,7 +87,11 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.insights_rounded, color: AppColors.primary, size: 20),
+                child: Icon(
+                  Icons.insights_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -103,7 +109,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                     Text(
                       'Daily Footfall & Member Consistency',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 14,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -187,7 +193,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                   Text(
                     'Daily Present',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 14,
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
@@ -197,7 +203,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
               Text(
                 'Total active pool: $totalActive members',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 14,
                   color: AppColors.textMuted,
                   fontWeight: FontWeight.w500,
                 ),
@@ -222,7 +228,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
         child: Text(
           text,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
             color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
           ),
@@ -256,7 +262,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                   ),
@@ -266,7 +272,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                 Text(
                   subtitle ?? label,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 14,
                     color: AppColors.textMuted,
                     fontWeight: FontWeight.w500,
                   ),
@@ -288,12 +294,16 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.event_busy_rounded, size: 40, color: AppColors.textMuted.withValues(alpha: 0.5)),
+          Icon(
+            Icons.event_busy_rounded,
+            size: 40,
+            color: AppColors.textMuted.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 8),
           Text(
             'No Attendance Records',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -302,17 +312,17 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
           Text(
             'Mark member attendance daily in the Attendance tab to track turnout trends.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textMuted,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAttendanceLineChart(List<_AttendanceDayPoint> points, int totalActive) {
+  Widget _buildAttendanceLineChart(
+    List<_AttendanceDayPoint> points,
+    int totalActive,
+  ) {
     int maxVal = 0;
     for (final p in points) {
       maxVal = math.max(maxVal, p.presentCount);
@@ -346,7 +356,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                   TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 14,
                   ),
                   children: [
                     TextSpan(
@@ -354,7 +364,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                       style: TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w800,
-                        fontSize: 12,
+                        fontSize: 14,
                       ),
                     ),
                   ],
@@ -375,16 +385,24 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (double value, TitleMeta meta) {
                 final index = value.toInt();
-                if (index < 0 || index >= points.length) return const SizedBox.shrink();
+                if (index < 0 || index >= points.length) {
+                  return const SizedBox.shrink();
+                }
                 // If 14 days, show every 2nd title to avoid crowding
-                if (_daysCount > 7 && index % 2 != 0 && index != points.length - 1) {
+                if (_daysCount > 7 &&
+                    index % 2 != 0 &&
+                    index != points.length - 1) {
                   return const SizedBox.shrink();
                 }
                 return SideTitleWidget(
@@ -395,7 +413,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 10,
+                      fontSize: 14,
                     ),
                   ),
                 );
@@ -415,7 +433,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                     value.toInt().toString(),
                     style: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 10,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

@@ -67,7 +67,10 @@ class _ExpenseTabState extends State<ExpenseTab> {
             children: [
               // Summary Header Banner
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -79,7 +82,9 @@ class _ExpenseTabState extends State<ExpenseTab> {
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.absent.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.absent.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -89,7 +94,11 @@ class _ExpenseTabState extends State<ExpenseTab> {
                         color: AppColors.absent.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.outbox_rounded, color: AppColors.absent, size: 24),
+                      child: Icon(
+                        Icons.outbox_rounded,
+                        color: AppColors.absent,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -99,7 +108,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                           Text(
                             'TOTAL EXPENSES (${GymDateUtils.formatMonthHeader(monthKey)})',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
                               color: AppColors.textMuted,
@@ -107,7 +116,10 @@ class _ExpenseTabState extends State<ExpenseTab> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            GymDateUtils.formatCurrency(totalExpense, symbol: currency),
+                            GymDateUtils.formatCurrency(
+                              totalExpense,
+                              symbol: currency,
+                            ),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -118,7 +130,10 @@ class _ExpenseTabState extends State<ExpenseTab> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceElevated,
                         borderRadius: BorderRadius.circular(20),
@@ -127,7 +142,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                       child: Text(
                         '${allExpenses.length} Records',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
@@ -139,22 +154,33 @@ class _ExpenseTabState extends State<ExpenseTab> {
 
               // Search and Category Filters
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: TextField(
                   controller: _searchController,
                   onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Search expenses by name or notes...',
-                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    hintStyle: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 14,
+                    ),
                     filled: true,
                     fillColor: AppColors.surfaceElevated,
-                    prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textMuted),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 18,
+                      color: AppColors.textMuted,
+                    ),
                     suffixIcon: VoiceSearchSuffix(
                       controller: _searchController,
                       voiceHint: 'Say expense title, category, or note...',
                       iconSize: 18,
-                      onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                      onChanged: (val) =>
+                          setState(() => _searchQuery = val.trim()),
                       onClear: () => setState(() => _searchQuery = ''),
                     ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -173,7 +199,10 @@ class _ExpenseTabState extends State<ExpenseTab> {
               // Category Filter Chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     FilterChip(
@@ -181,11 +210,13 @@ class _ExpenseTabState extends State<ExpenseTab> {
                       showCheckmark: false,
                       label: Text('All (${allExpenses.length})'),
                       labelStyle: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: _selectedCategoryFilter == null
                             ? FontWeight.w700
                             : FontWeight.w500,
-                        color: _selectedCategoryFilter == null ? AppColors.primaryOn : AppColors.textSecondary,
+                        color: _selectedCategoryFilter == null
+                            ? AppColors.primaryOn
+                            : AppColors.textSecondary,
                       ),
                       selectedColor: AppColors.primary,
                       backgroundColor: AppColors.surfaceElevated,
@@ -194,7 +225,8 @@ class _ExpenseTabState extends State<ExpenseTab> {
                             ? AppColors.primary
                             : AppColors.surfaceBorder,
                       ),
-                      onSelected: (_) => setState(() => _selectedCategoryFilter = null),
+                      onSelected: (_) =>
+                          setState(() => _selectedCategoryFilter = null),
                     ),
                     const SizedBox(width: 8),
                     ...ExpenseCategory.values.map((cat) {
@@ -217,14 +249,20 @@ class _ExpenseTabState extends State<ExpenseTab> {
                           ),
                           label: Text('${cat.label} ($count)'),
                           labelStyle: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isSelected ? Colors.black : AppColors.textSecondary,
+                            fontSize: 14,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? Colors.black
+                                : AppColors.textSecondary,
                           ),
                           selectedColor: cat.color,
                           backgroundColor: AppColors.surfaceElevated,
                           side: BorderSide(
-                            color: isSelected ? cat.color : AppColors.surfaceBorder,
+                            color: isSelected
+                                ? cat.color
+                                : AppColors.surfaceBorder,
                           ),
                           onSelected: (selected) {
                             setState(() {
@@ -245,10 +283,15 @@ class _ExpenseTabState extends State<ExpenseTab> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.receipt_long_outlined, size: 56, color: AppColors.textMuted),
+                            Icon(
+                              Icons.receipt_long_outlined,
+                              size: 56,
+                              color: AppColors.textMuted,
+                            ),
                             const SizedBox(height: 12),
                             Text(
-                              _selectedCategoryFilter != null || _searchQuery.isNotEmpty
+                              _selectedCategoryFilter != null ||
+                                      _searchQuery.isNotEmpty
                                   ? 'No expenses matching filter'
                                   : 'No expenses recorded for this month',
                               style: TextStyle(
@@ -306,7 +349,8 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: expense.category.color.withValues(alpha: 0.15),
+                                        color: expense.category.color
+                                            .withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Icon(
@@ -320,7 +364,8 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                     // Title, Category & Date
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             expense.title,
@@ -334,28 +379,34 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                           Row(
                                             children: [
                                               Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 2,
-                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color: expense.category.color.withValues(alpha: 0.12),
-                                                  borderRadius: BorderRadius.circular(6),
+                                                  color: expense.category.color
+                                                      .withValues(alpha: 0.12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
                                                 ),
                                                 child: Text(
                                                   expense.category.label,
                                                   style: TextStyle(
-                                                    fontSize: 10,
+                                                    fontSize: 14,
                                                     fontWeight: FontWeight.w600,
-                                                    color: expense.category.color,
+                                                    color:
+                                                        expense.category.color,
                                                   ),
                                                 ),
                                               ),
                                               const SizedBox(width: 6),
                                               Text(
-                                                GymDateUtils.formatDisplayDate(expense.date),
+                                                GymDateUtils.formatDisplayDate(
+                                                  expense.date,
+                                                ),
                                                 style: TextStyle(
-                                                  fontSize: 11,
+                                                  fontSize: 14,
                                                   color: AppColors.textMuted,
                                                 ),
                                               ),
@@ -363,7 +414,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                               Text(
                                                 '• ${PaymentRecord.methodLabel(expense.paymentMethod)}',
                                                 style: TextStyle(
-                                                  fontSize: 11,
+                                                  fontSize: 14,
                                                   color: AppColors.textMuted,
                                                 ),
                                               ),
@@ -375,7 +426,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                             Text(
                                               expense.notes!,
                                               style: TextStyle(
-                                                fontSize: 11,
+                                                fontSize: 14,
                                                 fontStyle: FontStyle.italic,
                                                 color: AppColors.textMuted,
                                               ),
@@ -389,10 +440,14 @@ class _ExpenseTabState extends State<ExpenseTab> {
 
                                     // Amount & Edit Icon
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
                                       children: [
                                         Text(
-                                          GymDateUtils.formatCurrency(expense.amount, symbol: currency),
+                                          GymDateUtils.formatCurrency(
+                                            expense.amount,
+                                            symbol: currency,
+                                          ),
                                           style: TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w800,
@@ -419,10 +474,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () {
-              AddExpenseDialog.show(
-                context,
-                initialDate: widget.selectedMonth,
-              );
+              AddExpenseDialog.show(context, initialDate: widget.selectedMonth);
             },
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.primaryOn,
