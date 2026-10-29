@@ -61,7 +61,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
             color: AppColors.isDark
                 ? AppColors.surface
                 : const Color(0xFF183B2D),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.surfaceBorder),
           ),
           child: Column(
@@ -73,41 +73,42 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                   horizontal: 14,
                   vertical: 10,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            Icons.dashboard_customize_outlined,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Gym Overview',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            child: Icon(
+                              Icons.dashboard_customize_outlined,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Gym Overview',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // "All Stats" Button to open dedicated statistics page
                         AnimatedPressable(
@@ -126,7 +127,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: Colors.white.withValues(alpha: 0.3),
                               ),
@@ -137,7 +138,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                                 Text(
                                   'All Stats',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
                                   ),
@@ -171,7 +172,10 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                               setState(() => _isExpanded = !_isExpanded),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                          constraints: const BoxConstraints.tightFor(
+                            width: 32,
+                            height: 32,
+                          ),
                         ),
                       ],
                     ),

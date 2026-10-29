@@ -36,39 +36,51 @@ void main() {
 
   for (final width in [360.0, 384.0, 412.0]) {
     for (final scale in [1.0, 1.3, 1.5]) {
-      testWidgets('Members at $width dp and $scale text scale', (tester) async {
-        tester.view.physicalSize = Size(width, 900);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        await ThemeService().setThemeMode(ThemeMode.light);
-        await gym.addCustomer(
-          name: 'Alexander Robertson Patel',
-          phone: '9876543210',
+      for (final paidAmount in [0.0, 150.0, 600.0]) {
+        testWidgets(
+          'Members at $width dp and $scale text scale and $paidAmount collected',
+          (tester) async {
+            tester.view.physicalSize = Size(width, 900);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+            await ThemeService().setThemeMode(ThemeMode.light);
+            await gym.addCustomer(
+              name: 'Alexander Robertson Patel',
+              phone: '9876543210',
+              joinDate: DateTime.now().subtract(const Duration(days: 14)),
+              membershipStartDate: DateTime.now().subtract(
+                const Duration(days: 14),
+              ),
+              membershipFee: 600,
+              markAsPaidNow: paidAmount > 0,
+              paidAmount: paidAmount,
+            );
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: AppTheme.lightTheme,
+                builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(scale)),
+                  child: child!,
+                ),
+                home: const CustomersTab(),
+              ),
+            );
+            await tester.pumpAndSettle();
+            expect(find.text('Alexander Robertson Patel'), findsOneWidget);
+            expect(find.text('Add Member'), findsOneWidget);
+            expect(tester.takeException(), isNull);
+            final list = tester.getRect(find.byType(ListView));
+            final add = tester.getRect(
+              find.byWidgetPredicate((widget) => widget is FilledButton),
+            );
+            expect(list.bottom, lessThanOrEqualTo(add.top));
+            await tester.pumpWidget(const SizedBox());
+          },
         );
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: AppTheme.lightTheme,
-            builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(scale)),
-              child: child!,
-            ),
-            home: const CustomersTab(),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('Alexander Robertson Patel'), findsOneWidget);
-        expect(find.text('Add Member'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-        final list = tester.getRect(find.byType(ListView));
-        final add = tester.getRect(
-          find.byWidgetPredicate((widget) => widget is FilledButton),
-        );
-        expect(list.bottom, lessThanOrEqualTo(add.top));
-        await tester.pumpWidget(const SizedBox());
-      });
+      }
     }
   }
 }

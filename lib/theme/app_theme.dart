@@ -76,9 +76,9 @@ class AppColors {
   static const Color lightPrimaryOn = _lightPrimaryOn;
 
   // Shared Status Colors - Mode-specific definitions
-  static const Color _darkPaid = Color(0xFF278052); // Emerald Green
-  static const Color _darkPending = Color(0xFFA66510); // Amber Orange
-  static const Color _darkAbsent = Color(0xFFC94A46); // Crimson Coral
+  static const Color _darkPaid = Color(0xFF83BC9B); // Emerald Green
+  static const Color _darkPending = Color(0xFFD8A85C); // Amber Orange
+  static const Color _darkAbsent = Color(0xFFE47C76); // Crimson Coral
   static const Color _darkRest = Color(0xFF497CC2); // Athletic Blue
 
   static const Color _lightPaid = Color(
@@ -126,18 +126,27 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
+      visualDensity: VisualDensity.compact,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.darkBackground,
       fontFamily: 'Roboto',
       navigationBarTheme: NavigationBarThemeData(
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? AppColors.primary
+                : AppColors.textSecondary,
+            size: 24,
+          ),
+        ),
         labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          minimumSize: const Size(44, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -145,22 +154,22 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size(48, 52),
+          minimumSize: const Size(44, 44),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
       textTheme: const TextTheme(
-        headlineSmall: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-        titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(fontSize: 18, height: 1.4),
-        bodyMedium: TextStyle(fontSize: 16, height: 1.4),
-        bodySmall: TextStyle(fontSize: 14, height: 1.4),
-        labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(fontSize: 16, height: 1.3),
+        bodyMedium: TextStyle(fontSize: 14, height: 1.3),
+        bodySmall: TextStyle(fontSize: 13, height: 1.3),
+        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       colorScheme: const ColorScheme.dark(
         primary: AppColors.darkPrimary,
@@ -178,8 +187,8 @@ class AppTheme {
         titleTextStyle: TextStyle(
           fontFamily: 'Roboto',
           color: Colors.white,
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
         ),
       ),
@@ -217,10 +226,11 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        isDense: true,
         fillColor: AppColors.darkSurfaceElevated,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 14,
+          vertical: 10,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -237,7 +247,7 @@ class AppTheme {
             width: 1.5,
           ),
         ),
-        hintStyle: const TextStyle(color: Color(0xFF657182), fontSize: 16),
+        hintStyle: const TextStyle(color: Color(0xFF657182), fontSize: 14),
       ),
     );
   }
@@ -245,18 +255,27 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      visualDensity: VisualDensity.compact,
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.lightBackground,
       fontFamily: 'Roboto',
       navigationBarTheme: NavigationBarThemeData(
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? AppColors.primary
+                : AppColors.textSecondary,
+            size: 24,
+          ),
+        ),
         labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          minimumSize: const Size(44, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -264,22 +283,22 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size(48, 52),
+          minimumSize: const Size(44, 44),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
       textTheme: const TextTheme(
-        headlineSmall: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-        titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(fontSize: 18, height: 1.4),
-        bodyMedium: TextStyle(fontSize: 16, height: 1.4),
-        bodySmall: TextStyle(fontSize: 14, height: 1.4),
-        labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(fontSize: 16, height: 1.3),
+        bodyMedium: TextStyle(fontSize: 14, height: 1.3),
+        bodySmall: TextStyle(fontSize: 13, height: 1.3),
+        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
       colorScheme: const ColorScheme.light(
         primary: AppColors.lightPrimary,
@@ -297,8 +316,8 @@ class AppTheme {
         titleTextStyle: TextStyle(
           fontFamily: 'Roboto',
           color: Color(0xFF18251F),
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
         ),
       ),
@@ -337,10 +356,11 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        isDense: true,
         fillColor: AppColors.lightSurface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 14,
+          vertical: 10,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -357,7 +377,7 @@ class AppTheme {
             width: 1.5,
           ),
         ),
-        hintStyle: const TextStyle(color: Color(0xFF59685F), fontSize: 16),
+        hintStyle: const TextStyle(color: Color(0xFF59685F), fontSize: 14),
       ),
     );
   }

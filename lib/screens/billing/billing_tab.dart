@@ -184,7 +184,7 @@ class _BillingTabState extends State<BillingTab> {
           body: LayoutBuilder(
             builder: (context, constraints) {
               final minimumHeight =
-                  560 * MediaQuery.textScalerOf(context).scale(1);
+                  480 * MediaQuery.textScalerOf(context).scale(1);
               return SingleChildScrollView(
                 child: SizedBox(
                   height: constraints.maxHeight < minimumHeight
@@ -192,30 +192,6 @@ class _BillingTabState extends State<BillingTab> {
                       : constraints.maxHeight,
                   child: Column(
                     children: [
-                      Container(
-                        margin: const EdgeInsets.only(right: 16),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.surfaceBorder),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              'Fee: ${GymDateUtils.formatCurrency(gym.settings.standardMonthlyFee, symbol: currency)}/mo',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                       // Month Selector Bar and section tabs are hidden while the keyboard
                       // is open so the search field and results fit on small screens.
                       if (MediaQuery.viewInsetsOf(context).bottom == 0) ...[
@@ -236,13 +212,28 @@ class _BillingTabState extends State<BillingTab> {
                                     size: 20,
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    GymDateUtils.formatMonthYearKey(monthKey),
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
-                                    ),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        GymDateUtils.formatMonthYearKey(
+                                          monthKey,
+                                        ),
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Fee: ${GymDateUtils.formatCurrency(gym.settings.standardMonthlyFee, symbol: currency)}/mo',
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -290,7 +281,7 @@ class _BillingTabState extends State<BillingTab> {
                               child: SizedBox(
                                 width: (MediaQuery.sizeOf(context).width - 40)
                                     .clamp(
-                                      300 *
+                                      350 *
                                           MediaQuery.textScalerOf(
                                             context,
                                           ).scale(1),
@@ -356,7 +347,7 @@ class _BillingTabState extends State<BillingTab> {
                             controller: _searchController,
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                             onChanged: (_) => setState(() {}),
                             decoration: InputDecoration(
@@ -419,10 +410,10 @@ class _BillingTabState extends State<BillingTab> {
                                         horizontal: 16,
                                         vertical: 6,
                                       ),
-                                      padding: const EdgeInsets.all(18),
+                                      padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         color: AppColors.surface,
-                                        borderRadius: BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(14),
                                         border: Border.all(
                                           color: AppColors.surfaceBorder,
                                         ),
@@ -450,7 +441,7 @@ class _BillingTabState extends State<BillingTab> {
                                                     totalCollected,
                                                     symbol: currency,
                                                   ),
-                                                  AppColors.paid,
+                                                  AppColors.dynamicPaid,
                                                   '$paidCount paid',
                                                   prefix: currency,
                                                 ),
@@ -468,7 +459,7 @@ class _BillingTabState extends State<BillingTab> {
                                                     totalPending,
                                                     symbol: currency,
                                                   ),
-                                                  AppColors.pending,
+                                                  AppColors.dynamicPending,
                                                   '$pendingCount pending',
                                                   prefix: currency,
                                                 ),
@@ -493,7 +484,7 @@ class _BillingTabState extends State<BillingTab> {
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 14),
+                                          const SizedBox(height: 8),
                                           // Progress Bar
                                           ClipRRect(
                                             borderRadius: BorderRadius.circular(
@@ -518,10 +509,13 @@ class _BillingTabState extends State<BillingTab> {
                                                         Color
                                                       >(
                                                         animatedVal >= 0.8
-                                                            ? AppColors.paid
+                                                            ? AppColors
+                                                                  .dynamicPaid
                                                             : animatedVal >= 0.5
-                                                            ? AppColors.pending
-                                                            : AppColors.absent,
+                                                            ? AppColors
+                                                                  .dynamicPending
+                                                            : AppColors
+                                                                  .dynamicAbsent,
                                                       ),
                                                 );
                                               },
@@ -544,7 +538,7 @@ class _BillingTabState extends State<BillingTab> {
                                                     style: TextStyle(
                                                       color: AppColors
                                                           .textSecondary,
-                                                      fontSize: 14,
+                                                      fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                     ),
@@ -556,7 +550,7 @@ class _BillingTabState extends State<BillingTab> {
                                                     style: TextStyle(
                                                       color:
                                                           AppColors.textPrimary,
-                                                      fontSize: 14,
+                                                      fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                     ),
@@ -567,7 +561,7 @@ class _BillingTabState extends State<BillingTab> {
                                                 '$paidCount of $totalMembers Cleared',
                                                 style: TextStyle(
                                                   color: AppColors.textMuted,
-                                                  fontSize: 14,
+                                                  fontSize: 13,
                                                 ),
                                               ),
                                             ],
@@ -614,14 +608,16 @@ class _BillingTabState extends State<BillingTab> {
                                                   8,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: AppColors.pending
+                                                  color: AppColors
+                                                      .dynamicPending
                                                       .withValues(alpha: 0.15),
                                                   borderRadius:
                                                       BorderRadius.circular(10),
                                                 ),
                                                 child: Icon(
                                                   Icons.history_rounded,
-                                                  color: AppColors.pending,
+                                                  color:
+                                                      AppColors.dynamicPending,
                                                   size: 18,
                                                 ),
                                               ),
@@ -636,17 +632,17 @@ class _BillingTabState extends State<BillingTab> {
                                                       style: TextStyle(
                                                         color: AppColors
                                                             .textPrimary,
-                                                        fontSize: 14,
+                                                        fontSize: 13,
                                                         fontWeight:
                                                             FontWeight.bold,
                                                       ),
                                                     ),
                                                     Text(
-                                                      'Track pending dues across months with 1-tap reminders',
+                                                      'Dues across months · Send reminders',
                                                       style: TextStyle(
                                                         color:
                                                             AppColors.textMuted,
-                                                        fontSize: 14,
+                                                        fontSize: 13,
                                                       ),
                                                     ),
                                                   ],
@@ -758,60 +754,32 @@ class _BillingTabState extends State<BillingTab> {
             color: isSelected ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    size: 16,
-                    color: isSelected
-                        ? AppColors.primaryOn
-                        : AppColors.textSecondary,
-                  ),
-                  if (badge != null) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primaryOn.withValues(alpha: 0.2)
-                            : AppColors.surfaceBorder,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        badge,
-                        style: TextStyle(
-                          color: isSelected
-                              ? AppColors.primaryOn
-                              : AppColors.textMuted,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 6),
               Text(
                 title,
-                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isSelected
                       ? AppColors.primaryOn
                       : AppColors.textSecondary,
-                  fontSize: 14,
-                  height: 1.2,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
+              if (badge != null) ...[
+                const SizedBox(width: 4),
+                Text(
+                  badge,
+                  style: TextStyle(
+                    color: isSelected
+                        ? AppColors.primaryOn
+                        : AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -833,7 +801,7 @@ class _BillingTabState extends State<BillingTab> {
           title,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
@@ -850,7 +818,7 @@ class _BillingTabState extends State<BillingTab> {
                   style: TextStyle(
                     color: color,
                     fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 )
               : Text(
@@ -858,7 +826,7 @@ class _BillingTabState extends State<BillingTab> {
                   style: TextStyle(
                     color: color,
                     fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
         ),
@@ -883,7 +851,7 @@ class _BillingTabState extends State<BillingTab> {
         curve: AppAnimations.curveEaseInOut,
         constraints: const BoxConstraints(minHeight: 36),
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(10),
@@ -895,8 +863,8 @@ class _BillingTabState extends State<BillingTab> {
           label,
           style: TextStyle(
             color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 13,
             height: 1.2,
           ),
         ),
@@ -926,14 +894,14 @@ class _BillingTabState extends State<BillingTab> {
       child: AnimatedContainer(
         duration: AppAnimations.normalDuration,
         curve: AppAnimations.curveEaseInOut,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isPaid
                 ? AppColors.surfaceBorder
-                : AppColors.pending.withValues(alpha: 0.4),
+                : AppColors.dynamicPending.withValues(alpha: 0.4),
             width: isPaid ? 1 : 1.2,
           ),
         ),
@@ -947,7 +915,7 @@ class _BillingTabState extends State<BillingTab> {
                   imagePath: customer.imagePath,
                   imageBase64: customer.imageBase64,
                   name: customer.name,
-                  radius: 24,
+                  radius: 18,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -976,12 +944,12 @@ class _BillingTabState extends State<BillingTab> {
                                 vertical: 1.5,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.pending.withValues(
+                                color: AppColors.dynamicPending.withValues(
                                   alpha: 0.12,
                                 ),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
-                                  color: AppColors.pending.withValues(
+                                  color: AppColors.dynamicPending.withValues(
                                     alpha: 0.4,
                                   ),
                                   width: 0.8,
@@ -993,15 +961,15 @@ class _BillingTabState extends State<BillingTab> {
                                   Icon(
                                     Icons.archive_outlined,
                                     size: 10,
-                                    color: AppColors.pending,
+                                    color: AppColors.dynamicPending,
                                   ),
                                   const SizedBox(width: 3),
                                   Text(
                                     'ARCHIVED',
                                     style: TextStyle(
-                                      color: AppColors.pending,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.dynamicPending,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
                                       letterSpacing: 0.4,
                                     ),
                                   ),
@@ -1018,7 +986,7 @@ class _BillingTabState extends State<BillingTab> {
                             Icons.calendar_today_rounded,
                             size: 12,
                             color: presentDays > 0
-                                ? AppColors.paid
+                                ? AppColors.dynamicPaid
                                 : AppColors.textMuted,
                           ),
                           const SizedBox(width: 4),
@@ -1027,7 +995,7 @@ class _BillingTabState extends State<BillingTab> {
                               '$presentDays days attended in ${GymDateUtils.formatMonthYearKey(monthKey).split(' ').first}',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontSize: 14,
+                                fontSize: 13,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1051,7 +1019,7 @@ class _BillingTabState extends State<BillingTab> {
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -1081,18 +1049,18 @@ class _BillingTabState extends State<BillingTab> {
                           ),
                           decoration: BoxDecoration(
                             color: isPaid
-                                ? AppColors.paid.withValues(alpha: 0.15)
+                                ? AppColors.dynamicPaid.withValues(alpha: 0.15)
                                 : (isDue
-                                      ? AppColors.pending.withValues(
+                                      ? AppColors.dynamicPending.withValues(
                                           alpha: 0.15,
                                         )
                                       : AppColors.surfaceElevated),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
                               color: isPaid
-                                  ? AppColors.paid.withValues(alpha: 0.5)
+                                  ? AppColors.dynamicPaid.withValues(alpha: 0.5)
                                   : (isDue
-                                        ? AppColors.pending.withValues(
+                                        ? AppColors.dynamicPending.withValues(
                                             alpha: 0.5,
                                           )
                                         : AppColors.surfaceBorder),
@@ -1107,12 +1075,12 @@ class _BillingTabState extends State<BillingTab> {
                                 : (isDue ? 'PENDING' : 'NOT DUE'),
                             style: TextStyle(
                               color: isPaid
-                                  ? AppColors.paid
+                                  ? AppColors.dynamicPaid
                                   : (isDue
-                                        ? AppColors.pending
+                                        ? AppColors.dynamicPending
                                         : AppColors.textMuted),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -1137,19 +1105,19 @@ class _BillingTabState extends State<BillingTab> {
                   child: isPaid && payment.method != null
                       ? Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.verified_rounded,
                               size: 14,
-                              color: AppColors.paid,
+                              color: AppColors.dynamicPaid,
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 'Via ${payment.method!.label}'
                                 '${payment.paidAt != null ? ' (${GymDateUtils.formatShortDate(payment.paidAt!)})' : ''}',
-                                style: const TextStyle(
-                                  color: AppColors.paid,
-                                  fontSize: 14,
+                                style: TextStyle(
+                                  color: AppColors.dynamicPaid,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 maxLines: 1,
@@ -1164,7 +1132,7 @@ class _BillingTabState extends State<BillingTab> {
                               Icons.pending_actions_rounded,
                               size: 14,
                               color: isDue
-                                  ? AppColors.pending
+                                  ? AppColors.dynamicPending
                                   : AppColors.textMuted,
                             ),
                             const SizedBox(width: 6),
@@ -1178,9 +1146,9 @@ class _BillingTabState extends State<BillingTab> {
                                     : 'No unpaid attendance yet',
                                 style: TextStyle(
                                   color: isDue
-                                      ? AppColors.pending
+                                      ? AppColors.dynamicPending
                                       : AppColors.textMuted,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 maxLines: 1,
@@ -1218,7 +1186,7 @@ class _BillingTabState extends State<BillingTab> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.chat_bubble_rounded,
                       size: 13,
                       color: AppColors.whatsapp,
@@ -1226,8 +1194,8 @@ class _BillingTabState extends State<BillingTab> {
                     label: const Text(
                       'Remind',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.whatsapp,
                       ),
                     ),
@@ -1242,10 +1210,12 @@ class _BillingTabState extends State<BillingTab> {
                       payment: payment,
                     ),
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: AppColors.paid.withValues(alpha: 0.1),
-                      foregroundColor: AppColors.paid,
+                      backgroundColor: AppColors.dynamicPaid.withValues(
+                        alpha: 0.1,
+                      ),
+                      foregroundColor: AppColors.dynamicPaid,
                       side: BorderSide(
-                        color: AppColors.paid.withValues(alpha: 0.4),
+                        color: AppColors.dynamicPaid.withValues(alpha: 0.4),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 9,
@@ -1256,17 +1226,17 @@ class _BillingTabState extends State<BillingTab> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.receipt_long_rounded,
                       size: 13,
-                      color: AppColors.paid,
+                      color: AppColors.dynamicPaid,
                     ),
-                    label: const Text(
+                    label: Text(
                       'Bill',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.paid,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.dynamicPaid,
                       ),
                     ),
                   ),
@@ -1301,8 +1271,8 @@ class _BillingTabState extends State<BillingTab> {
                     label: Text(
                       'Edit',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -1339,8 +1309,8 @@ class _BillingTabState extends State<BillingTab> {
                     label: Text(
                       'Mark Paid',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.primaryOn,
                       ),
                     ),
@@ -1366,7 +1336,7 @@ class _BillingTabState extends State<BillingTab> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.pending,
+                    backgroundColor: AppColors.dynamicPending,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -1382,8 +1352,8 @@ class _BillingTabState extends State<BillingTab> {
                   label: Text(
                     'Collect Balance ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}',
                     style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
