@@ -556,9 +556,9 @@ class _CustomersTabState extends State<CustomersTab> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 10),
                       Wrap(
-                        spacing: 2,
+                        spacing: 6,
                         children: [
                           IconButton(
                             visualDensity: VisualDensity.compact,

@@ -27,9 +27,14 @@ Reference-scale revision following phone review: 30 October 2026.
 
 ## Build and delivery
 
-- Android version: `1.0.0+2` (version code 2 distinguishes this build from the earlier APKs).
-- Replacement APK: `build/app/outputs/flutter-apk/gym-manager-dense-v2.apk` (also emitted as `app-release.apk`).
+- Android version: `1.0.0+3` (version code 3 includes the member-action spacing correction).
+- Replacement APK: `build/app/outputs/flutter-apk/gym-manager-dense-v3.apk` (also emitted as `app-release.apk`).
 - The local Flutter SDK migrates Android minSdk to its supported default (24 / Android 7). NDK is aligned to installed 28.2.13676358 required by speech_to_text.
 - Existing release signing configuration uses the debug signing key; production signing was not changed.
 - No cloud deployment, merge or push is performed by this change. No real member/payment/attendance records were edited.
 - No Android device was connected during the reference-scale revision, so the replacement APK is supplied for installation. Both saved dark and light preferences remain supported.
+
+## Member action spacing correction
+
+- Increased the gap between the payment pill and call/message/receipt actions from 4 to 10 dp, and action wrapping spacing from 2 to 6 dp.
+- All 31 targeted member-layout checks passed, including unpaid, fully paid and partially paid members at 360/384/412 dp with 100/130/150% text and rendered member screens in both themes. The existing 84 dp normal-card limit and six-visible-identities checks still pass.
