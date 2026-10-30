@@ -80,7 +80,7 @@ class _AnimatedEmptyStateState extends State<AnimatedEmptyState>
                 widget.title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                   letterSpacing: -0.2,
@@ -92,7 +92,7 @@ class _AnimatedEmptyStateState extends State<AnimatedEmptyState>
                   widget.subtitle!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: AppColors.textMuted,
                     height: 1.4,
                   ),

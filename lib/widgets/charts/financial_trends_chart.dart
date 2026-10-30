@@ -107,7 +107,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     Text(
                       'Financial Trends',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
@@ -117,7 +117,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                           ? 'Revenue vs Operating Expenses'
                           : 'Monthly Net Profit Trajectory',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -191,7 +191,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     Text(
                       '${_monthsCount}M Net: ',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textMuted,
                         fontWeight: FontWeight.w600,
                       ),
@@ -199,7 +199,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     Text(
                       '${totalProfit >= 0 ? '+' : ''}${GymDateUtils.formatCurrency(totalProfit, symbol: widget.currency)}',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: totalProfit >= 0
                             ? AppColors.paid
@@ -264,7 +264,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
         child: Text(
           text,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.bold,
             color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
           ),
@@ -302,7 +302,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected ? AppColors.primary : AppColors.textMuted,
               ),
@@ -329,7 +329,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
           Text(
             'No Financial Activity Recorded',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -338,7 +338,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
           Text(
             'Collect member dues or record expenses to populate this graph.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
         ],
       ),
@@ -376,7 +376,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                 TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 12,
                 ),
                 children: [
                   TextSpan(
@@ -385,7 +385,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     style: TextStyle(
                       color: color,
                       fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                   TextSpan(
@@ -396,7 +396,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                           ? AppColors.paid
                           : AppColors.absent,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -442,7 +442,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                           ? AppColors.primary
                           : AppColors.textSecondary,
                       fontWeight: isTouched ? FontWeight.bold : FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 );
@@ -462,7 +462,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     _formatCompact(value),
                     style: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -567,7 +567,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                   TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                   children: [
                     TextSpan(
@@ -576,7 +576,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                       style: TextStyle(
                         color: isPositive ? AppColors.paid : AppColors.absent,
                         fontWeight: FontWeight.w800,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -623,7 +623,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 );
@@ -642,7 +642,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
                     _formatCompact(value),
                     style: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -720,7 +720,7 @@ class _FinancialTrendsChartState extends State<FinancialTrendsChart> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             color: AppColors.textSecondary,
             fontWeight: FontWeight.w600,
           ),

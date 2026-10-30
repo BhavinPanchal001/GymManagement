@@ -108,7 +108,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                           Text(
                             'TOTAL EXPENSES (${GymDateUtils.formatMonthHeader(monthKey)})',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
                               color: AppColors.textMuted,
@@ -121,7 +121,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                               symbol: currency,
                             ),
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: AppColors.absent,
                             ),
@@ -142,7 +142,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                       child: Text(
                         '${allExpenses.length} Records',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
@@ -161,12 +161,12 @@ class _ExpenseTabState extends State<ExpenseTab> {
                 child: TextField(
                   controller: _searchController,
                   onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 12),
                   decoration: InputDecoration(
                     hintText: 'Search expenses by name or notes...',
                     hintStyle: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                     filled: true,
                     fillColor: AppColors.surfaceElevated,
@@ -210,7 +210,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                       showCheckmark: false,
                       label: Text('All (${allExpenses.length})'),
                       labelStyle: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: _selectedCategoryFilter == null
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -249,7 +249,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                           ),
                           label: Text('${cat.label} ($count)'),
                           labelStyle: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: isSelected
                                 ? FontWeight.w700
                                 : FontWeight.w500,
@@ -295,7 +295,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                   ? 'No expenses matching filter'
                                   : 'No expenses recorded for this month',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textSecondary,
                               ),
@@ -370,7 +370,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                           Text(
                                             expense.title,
                                             style: TextStyle(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.textPrimary,
                                             ),
@@ -393,7 +393,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                                 child: Text(
                                                   expense.category.label,
                                                   style: TextStyle(
-                                                    fontSize: 14,
+                                                    fontSize: 12,
                                                     fontWeight: FontWeight.w600,
                                                     color:
                                                         expense.category.color,
@@ -406,7 +406,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                                   expense.date,
                                                 ),
                                                 style: TextStyle(
-                                                  fontSize: 14,
+                                                  fontSize: 12,
                                                   color: AppColors.textMuted,
                                                 ),
                                               ),
@@ -414,7 +414,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                               Text(
                                                 '• ${PaymentRecord.methodLabel(expense.paymentMethod)}',
                                                 style: TextStyle(
-                                                  fontSize: 14,
+                                                  fontSize: 12,
                                                   color: AppColors.textMuted,
                                                 ),
                                               ),
@@ -426,7 +426,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                             Text(
                                               expense.notes!,
                                               style: TextStyle(
-                                                fontSize: 14,
+                                                fontSize: 12,
                                                 fontStyle: FontStyle.italic,
                                                 color: AppColors.textMuted,
                                               ),
@@ -449,7 +449,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
                                             symbol: currency,
                                           ),
                                           style: TextStyle(
-                                            fontSize: 15,
+                                            fontSize: 13,
                                             fontWeight: FontWeight.w800,
                                             color: AppColors.absent,
                                           ),

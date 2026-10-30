@@ -162,7 +162,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                         'Send Welcome Message',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -173,7 +173,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                             widget.customer.name,
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -182,7 +182,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                             '•',
                             style: TextStyle(
                               color: AppColors.textMuted,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -194,7 +194,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                               color: widget.customer.phone.isNotEmpty
                                   ? AppColors.whatsapp
                                   : AppColors.absent,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -236,7 +236,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                           '$planLabel ($durationLabel)',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -245,7 +245,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                           'Joined ${GymDateUtils.formatDisplayDate(widget.customer.joinDate)} • New Onboarding',
                           style: TextStyle(
                             color: AppColors.textMuted,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -268,7 +268,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                       'NEW',
                       style: TextStyle(
                         color: welcomeAccent,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -283,7 +283,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
               'Message Tone',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -322,7 +322,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.w500,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -341,7 +341,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                   'Message Preview & Customization',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -355,7 +355,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                   label: Text(
                     'Copy Text',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -399,7 +399,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                           'WhatsApp Welcome • ${GymService().settings.gymName.isNotEmpty ? GymService().settings.gymName : "Gym"}',
                           style: const TextStyle(
                             color: AppColors.whatsapp,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -413,7 +413,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                     maxLines: 8,
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14,
+                      fontSize: 12,
                       height: 1.45,
                     ),
                     decoration: InputDecoration(
@@ -427,7 +427,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                       hintText: 'Type welcome message...',
                       hintStyle: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -457,7 +457,7 @@ class _WhatsAppWelcomeSheetState extends State<WhatsAppWelcomeSheet> {
                     label: Text(
                       _isSending ? 'Opening...' : 'Send via WhatsApp',
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.3,
                       ),

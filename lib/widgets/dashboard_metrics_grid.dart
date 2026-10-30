@@ -61,7 +61,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
             color: AppColors.isDark
                 ? AppColors.surface
                 : const Color(0xFF183B2D),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.surfaceBorder),
           ),
           child: Column(
@@ -71,7 +71,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 10,
+                  vertical: 6,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -96,7 +96,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                             child: Text(
                               'Gym Overview',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                               ),
@@ -127,7 +127,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: Colors.white.withValues(alpha: 0.3),
                               ),
@@ -138,7 +138,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                                 Text(
                                   'All Stats',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
                                   ),
@@ -165,7 +165,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                             child: Icon(
                               Icons.keyboard_arrow_up_rounded,
                               color: Colors.white70,
-                              size: 20,
+                              size: 18,
                             ),
                           ),
                           onPressed: () =>
@@ -330,7 +330,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isUrgent
                 ? color.withValues(alpha: 0.6)
@@ -359,7 +359,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -372,7 +372,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                           ? 0
                           : 2,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w900,
                         color: color,
                         letterSpacing: -0.3,
@@ -381,7 +381,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
                   : Text(
                       value,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w900,
                         color: color,
                         letterSpacing: -0.3,
@@ -392,7 +392,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
             Text(
               title,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
@@ -403,7 +403,7 @@ class _DashboardMetricsGridState extends State<DashboardMetricsGrid> {
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: isUrgent ? color : AppColors.textMuted,
               ),

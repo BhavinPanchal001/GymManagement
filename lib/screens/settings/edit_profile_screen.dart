@@ -321,7 +321,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   : const Icon(Icons.check_rounded, size: 20),
               label: const Text(
                 'Save',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
             ),
           ),
@@ -379,7 +379,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           'Gym Brand Logo',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -393,7 +393,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -424,7 +424,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           'Owner Information',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -496,7 +496,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           'Gym Details',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -587,7 +587,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           'Receipt & Tax Preferences',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -713,7 +713,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           'Security & Password',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -724,7 +724,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       'Receive a secure link on your email address to reset or change your account password.',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                         height: 1.4,
                       ),
                     ),
@@ -797,7 +797,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             Text(
                               'Save Changes',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -874,7 +874,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   'Plan Tiers & Duration Packages',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -889,7 +889,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   'DURATION COMBOS',
                   style: TextStyle(
                     color: AppColors.primary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -901,7 +901,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             'Configure package fees according to duration (e.g. 1 Month ₹600, 3 Months ₹1,500) for each membership tier.',
             style: TextStyle(
               color: AppColors.textSecondary,
-              fontSize: 14,
+              fontSize: 12,
               height: 1.4,
             ),
           ),
@@ -983,7 +983,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           pkg.title.toUpperCase(),
                           style: TextStyle(
                             color: tierColor,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1003,7 +1003,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             'SAVE $currency$savings',
                             style: TextStyle(
                               color: AppColors.paid,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1038,7 +1038,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                     onChanged: (_) => setState(() {}),
@@ -1060,7 +1060,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           currency,
                           style: TextStyle(
                             color: tierColor,
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1070,7 +1070,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           : '/ month',
                       suffixStyle: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                       filled: true,
                       fillColor: AppColors.surface,
@@ -1123,7 +1123,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text(
                 'Add Duration Combo (e.g. 2, 3, 6, 12 Months)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
             ),
           ),
@@ -1169,7 +1169,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   color: isSelected
                       ? (AppColors.isDark ? Colors.white : activeColor)
                       : AppColors.textSecondary,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -1212,7 +1212,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     'Add Duration Combo',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 17,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1226,7 +1226,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     'Plan: ${CustomerPlan.getLabel(planType)}',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -1234,7 +1234,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     'Select Duration (Months)',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1258,7 +1258,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           fontWeight: isSel
                               ? FontWeight.bold
                               : FontWeight.normal,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                         side: BorderSide(
                           color: isSel
@@ -1279,7 +1279,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     'Total Package Price ($currency)',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1291,7 +1291,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 15,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
                     decoration: InputDecoration(
@@ -1303,7 +1303,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           currency,
                           style: TextStyle(
                             color: AppColors.primary,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1402,7 +1402,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           label,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1417,14 +1417,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           maxLength: maxLength,
           style: TextStyle(
             color: readOnly ? AppColors.textMuted : AppColors.textPrimary,
-            fontSize: 15,
+            fontSize: 13,
           ),
           validator: validator,
           decoration: InputDecoration(
             hintText: hint,
             helperText: helperText,
             helperMaxLines: 2,
-            helperStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+            helperStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
             prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
             filled: true,
             fillColor: readOnly

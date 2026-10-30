@@ -99,7 +99,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                     Text(
                       'Executive Financial KPIs',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
@@ -109,7 +109,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                     Text(
                       'Unit Economics & Operational Sustainability',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textMuted,
                       ),
                       maxLines: 1,
@@ -144,7 +144,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                     Text(
                       healthTitle,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: tierColor,
                       ),
@@ -174,7 +174,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                   child: Text(
                     healthAdvice,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: AppColors.textSecondary,
                       height: 1.35,
                     ),
@@ -328,7 +328,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                   child: Text(
                     'Cost Structure Analysis',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textSecondary,
                     ),
@@ -339,7 +339,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   'Fixed: ${fixedCostPct.toStringAsFixed(0)}% • Variable: ${variableCostPct.toStringAsFixed(0)}%',
-                  style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
               ],
             ),
@@ -389,7 +389,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                     Text(
                       'Fixed (Rent, Salaries, Power): ${GymDateUtils.formatCurrency(fixedCosts, symbol: currency)}',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -410,7 +410,7 @@ class BalanceSheetKPICard extends StatelessWidget {
                     Text(
                       'Variable: ${GymDateUtils.formatCurrency(variableCosts, symbol: currency)}',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -449,7 +449,7 @@ class BalanceSheetKPICard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textMuted,
                 ),
@@ -465,7 +465,7 @@ class BalanceSheetKPICard extends StatelessWidget {
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
               ),
@@ -475,7 +475,7 @@ class BalanceSheetKPICard extends StatelessWidget {
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: subColor,
             ),
@@ -501,7 +501,7 @@ class BalanceSheetKPICard extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -518,7 +518,7 @@ class BalanceSheetKPICard extends StatelessWidget {
             Text(
               '${pct.abs().toStringAsFixed(1)}%',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: color,
               ),

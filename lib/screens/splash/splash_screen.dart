@@ -181,7 +181,7 @@ class _SplashScreenState extends State<SplashScreen>
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 32,
+                        fontSize: 26,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 2.0,
                       ),
@@ -201,7 +201,7 @@ class _SplashScreenState extends State<SplashScreen>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: AppColors.primary,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
                     ),
@@ -245,7 +245,7 @@ class _SplashScreenState extends State<SplashScreen>
                       'Offline First • Cloud Synced',
                       style: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
                       ),
@@ -257,7 +257,7 @@ class _SplashScreenState extends State<SplashScreen>
                   'v1.0.0',
                   style: TextStyle(
                     color: AppColors.textMuted.withValues(alpha: 0.6),
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

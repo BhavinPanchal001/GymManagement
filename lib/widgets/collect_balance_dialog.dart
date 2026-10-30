@@ -110,7 +110,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
                 const SizedBox(width: 8),
                 const Text(
                   'Remaining Balance: ',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 Text(
                   GymDateUtils.formatCurrency(
@@ -118,7 +118,7 @@ class _CollectBalanceDialogState extends State<CollectBalanceDialog> {
                     symbol: GymService().settings.currencySymbol,
                   ),
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFFA66510),
                   ),

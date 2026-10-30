@@ -139,7 +139,7 @@ void main() {
                   bottomNavigationBar: entry.key == 'sign-in'
                       ? null
                       : NavigationBar(
-                          height: 64,
+                          height: 56,
                           backgroundColor: AppColors.surface,
                           indicatorColor: AppColors.primary.withValues(
                             alpha: 0.2,
@@ -176,7 +176,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
           if (scale == 1 && ['members', 'attendance'].contains(entry.key)) {
-            // A phone must show at least four complete identities without scrolling.
+            // A phone must show at least six identities without scrolling.
             final visibleNames =
                 [
                       'Aarav Patel',
@@ -195,7 +195,16 @@ void main() {
                           find.text(name).hitTestable().evaluate().isNotEmpty,
                     )
                     .length;
-            expect(visibleNames, greaterThanOrEqualTo(4));
+            expect(visibleNames, greaterThanOrEqualTo(6));
+            if (entry.key == 'members') {
+              final card = find
+                  .ancestor(
+                    of: find.text('Viren'),
+                    matching: find.byType(AnimatedContainer),
+                  )
+                  .first;
+              expect(tester.getSize(card).height, lessThanOrEqualTo(84));
+            }
           }
           if (const bool.fromEnvironment('CAPTURE_UI')) {
             final boundary =
@@ -207,7 +216,7 @@ void main() {
                 format: ui.ImageByteFormat.png,
               );
               final file = File(
-                'build/ui-review/compact-${entry.key}-${mode.name}-${(scale * 100).round()}.png',
+                'build/ui-review/dense-${entry.key}-${mode.name}-${(scale * 100).round()}.png',
               );
               await file.parent.create(recursive: true);
               await file.writeAsBytes(bytes!.buffer.asUint8List());

@@ -587,7 +587,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             : 'Record Payment',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -604,7 +604,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             '${widget.customer.name} • ${GymDateUtils.formatMonthYearKey(widget.monthYear)} ($attendedDays days attended)',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           );
@@ -632,7 +632,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     isAlreadyPaid ? 'PAID' : 'PENDING',
                     style: TextStyle(
                       color: isAlreadyPaid ? AppColors.paid : AppColors.pending,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -652,7 +652,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
             const SizedBox(height: 8),
             Text(
               'Paid late? Keep the membership dates and set the payment received date below.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
             const SizedBox(height: 14),
 
@@ -685,7 +685,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   'Total Due',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -694,7 +694,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   GymDateUtils.formatCurrency(_totalDue, symbol: currency),
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -727,7 +727,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   : 'Amount received now',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -739,7 +739,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               ),
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
               decoration: InputDecoration(
@@ -749,7 +749,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     currency,
                     style: TextStyle(
                       color: AppColors.primary,
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -771,7 +771,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         'Balance: ${GymDateUtils.formatCurrency(balance, symbol: currency)}',
                         style: TextStyle(
                           color: AppColors.pending,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -792,7 +792,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                           'Will be recorded as PARTIAL payment',
                           style: TextStyle(
                             color: AppColors.pending,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -809,7 +809,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               'Payment Method',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -861,7 +861,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.w500,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -885,7 +885,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             : 'Payment received date',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -936,7 +936,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         'Ref / Txn ID (Optional)',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -945,7 +945,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                         controller: _refController,
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                         decoration: const InputDecoration(
                           hintText: 'e.g. UPI-9821...',
@@ -963,14 +963,14 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               'Remarks / Notes',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _notesController,
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 12),
               decoration: const InputDecoration(
                 hintText: 'e.g. Paid in full at front counter',
               ),
@@ -1040,7 +1040,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                               ? 'Record Partial Payment'
                                               : 'Confirm & Mark as Paid')),
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.2,
                               ),
@@ -1086,7 +1086,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   label: const Text(
                     'Send WhatsApp Fee Reminder',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.whatsapp,
                     ),
@@ -1115,7 +1115,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     label: Text(
                       'Collect Balance ${GymDateUtils.formatCurrency(widget.currentRecord.balanceDue, symbol: currency)}',
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1152,7 +1152,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                   label: const Text(
                     'View Payment Bill / Receipt',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.paid,
                     ),
@@ -1220,7 +1220,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                       style: TextStyle(
                         color: AppColors.paid,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -1234,7 +1234,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               'Membership period:',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1308,7 +1308,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                       ? AppColors.paid
                                       : AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -1318,7 +1318,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             'From Today (${GymDateUtils.formatShortDate(today)})',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -1399,7 +1399,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                       ? AppColors.primary
                                       : AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -1409,7 +1409,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             'From ${GymDateUtils.formatShortDate(_lastExpiryDate.add(const Duration(days: 1)))}',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -1462,7 +1462,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                           color: overlapping != null
                                               ? AppColors.absent
                                               : AppColors.textSecondary,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w700,
                                           letterSpacing: 0.5,
                                         ),
@@ -1483,7 +1483,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                   style: TextStyle(
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ],
@@ -1530,7 +1530,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                           color: overlapping != null
                                               ? AppColors.absent
                                               : AppColors.textSecondary,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w700,
                                           letterSpacing: 0.5,
                                         ),
@@ -1551,7 +1551,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                   style: TextStyle(
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ],
@@ -1589,7 +1589,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                   style: const TextStyle(
                                     color: AppColors.absent,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ),
@@ -1600,7 +1600,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             'This member has already paid for dates within this period. Please select a non-overlapping start date.',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -1649,7 +1649,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                     'Start after paid plan (${GymDateUtils.formatShortDate(DateTime(overlapping.effectiveEndDate.year, overlapping.effectiveEndDate.month, overlapping.effectiveEndDate.day + 1))})',
                                     style: TextStyle(
                                       color: AppColors.primary,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1683,7 +1683,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                               'Plan Validity: ${GymDateUtils.formatDateRange(_startDate, _endDate)} ($_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"})',
                               style: TextStyle(
                                 color: AppColors.primary,
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -1731,7 +1731,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               'Package Duration',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1746,7 +1746,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                 CustomerPlan.getShortLabel(widget.customer.planType),
                 style: TextStyle(
                   color: accentColor,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1755,7 +1755,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
               '$_selectedDurationMonths ${_selectedDurationMonths == 1 ? "Month" : "Months"}',
               style: TextStyle(
                 color: accentColor,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1829,7 +1829,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.w600,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1840,7 +1840,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                                 ? accentColor
                                 : AppColors.textSecondary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -1869,7 +1869,7 @@ class _MarkPaymentDialogState extends State<MarkPaymentDialog> {
                     'Covers ${_getCoveragePeriodPreview()} • Next bill in ${_getNextBillMonthPreview()}',
                     style: TextStyle(
                       color: AppColors.paid,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

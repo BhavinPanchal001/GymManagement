@@ -101,7 +101,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                     Text(
                       'Attendance Trends',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
@@ -109,7 +109,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                     Text(
                       'Daily Footfall & Member Consistency',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -193,7 +193,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                   Text(
                     'Daily Present',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
@@ -203,7 +203,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
               Text(
                 'Total active pool: $totalActive members',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   color: AppColors.textMuted,
                   fontWeight: FontWeight.w500,
                 ),
@@ -228,7 +228,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
         child: Text(
           text,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.bold,
             color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
           ),
@@ -262,7 +262,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                   ),
@@ -272,7 +272,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                 Text(
                   subtitle ?? label,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: AppColors.textMuted,
                     fontWeight: FontWeight.w500,
                   ),
@@ -303,7 +303,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
           Text(
             'No Attendance Records',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -312,7 +312,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
           Text(
             'Mark member attendance daily in the Attendance tab to track turnout trends.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
         ],
       ),
@@ -356,7 +356,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                   TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                   children: [
                     TextSpan(
@@ -364,7 +364,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                       style: TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w800,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -413,7 +413,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 );
@@ -433,7 +433,7 @@ class _AttendanceTrendChartState extends State<AttendanceTrendChart> {
                     value.toInt().toString(),
                     style: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

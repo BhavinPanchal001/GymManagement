@@ -253,7 +253,7 @@ class _SettingsTabState extends State<SettingsTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Text(
           'Clear All Gym Data?',
           style: TextStyle(
@@ -306,7 +306,7 @@ class _SettingsTabState extends State<SettingsTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Text(
           'Sign Out?',
           style: TextStyle(
@@ -356,31 +356,36 @@ class _SettingsTabState extends State<SettingsTab> {
         onTap: () => ThemeService().setThemeMode(mode),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primary.withValues(alpha: 0.14)
                 : AppColors.surfaceElevated,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected ? AppColors.primary : AppColors.surfaceBorder,
               width: isSelected ? 1.8 : 1.0,
             ),
           ),
-          child: Column(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: 20,
+                size: 18,
                 color: isSelected ? AppColors.primary : AppColors.textSecondary,
               ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  fontSize: 13,
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    fontSize: 11,
+                  ),
                 ),
               ),
             ],
@@ -426,10 +431,10 @@ class _SettingsTabState extends State<SettingsTab> {
                 AnimatedFadeSlide.staggered(
                   index: 0,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.surfaceBorder),
                     ),
                     child: Column(
@@ -443,14 +448,14 @@ class _SettingsTabState extends State<SettingsTab> {
                             Icon(
                               Icons.account_circle_rounded,
                               color: AppColors.primary,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Account & Security',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -477,7 +482,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
                         ListenableBuilder(
                           listenable: AuthService().profileNotifier,
                           builder: (context, _) {
@@ -499,7 +504,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                     child: Row(
                                       children: [
                                         const UserAvatar(
-                                          radius: 22,
+                                          radius: 18,
                                           showEditBadge: true,
                                         ),
                                         const SizedBox(width: 14),
@@ -512,7 +517,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                                 name,
                                                 style: TextStyle(
                                                   color: AppColors.textPrimary,
-                                                  fontSize: 16,
+                                                  fontSize: 14,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
@@ -522,7 +527,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                                 style: TextStyle(
                                                   color:
                                                       AppColors.textSecondary,
-                                                  fontSize: 13,
+                                                  fontSize: 11,
                                                 ),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
@@ -542,7 +547,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                                       style: TextStyle(
                                                         color: AppColors
                                                             .textSecondary,
-                                                        fontSize: 13,
+                                                        fontSize: 11,
                                                       ),
                                                     ),
                                                   ],
@@ -559,7 +564,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 6),
                                 Row(
                                   children: [
                                     Expanded(
@@ -574,7 +579,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                             ),
                                           ),
                                           padding: const EdgeInsets.symmetric(
-                                            vertical: 8,
+                                            vertical: 6,
                                           ),
                                           elevation: 0,
                                         ),
@@ -606,7 +611,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                           ),
                                         ),
                                         padding: const EdgeInsets.symmetric(
-                                          vertical: 8,
+                                          vertical: 6,
                                           horizontal: 16,
                                         ),
                                       ),
@@ -631,16 +636,16 @@ class _SettingsTabState extends State<SettingsTab> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // Appearance & Theme Card
                 AnimatedFadeSlide.staggered(
                   index: 1,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.surfaceBorder),
                     ),
                     child: Column(
@@ -654,14 +659,14 @@ class _SettingsTabState extends State<SettingsTab> {
                             Icon(
                               Icons.palette_rounded,
                               color: AppColors.primary,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Appearance & Theme',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -681,7 +686,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 theme.themeModeName.toUpperCase(),
                                 style: TextStyle(
                                   color: AppColors.primary,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -693,10 +698,10 @@ class _SettingsTabState extends State<SettingsTab> {
                           'Select light mode, dark mode, or follow your device settings.',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 13,
+                            fontSize: 11,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             _buildThemeOption(
@@ -725,16 +730,16 @@ class _SettingsTabState extends State<SettingsTab> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // Notifications & Alerts Card
                 AnimatedFadeSlide.staggered(
                   index: 2,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.surfaceBorder),
                     ),
                     child: Column(
@@ -748,14 +753,14 @@ class _SettingsTabState extends State<SettingsTab> {
                             Icon(
                               Icons.notifications_active_rounded,
                               color: AppColors.dynamicPending,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Notifications & Alerts',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -787,14 +792,14 @@ class _SettingsTabState extends State<SettingsTab> {
                                           .isPaymentDueNotificationEnabled
                                       ? AppColors.dynamicPaid
                                       : AppColors.textMuted,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
                         Material(
                           color: Colors.transparent,
                           child: SwitchListTile(
@@ -805,14 +810,14 @@ class _SettingsTabState extends State<SettingsTab> {
                               style: TextStyle(
                                 color: AppColors.textPrimary,
                                 fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                                fontSize: 11,
                               ),
                             ),
                             subtitle: Text(
                               'Notify on app launch when members have overdue membership payments.',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontSize: 13,
+                                fontSize: 11,
                               ),
                             ),
                             value: gym.settings.isPaymentDueNotificationEnabled,
@@ -838,7 +843,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 'Firebase FCM Push Ready',
                                 style: TextStyle(
                                   color: AppColors.textMuted,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                 ),
                               ),
                             ),
@@ -868,7 +873,7 @@ class _SettingsTabState extends State<SettingsTab> {
                               child: const Text(
                                 'Test Alert',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -879,16 +884,16 @@ class _SettingsTabState extends State<SettingsTab> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // Gym Profile Card
                 AnimatedFadeSlide.staggered(
                   index: 3,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.surfaceBorder),
                     ),
                     child: Column(
@@ -899,27 +904,27 @@ class _SettingsTabState extends State<SettingsTab> {
                             Icon(
                               Icons.fitness_center_rounded,
                               color: AppColors.primary,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Gym Profile & Pricing',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
 
                         // Gym Brand Logo Preview & Quick Edit
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: AppColors.surfaceElevated,
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: AppColors.surfaceBorder),
                           ),
                           child: Row(
@@ -941,7 +946,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                       'Gym Brand Logo',
                                       style: TextStyle(
                                         color: AppColors.textPrimary,
-                                        fontSize: 13,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -952,7 +957,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                           : 'No logo set yet. Tap to upload.',
                                       style: TextStyle(
                                         color: AppColors.textSecondary,
-                                        fontSize: 13,
+                                        fontSize: 11,
                                       ),
                                     ),
                                   ],
@@ -972,36 +977,36 @@ class _SettingsTabState extends State<SettingsTab> {
                                   gym.gymLogoPath != null ? 'Change' : 'Upload',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+                                    fontSize: 11,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
 
                         // Gym Name
                         Text(
                           'Gym Name',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 13,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         TextField(
                           controller: _gymNameController,
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 15,
+                            fontSize: 13,
                           ),
                           decoration: const InputDecoration(
                             hintText: 'Enter gym title',
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
 
                         Divider(color: AppColors.surfaceBorder, height: 28),
 
@@ -1021,7 +1026,7 @@ class _SettingsTabState extends State<SettingsTab> {
                               'Membership Plans Pricing',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1041,7 +1046,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 'PER MONTH',
                                 style: TextStyle(
                                   color: AppColors.primary,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1053,17 +1058,17 @@ class _SettingsTabState extends State<SettingsTab> {
                           'Monthly charges applied to active members according to their plan tier.',
                           style: TextStyle(
                             color: AppColors.textMuted,
-                            fontSize: 13,
+                            fontSize: 11,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
 
                         // 1. Normal Plan
                         Text(
                           'Normal Plan (₹/mo)',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 13,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1073,7 +1078,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           keyboardType: TextInputType.number,
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                           decoration: InputDecoration(
@@ -1087,7 +1092,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 currency,
                                 style: TextStyle(
                                   color: AppColors.primary,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -1095,14 +1100,14 @@ class _SettingsTabState extends State<SettingsTab> {
                             hintText: '1200',
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
 
                         // 2. Plan with Personal Training
                         Text(
                           'Plan with Personal Training (₹/mo)',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 13,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1112,7 +1117,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           keyboardType: TextInputType.number,
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                           decoration: InputDecoration(
@@ -1126,7 +1131,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 currency,
                                 style: TextStyle(
                                   color: AppColors.secondary,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -1134,14 +1139,14 @@ class _SettingsTabState extends State<SettingsTab> {
                             hintText: '2500',
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
 
                         // 3. Plan with Personal Training + Diet
                         Text(
                           'Plan with Personal Training + Diet (₹/mo)',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 13,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1151,7 +1156,7 @@ class _SettingsTabState extends State<SettingsTab> {
                           keyboardType: TextInputType.number,
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                           decoration: InputDecoration(
@@ -1165,7 +1170,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 currency,
                                 style: const TextStyle(
                                   color: Color(0xFFA66510),
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -1191,13 +1196,13 @@ class _SettingsTabState extends State<SettingsTab> {
                             child: const Text(
                               'Save Settings',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
@@ -1217,7 +1222,7 @@ class _SettingsTabState extends State<SettingsTab> {
                               'Manage Duration Packages (1, 3, 6, 12 Mo)',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                                fontSize: 11,
                               ),
                             ),
                           ),
@@ -1226,16 +1231,16 @@ class _SettingsTabState extends State<SettingsTab> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // Cloud Sync / Firebase Card
                 AnimatedFadeSlide.staggered(
                   index: 4,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.surfaceBorder),
                     ),
                     child: Column(
@@ -1246,7 +1251,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             Icon(
                               Icons.cloud_sync_rounded,
                               color: AppColors.secondary,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -1254,7 +1259,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 'Cloud & Database',
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
-                                  fontSize: 15,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1286,7 +1291,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                   color: gym.isCloudAttached
                                       ? AppColors.dynamicPaid
                                       : AppColors.dynamicPending,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1300,12 +1305,12 @@ class _SettingsTabState extends State<SettingsTab> {
                               : 'Data is stored locally on this device. Sign in to enable cloud sync across devices.',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 13,
+                            fontSize: 11,
                             height: 1.4,
                           ),
                         ),
                         if (gym.isCloudAttached) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
                               Icon(
@@ -1318,7 +1323,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 'Cloud account connected',
                                 style: TextStyle(
                                   color: AppColors.textMuted,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                 ),
                               ),
                             ],
@@ -1328,16 +1333,16 @@ class _SettingsTabState extends State<SettingsTab> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // App Tour & Resources Card
                 AnimatedFadeSlide.staggered(
                   index: 5,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.surfaceBorder),
                     ),
                     child: Column(
@@ -1348,14 +1353,14 @@ class _SettingsTabState extends State<SettingsTab> {
                             Icon(
                               Icons.help_outline_rounded,
                               color: AppColors.secondary,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'App Tour & Resources',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1379,7 +1384,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
-                              vertical: 8,
+                              vertical: 6,
                             ),
                           ),
                           icon: Icon(
@@ -1396,16 +1401,16 @@ class _SettingsTabState extends State<SettingsTab> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // Danger Zone Card
                 AnimatedFadeSlide.staggered(
                   index: 5,
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: AppColors.dynamicAbsent.withValues(alpha: 0.35),
                         width: 1.2,
@@ -1422,14 +1427,14 @@ class _SettingsTabState extends State<SettingsTab> {
                             Icon(
                               Icons.warning_amber_rounded,
                               color: AppColors.dynamicAbsent,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Danger Zone',
                               style: TextStyle(
                                 color: AppColors.dynamicAbsent,
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1449,7 +1454,7 @@ class _SettingsTabState extends State<SettingsTab> {
                                 'DESTRUCTIVE',
                                 style: TextStyle(
                                   color: AppColors.dynamicAbsent,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.5,
                                 ),
@@ -1462,11 +1467,11 @@ class _SettingsTabState extends State<SettingsTab> {
                           'Operations that reset or wipe local and cloud database records. Protected by security confirmation when real data exists.',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 13,
+                            fontSize: 11,
                             height: 1.3,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
                         OutlinedButton.icon(
                           onPressed: gym.currentUserId == null
                               ? _confirmClearAllData
@@ -1483,7 +1488,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
-                              vertical: 8,
+                              vertical: 6,
                             ),
                           ),
                           icon: Icon(
@@ -1496,7 +1501,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
                         OutlinedButton.icon(
                           onPressed: gym.currentUserId == null
                               ? _confirmResetData
@@ -1509,7 +1514,7 @@ class _SettingsTabState extends State<SettingsTab> {
                             ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
-                              vertical: 8,
+                              vertical: 6,
                             ),
                           ),
                           icon: Icon(

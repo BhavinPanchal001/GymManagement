@@ -178,7 +178,7 @@ class _ExportReportDialogState extends State<ExportReportDialog>
                         'Export Pending Report',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -186,7 +186,7 @@ class _ExportReportDialogState extends State<ExportReportDialog>
                         'Copy CSV data or share formatted summary',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -222,7 +222,7 @@ class _ExportReportDialogState extends State<ExportReportDialog>
                 unselectedLabelColor: AppColors.textSecondary,
                 labelStyle: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 12,
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerHeight: 0,
@@ -253,7 +253,7 @@ class _ExportReportDialogState extends State<ExportReportDialog>
                         _csvContent,
                         style: TextStyle(
                           fontFamily: 'monospace',
-                          fontSize: 14,
+                          fontSize: 12,
                           color: AppColors.textSecondary,
                           height: 1.4,
                         ),
@@ -273,7 +273,7 @@ class _ExportReportDialogState extends State<ExportReportDialog>
                       child: SelectableText(
                         _textContent,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           color: AppColors.textPrimary,
                           height: 1.4,
                         ),
@@ -301,7 +301,7 @@ class _ExportReportDialogState extends State<ExportReportDialog>
                     icon: const Icon(Icons.copy_rounded, size: 16),
                     label: const Text(
                       'Copy CSV',
-                      style: TextStyle(fontSize: 14),
+                      style: TextStyle(fontSize: 12),
                     ),
                     onPressed: () => _copyToClipboard(_csvContent, 'CSV Data'),
                   ),
@@ -322,7 +322,7 @@ class _ExportReportDialogState extends State<ExportReportDialog>
                     label: const Text(
                       'Copy Text',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

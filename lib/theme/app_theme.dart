@@ -136,40 +136,56 @@ class AppTheme {
             color: states.contains(WidgetState.selected)
                 ? AppColors.primary
                 : AppColors.textSecondary,
-            size: 24,
+            size: 21,
           ),
         ),
         labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(44, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          minimumSize: const Size(36, 36),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(32, 32),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(32, 32),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size(44, 44),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          minimumSize: const Size(36, 36),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
       textTheme: const TextTheme(
-        headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(fontSize: 16, height: 1.3),
-        bodyMedium: TextStyle(fontSize: 14, height: 1.3),
-        bodySmall: TextStyle(fontSize: 13, height: 1.3),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(fontSize: 14, height: 1.3),
+        bodyMedium: TextStyle(fontSize: 13, height: 1.3),
+        bodySmall: TextStyle(fontSize: 11, height: 1.3),
+        labelLarge: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
       colorScheme: const ColorScheme.dark(
         primary: AppColors.darkPrimary,
@@ -179,6 +195,7 @@ class AppTheme {
         error: AppColors._darkAbsent,
       ),
       appBarTheme: const AppBarTheme(
+        toolbarHeight: 48,
         backgroundColor: AppColors.darkBackground,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -187,7 +204,7 @@ class AppTheme {
         titleTextStyle: TextStyle(
           fontFamily: 'Roboto',
           color: Colors.white,
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
         ),
@@ -196,7 +213,7 @@ class AppTheme {
         color: AppColors.darkSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           side: const BorderSide(color: AppColors.darkSurfaceBorder, width: 1),
         ),
       ),
@@ -227,11 +244,16 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         isDense: true,
-        fillColor: AppColors.darkSurfaceElevated,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 10,
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 36,
+          minHeight: 36,
         ),
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 36,
+          minHeight: 36,
+        ),
+        fillColor: AppColors.darkSurfaceElevated,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.darkSurfaceBorder),
@@ -247,7 +269,7 @@ class AppTheme {
             width: 1.5,
           ),
         ),
-        hintStyle: const TextStyle(color: Color(0xFF657182), fontSize: 14),
+        hintStyle: const TextStyle(color: Color(0xFF657182), fontSize: 12),
       ),
     );
   }
@@ -265,40 +287,56 @@ class AppTheme {
             color: states.contains(WidgetState.selected)
                 ? AppColors.primary
                 : AppColors.textSecondary,
-            size: 24,
+            size: 21,
           ),
         ),
         labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(44, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          minimumSize: const Size(36, 36),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(32, 32),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(32, 32),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size(44, 44),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          minimumSize: const Size(36, 36),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
       textTheme: const TextTheme(
-        headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(fontSize: 16, height: 1.3),
-        bodyMedium: TextStyle(fontSize: 14, height: 1.3),
-        bodySmall: TextStyle(fontSize: 13, height: 1.3),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(fontSize: 14, height: 1.3),
+        bodyMedium: TextStyle(fontSize: 13, height: 1.3),
+        bodySmall: TextStyle(fontSize: 11, height: 1.3),
+        labelLarge: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
       colorScheme: const ColorScheme.light(
         primary: AppColors.lightPrimary,
@@ -308,6 +346,7 @@ class AppTheme {
         error: AppColors._lightAbsent,
       ),
       appBarTheme: const AppBarTheme(
+        toolbarHeight: 48,
         backgroundColor: AppColors.lightBackground,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -316,7 +355,7 @@ class AppTheme {
         titleTextStyle: TextStyle(
           fontFamily: 'Roboto',
           color: Color(0xFF18251F),
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
         ),
@@ -325,7 +364,7 @@ class AppTheme {
         color: AppColors.lightSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           side: const BorderSide(color: AppColors.lightSurfaceBorder, width: 1),
         ),
       ),
@@ -357,11 +396,16 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         isDense: true,
-        fillColor: AppColors.lightSurface,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 10,
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 36,
+          minHeight: 36,
         ),
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 36,
+          minHeight: 36,
+        ),
+        fillColor: AppColors.lightSurface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.lightSurfaceBorder),
@@ -377,7 +421,7 @@ class AppTheme {
             width: 1.5,
           ),
         ),
-        hintStyle: const TextStyle(color: Color(0xFF59685F), fontSize: 14),
+        hintStyle: const TextStyle(color: Color(0xFF59685F), fontSize: 12),
       ),
     );
   }

@@ -144,7 +144,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                     Text(
                       'Membership Distribution',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
@@ -152,7 +152,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                     Text(
                       'Health Breakdown & Renewal Urgency',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -168,7 +168,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                 child: Text(
                   '$activePct% Active',
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: AppColors.paid,
                   ),
@@ -286,7 +286,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                       Text(
                         seg.title,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
@@ -304,7 +304,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
                         child: Text(
                           '${seg.count} ($pct%)',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: seg.color,
                           ),
@@ -337,7 +337,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
           Text(
             '${touched.count}',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w900,
               color: touched.color,
             ),
@@ -345,7 +345,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
           Text(
             '$pct% of Total',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
             ),
@@ -360,7 +360,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
         Text(
           '$totalActive',
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: FontWeight.w900,
             color: AppColors.textPrimary,
           ),
@@ -368,7 +368,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
         Text(
           'Active / $totalMembers',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             color: AppColors.textMuted,
           ),
@@ -393,7 +393,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
           Text(
             'No Members Registered',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -402,7 +402,7 @@ class _MembershipDonutChartState extends State<MembershipDonutChart> {
           Text(
             'Add members to view live membership health and expiry funnel distributions.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
         ],
       ),

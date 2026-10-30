@@ -148,7 +148,7 @@ class _AnimatedSuccessDialogState extends State<AnimatedSuccessDialog>
                 widget.title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 17,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                   letterSpacing: -0.2,
@@ -160,7 +160,7 @@ class _AnimatedSuccessDialogState extends State<AnimatedSuccessDialog>
                   widget.message!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: AppColors.textSecondary,
                     height: 1.35,
                   ),

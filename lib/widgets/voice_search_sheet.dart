@@ -234,7 +234,7 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                     Text(
                       widget.title ?? 'Voice Search',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
@@ -242,7 +242,7 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                     Text(
                       widget.hint,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textMuted,
                       ),
                       maxLines: 1,
@@ -290,7 +290,7 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                           _errorMessage!,
                           style: const TextStyle(
                             color: Colors.orange,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -301,7 +301,7 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                     _words,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                       letterSpacing: 0.2,
@@ -312,7 +312,7 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                     _statusText,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 13,
                       fontStyle: FontStyle.italic,
                       color: AppColors.textSecondary,
                     ),
@@ -325,7 +325,7 @@ class _VoiceSearchBottomSheetState extends State<VoiceSearchBottomSheet>
                       : (_words.isNotEmpty
                             ? 'Tap search to apply'
                             : 'Tap mic below to try again'),
-                  style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
               ],
             ),

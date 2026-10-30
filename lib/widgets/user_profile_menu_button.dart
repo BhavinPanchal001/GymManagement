@@ -108,7 +108,7 @@ class UserProfileMenuButton extends StatelessWidget {
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -116,7 +116,7 @@ class UserProfileMenuButton extends StatelessWidget {
                                 email,
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -145,7 +145,7 @@ class UserProfileMenuButton extends StatelessWidget {
                     'Edit Profile',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -167,7 +167,7 @@ class UserProfileMenuButton extends StatelessWidget {
                     theme.isDarkMode ? 'Light Mode' : 'Dark Mode',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -188,7 +188,7 @@ class UserProfileMenuButton extends StatelessWidget {
                       'Gym Settings',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -208,7 +208,7 @@ class UserProfileMenuButton extends StatelessWidget {
                     'Sign Out',
                     style: TextStyle(
                       color: AppColors.absent,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

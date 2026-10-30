@@ -483,7 +483,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           isEditing ? 'Edit Member Profile' : 'Register New Member',
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.3,
           ),
@@ -511,7 +511,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           'Full Name',
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -519,7 +519,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
         TextFormField(
           controller: _nameController,
           textCapitalization: TextCapitalization.words,
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
           decoration: InputDecoration(
             hintText: 'e.g. Rahul Sharma',
             prefixIcon: Icon(
@@ -550,7 +550,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           'Phone Number',
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -559,7 +559,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           controller: _phoneController,
           keyboardType: TextInputType.phone,
           inputFormatters: [_PhoneNumberFormatter()],
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
           decoration: InputDecoration(
             hintText: 'e.g. 9876543210',
             prefixIcon: Icon(
@@ -616,7 +616,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                         'Card No.',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -636,7 +636,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                           'ENTRY',
                           style: TextStyle(
                             color: Color(0xFFB71C1C),
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -649,7 +649,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     keyboardType: TextInputType.text,
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 15,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
                     decoration: const InputDecoration(
@@ -695,7 +695,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     'Joining Date',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -727,7 +727,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                               style: TextStyle(
                                 color: AppColors.textPrimary,
                                 fontWeight: FontWeight.w600,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -834,7 +834,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               : Text(
                   isEditing ? 'Save Changes' : 'Register Member',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.2,
                   ),
@@ -949,7 +949,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                               : i < _membershipStep
                                               ? AppColors.primary
                                               : AppColors.textSecondary,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
@@ -962,7 +962,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                         color: _membershipStep == i
                                             ? AppColors.primary
                                             : AppColors.textSecondary,
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         fontWeight: _membershipStep == i
                                             ? FontWeight.w800
                                             : FontWeight.w500,
@@ -1008,7 +1008,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 textStyle: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1030,7 +1030,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   textStyle: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1056,7 +1056,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               'Membership Plan',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1071,7 +1071,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 'MONTHLY TIER',
                 style: TextStyle(
                   color: AppColors.primary,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1167,13 +1167,13 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       fontWeight: isSelected
                           ? FontWeight.bold
                           : FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                   ),
                 ],
               ),
@@ -1197,7 +1197,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 style: TextStyle(
                   color: isSelected ? accentColor : AppColors.textSecondary,
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 12,
                 ),
               ),
             ),
@@ -1252,7 +1252,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 'Package Duration (Combo Pricing)',
                 style: TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1268,7 +1268,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                 '$effectiveSelected ${effectiveSelected == 1 ? "MONTH" : "MONTHS"}',
                 style: TextStyle(
                   color: accentColor,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1337,7 +1337,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                   fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.w600,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                               ),
                               if (savings > 0) ...[
@@ -1357,7 +1357,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                     'SAVE $currency$savings',
                                     style: const TextStyle(
                                       color: AppColors.paid,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1371,7 +1371,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                               'Effective $currency${pkg.monthlyRate.toStringAsFixed(0)} / month',
                               style: TextStyle(
                                 color: AppColors.textMuted,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -1386,7 +1386,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       style: TextStyle(
                         color: isSelected ? accentColor : AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
-                        fontSize: 15,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -1472,7 +1472,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       'Registration Payment',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1481,7 +1481,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       'Full payment, partial advance, or pay later',
                       style: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -1498,7 +1498,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   style: TextStyle(
                     color: activeColor,
                     fontWeight: FontWeight.w800,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -1563,7 +1563,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       'Full registration fee ($currency${fee.toInt()}) will be marked pending. You can collect payment at any time.',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                         height: 1.3,
                       ),
                     ),
@@ -1605,7 +1605,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                         'Full Fee Settled Upfront',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1615,7 +1615,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     GymDateUtils.formatCurrency(fee, symbol: currency),
                     style: TextStyle(
                       color: AppColors.paid,
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -1640,7 +1640,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       'Amount Received Today',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1648,7 +1648,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                       'Total Fee: $currency${fee.toInt()}',
                       style: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -1666,7 +1666,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   ],
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                   decoration: InputDecoration(
@@ -1678,7 +1678,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                         currency,
                         style: const TextStyle(
                           color: Color(0xFFA66510),
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -1753,7 +1753,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                 'Paid Today',
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -1765,7 +1765,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             ),
                             style: TextStyle(
                               color: AppColors.paid,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1798,7 +1798,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                   color: remainingBalance > 0
                                       ? const Color(0xFFA66510)
                                       : AppColors.paid,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -1826,7 +1826,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                 color: remainingBalance > 0
                                     ? const Color(0xFFA66510)
                                     : AppColors.paid,
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -1847,7 +1847,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
               'Payment Method',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1910,7 +1910,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                 fontWeight: isSelected
                                     ? FontWeight.bold
                                     : FontWeight.w500,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -1982,7 +1982,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                   style: TextStyle(
                     color: isSelected ? color : AppColors.textSecondary,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -2025,7 +2025,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
             color: isSelected
                 ? const Color(0xFFA66510)
                 : AppColors.textSecondary,
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
           ),
         ),
@@ -2060,7 +2060,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             'START DATE',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -2078,7 +2078,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -2107,7 +2107,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                             'EXPIRY DATE',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -2125,7 +2125,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -2154,7 +2154,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                     'Validity: ${GymDateUtils.formatDateRange(_membershipStartDate, _membershipEndDate)}',
                     style: TextStyle(
                       color: AppColors.primary,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -2213,7 +2213,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                               'Optional Details',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -2234,7 +2234,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                   'Filled',
                                   style: TextStyle(
                                     color: AppColors.secondary,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -2247,7 +2247,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                           'Address, Body Measurements, Workout Notes',
                           style: TextStyle(
                             color: AppColors.textMuted,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -2283,7 +2283,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                               'Address (Optional)',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -2293,7 +2293,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                               textCapitalization: TextCapitalization.sentences,
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                               decoration: InputDecoration(
                                 hintText: 'e.g. Station Road, Market Area',
@@ -2319,7 +2319,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                               'Workout Notes / Goals (Optional)',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -2330,7 +2330,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                               maxLines: 2,
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                               decoration: InputDecoration(
                                 hintText:
@@ -2370,7 +2370,7 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
                                     'Body Measurements (Entry Card)',
                                     style: TextStyle(
                                       color: AppColors.textPrimary,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -2450,14 +2450,14 @@ class _AddCustomerSheetState extends State<AddCustomerSheet> {
           label,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 4),
         TextFormField(
           controller: controller,
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 12),
           decoration: InputDecoration(
             hintText: hint,
             isDense: true,

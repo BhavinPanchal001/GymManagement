@@ -268,7 +268,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                             widget.title,
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -276,7 +276,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                             'Logo appears on member entry cards & payment receipts',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -317,7 +317,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                   'Or pick a gym brand emblem preset:',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -373,7 +373,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
                         'Remove Logo',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                       onPressed: () {
@@ -428,7 +428,7 @@ class _GymLogoSelectorState extends State<GymLogoSelector> {
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
-                fontSize: 14,
+                fontSize: 12,
               ),
             ),
           ],

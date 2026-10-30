@@ -39,12 +39,12 @@ class BillPdfPreviewScreen extends StatelessWidget {
           children: [
             const Text(
               'Official Payment Bill',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
             ),
             Text(
               '#${bill.billNumber} • ${bill.customerName}',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 color: AppColors.dynamicTextSecondary(),
                 fontWeight: FontWeight.w500,
               ),

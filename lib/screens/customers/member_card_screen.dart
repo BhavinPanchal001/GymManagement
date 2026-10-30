@@ -192,7 +192,7 @@ class _MemberCardScreenState extends State<MemberCardScreen> {
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                     items:
                         [

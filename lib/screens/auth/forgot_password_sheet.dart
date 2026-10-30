@@ -188,7 +188,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -198,7 +198,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                       text: TextSpan(
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 14,
+                          fontSize: 12,
                           height: 1.5,
                         ),
                         children: [
@@ -235,7 +235,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                         'Back to Sign In',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -265,7 +265,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                 : 'Resend email',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -278,7 +278,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                             'Try another email',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -309,7 +309,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                 'Reset Password',
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -318,7 +318,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                 'Enter your registered email address',
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -364,7 +364,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                 _errorMessage!,
                                 style: const TextStyle(
                                   color: AppColors.absent,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   height: 1.3,
                                 ),
@@ -508,7 +508,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
                                         Text(
                                           'Send Reset Instructions',
                                           style: TextStyle(
-                                            fontSize: 16,
+                                            fontSize: 14,
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),

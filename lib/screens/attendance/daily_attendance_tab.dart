@@ -168,7 +168,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                 tooltip: 'More Attendance Options',
                 color: AppColors.surface,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(10),
                   side: BorderSide(color: AppColors.surfaceBorder),
                 ),
                 onSelected: (val) async {
@@ -216,14 +216,14 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                         Icon(
                           Icons.calendar_month_rounded,
                           color: AppColors.primary,
-                          size: 20,
+                          size: 18,
                         ),
                         const SizedBox(width: 10),
                         Text(
                           'Mark Month (All Members)...',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 13,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -242,12 +242,12 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                 Container(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 8,
+                    vertical: 6,
                   ),
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceElevated,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: AppColors.surfaceBorder),
                   ),
                   child: Column(
@@ -266,7 +266,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                         GymDateUtils.formatDate(_selectedDate),
                                         style: TextStyle(
                                           color: AppColors.textPrimary,
-                                          fontSize: 16,
+                                          fontSize: 14,
                                           fontWeight: FontWeight.w700,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -289,7 +289,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                           'TODAY',
                                           style: TextStyle(
                                             color: AppColors.primaryOn,
-                                            fontSize: 13,
+                                            fontSize: 11,
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
@@ -302,7 +302,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                   GymDateUtils.formatDayOfWeek(_selectedDate),
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 13,
+                                    fontSize: 11,
                                   ),
                                 ),
                               ],
@@ -330,7 +330,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                             label: const Text(
                               'Mark All',
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -342,7 +342,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
-                            vertical: 8,
+                            vertical: 6,
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.dynamicPending.withValues(
@@ -368,7 +368,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                   'Future date: Attendance cannot be marked in advance.',
                                   style: TextStyle(
                                     color: AppColors.dynamicPending,
-                                    fontSize: 13,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -377,7 +377,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 6),
 
                       // Metrics Strip
                       Row(
@@ -428,7 +428,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                 ),
                 child: TextField(
                   controller: _searchController,
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 12),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     hintText: 'Search by name, phone, or card #...',
@@ -445,7 +445,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
 
               // Attendance List
               Expanded(
@@ -464,7 +464,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                         itemCount: filteredCustomers.length,
                         separatorBuilder: (context, index) =>
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 6),
                         itemBuilder: (context, i) {
                           final customer = filteredCustomers[i];
                           final status = gym.getAttendanceStatus(
@@ -481,11 +481,11 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                               curve: AppAnimations.curveEaseInOut,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
-                                vertical: 10,
+                                vertical: 6,
                               ),
                               decoration: BoxDecoration(
                                 color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: AppColors.surfaceBorder,
                                 ),
@@ -499,7 +499,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                           imagePath: customer.imagePath,
                                           imageBase64: customer.imageBase64,
                                           name: customer.name,
-                                          radius: 17,
+                                          radius: 14,
                                           onTap: () {
                                             Navigator.push(
                                               context,
@@ -535,7 +535,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                                   style: TextStyle(
                                                     color:
                                                         AppColors.textPrimary,
-                                                    fontSize: 15,
+                                                    fontSize: 13,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
@@ -545,7 +545,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
                                                   style: TextStyle(
                                                     color:
                                                         AppColors.textSecondary,
-                                                    fontSize: 13,
+                                                    fontSize: 11,
                                                   ),
                                                 ),
                                               ],
@@ -621,7 +621,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
           suffix: suffix,
           style: TextStyle(
             color: color,
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -630,7 +630,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
           label,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 13,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -651,7 +651,7 @@ class _DailyAttendanceTabState extends State<DailyAttendanceTab> {
       child: AnimatedContainer(
         duration: AppAnimations.microDuration,
         curve: AppAnimations.curveEaseInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
           color: isDisabled
               ? AppColors.surfaceElevated.withValues(alpha: 0.4)

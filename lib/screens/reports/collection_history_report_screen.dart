@@ -313,7 +313,7 @@ class _CollectionHistoryReportScreenState
                     ? AppColors.primaryOn
                     : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 14,
+                fontSize: 12,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -354,7 +354,7 @@ class _CollectionHistoryReportScreenState
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
-                fontSize: 14,
+                fontSize: 12,
               ),
             ),
           ),
@@ -380,7 +380,7 @@ class _CollectionHistoryReportScreenState
                     'Change',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -429,7 +429,7 @@ class _CollectionHistoryReportScreenState
                       'TOTAL COLLECTED',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
@@ -441,7 +441,7 @@ class _CollectionHistoryReportScreenState
                   GymDateUtils.formatCurrency(totalCollected, symbol: currency),
                   style: const TextStyle(
                     color: AppColors.paid,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -459,7 +459,7 @@ class _CollectionHistoryReportScreenState
                   'MEMBERS',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),
@@ -469,7 +469,7 @@ class _CollectionHistoryReportScreenState
                   '$membersCount',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -487,7 +487,7 @@ class _CollectionHistoryReportScreenState
                   'PAYMENTS',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),
@@ -497,7 +497,7 @@ class _CollectionHistoryReportScreenState
                   '$paymentsCount',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -524,14 +524,14 @@ class _CollectionHistoryReportScreenState
                     controller: _searchController,
                     onChanged: (val) => setState(() => _searchQuery = val),
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: AppColors.textPrimary,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Search member or phone...',
                       hintStyle: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                       prefixIcon: Icon(
                         Icons.search_rounded,
@@ -601,7 +601,7 @@ class _CollectionHistoryReportScreenState
                           order.label,
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -641,7 +641,7 @@ class _CollectionHistoryReportScreenState
                       : '$totalCount members paid',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -709,7 +709,7 @@ class _CollectionHistoryReportScreenState
                 color: isSelected
                     ? AppColors.primaryOn
                     : AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
@@ -765,7 +765,7 @@ class _CollectionHistoryReportScreenState
                           customer.name,
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -793,7 +793,7 @@ class _CollectionHistoryReportScreenState
                                   customer.phone,
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -817,7 +817,7 @@ class _CollectionHistoryReportScreenState
                         ),
                         style: const TextStyle(
                           color: AppColors.paid,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -825,7 +825,7 @@ class _CollectionHistoryReportScreenState
                         '${item.paidRecords.length} ${item.paidRecords.length == 1 ? 'payment' : 'payments'}',
                         style: TextStyle(
                           color: AppColors.textMuted,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -860,7 +860,7 @@ class _CollectionHistoryReportScreenState
                             GymDateUtils.formatMonthYearKey(rec.monthYear),
                             style: const TextStyle(
                               color: AppColors.paid,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -872,7 +872,7 @@ class _CollectionHistoryReportScreenState
                             ),
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -951,7 +951,7 @@ class _CollectionHistoryReportScreenState
                         label: const Text(
                           'View Receipt',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -1019,7 +1019,7 @@ class _CollectionHistoryReportScreenState
                       formattedMonth,
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1037,7 +1037,7 @@ class _CollectionHistoryReportScreenState
                         '${GymDateUtils.formatCurrency(group.totalAmount, symbol: currency)} collected (${group.items.length})',
                         style: const TextStyle(
                           color: AppColors.paid,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1078,7 +1078,7 @@ class _CollectionHistoryReportScreenState
                               customer.name,
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                               maxLines: 1,
@@ -1090,7 +1090,7 @@ class _CollectionHistoryReportScreenState
                                   customer.phone,
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1107,7 +1107,7 @@ class _CollectionHistoryReportScreenState
                                     PaymentRecord.methodLabel(payment.method),
                                     style: TextStyle(
                                       color: AppColors.textMuted,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
@@ -1125,7 +1125,7 @@ class _CollectionHistoryReportScreenState
                         style: const TextStyle(
                           color: AppColors.paid,
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -1243,7 +1243,7 @@ class _CollectionHistoryReportScreenState
                           : 'No Collections Found',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1255,7 +1255,7 @@ class _CollectionHistoryReportScreenState
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],

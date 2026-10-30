@@ -209,7 +209,7 @@ class _BillingTabState extends State<BillingTab> {
                                   Icon(
                                     Icons.event_note_rounded,
                                     color: AppColors.primary,
-                                    size: 20,
+                                    size: 18,
                                   ),
                                   const SizedBox(width: 8),
                                   Column(
@@ -222,7 +222,7 @@ class _BillingTabState extends State<BillingTab> {
                                         ),
                                         style: TextStyle(
                                           color: AppColors.textPrimary,
-                                          fontSize: 16,
+                                          fontSize: 14,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
@@ -230,7 +230,7 @@ class _BillingTabState extends State<BillingTab> {
                                         'Fee: ${GymDateUtils.formatCurrency(gym.settings.standardMonthlyFee, symbol: currency)}/mo',
                                         style: TextStyle(
                                           color: AppColors.textSecondary,
-                                          fontSize: 12,
+                                          fontSize: 11,
                                         ),
                                       ),
                                     ],
@@ -270,7 +270,7 @@ class _BillingTabState extends State<BillingTab> {
                           child: Container(
                             decoration: BoxDecoration(
                               color: AppColors.surfaceElevated,
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: AppColors.surfaceBorder,
                               ),
@@ -347,7 +347,7 @@ class _BillingTabState extends State<BillingTab> {
                             controller: _searchController,
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 13,
+                              fontSize: 11,
                             ),
                             onChanged: (_) => setState(() {}),
                             decoration: InputDecoration(
@@ -392,7 +392,7 @@ class _BillingTabState extends State<BillingTab> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
 
                         Expanded(
                           child: CustomScrollView(
@@ -410,10 +410,10 @@ class _BillingTabState extends State<BillingTab> {
                                         horizontal: 16,
                                         vertical: 6,
                                       ),
-                                      padding: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: AppColors.surface,
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
                                           color: AppColors.surfaceBorder,
                                         ),
@@ -484,7 +484,7 @@ class _BillingTabState extends State<BillingTab> {
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 8),
+                                          const SizedBox(height: 4),
                                           // Progress Bar
                                           ClipRRect(
                                             borderRadius: BorderRadius.circular(
@@ -521,7 +521,7 @@ class _BillingTabState extends State<BillingTab> {
                                               },
                                             ),
                                           ),
-                                          const SizedBox(height: 8),
+                                          const SizedBox(height: 4),
                                           Wrap(
                                             alignment:
                                                 WrapAlignment.spaceBetween,
@@ -538,7 +538,7 @@ class _BillingTabState extends State<BillingTab> {
                                                     style: TextStyle(
                                                       color: AppColors
                                                           .textSecondary,
-                                                      fontSize: 13,
+                                                      fontSize: 11,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                     ),
@@ -550,7 +550,7 @@ class _BillingTabState extends State<BillingTab> {
                                                     style: TextStyle(
                                                       color:
                                                           AppColors.textPrimary,
-                                                      fontSize: 13,
+                                                      fontSize: 11,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                     ),
@@ -561,7 +561,7 @@ class _BillingTabState extends State<BillingTab> {
                                                 '$paidCount of $totalMembers Cleared',
                                                 style: TextStyle(
                                                   color: AppColors.textMuted,
-                                                  fontSize: 13,
+                                                  fontSize: 11,
                                                 ),
                                               ),
                                             ],
@@ -586,11 +586,11 @@ class _BillingTabState extends State<BillingTab> {
                                             ),
                                           );
                                         },
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(10),
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 14,
-                                            vertical: 10,
+                                            vertical: 6,
                                           ),
                                           decoration: BoxDecoration(
                                             color: AppColors.surfaceElevated,
@@ -632,7 +632,7 @@ class _BillingTabState extends State<BillingTab> {
                                                       style: TextStyle(
                                                         color: AppColors
                                                             .textPrimary,
-                                                        fontSize: 13,
+                                                        fontSize: 11,
                                                         fontWeight:
                                                             FontWeight.bold,
                                                       ),
@@ -642,7 +642,7 @@ class _BillingTabState extends State<BillingTab> {
                                                       style: TextStyle(
                                                         color:
                                                             AppColors.textMuted,
-                                                        fontSize: 13,
+                                                        fontSize: 11,
                                                       ),
                                                     ),
                                                   ],
@@ -651,7 +651,7 @@ class _BillingTabState extends State<BillingTab> {
                                               Icon(
                                                 Icons.chevron_right_rounded,
                                                 color: AppColors.textMuted,
-                                                size: 20,
+                                                size: 18,
                                               ),
                                             ],
                                           ),
@@ -659,7 +659,7 @@ class _BillingTabState extends State<BillingTab> {
                                       ),
                                     ),
 
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 4),
                                   ],
                                 ),
                               ),
@@ -691,7 +691,7 @@ class _BillingTabState extends State<BillingTab> {
                                   sliver: SliverList.separated(
                                     itemCount: customers.length,
                                     separatorBuilder: (context, index) =>
-                                        const SizedBox(height: 10),
+                                        const SizedBox(height: 6),
                                     itemBuilder: (context, i) {
                                       final customer = customers[i];
                                       final payment = gym.getPaymentRecord(
@@ -749,7 +749,7 @@ class _BillingTabState extends State<BillingTab> {
         child: AnimatedContainer(
           duration: AppAnimations.microDuration,
           curve: AppAnimations.curveEaseInOut,
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
@@ -763,7 +763,7 @@ class _BillingTabState extends State<BillingTab> {
                   color: isSelected
                       ? AppColors.primaryOn
                       : AppColors.textSecondary,
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
@@ -801,7 +801,7 @@ class _BillingTabState extends State<BillingTab> {
           title,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 13,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
@@ -817,7 +817,7 @@ class _BillingTabState extends State<BillingTab> {
                       (numericAmount is int || numericAmount % 1 == 0) ? 0 : 2,
                   style: TextStyle(
                     color: color,
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 )
@@ -825,7 +825,7 @@ class _BillingTabState extends State<BillingTab> {
                   amount,
                   style: TextStyle(
                     color: color,
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -833,7 +833,7 @@ class _BillingTabState extends State<BillingTab> {
         const SizedBox(height: 2),
         Text(
           sub,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
           textAlign: TextAlign.center,
         ),
       ],
@@ -864,7 +864,7 @@ class _BillingTabState extends State<BillingTab> {
           style: TextStyle(
             color: isSelected ? AppColors.primaryOn : AppColors.textSecondary,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            fontSize: 13,
+            fontSize: 11,
             height: 1.2,
           ),
         ),
@@ -894,10 +894,10 @@ class _BillingTabState extends State<BillingTab> {
       child: AnimatedContainer(
         duration: AppAnimations.normalDuration,
         curve: AppAnimations.curveEaseInOut,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isPaid
                 ? AppColors.surfaceBorder
@@ -915,7 +915,7 @@ class _BillingTabState extends State<BillingTab> {
                   imagePath: customer.imagePath,
                   imageBase64: customer.imageBase64,
                   name: customer.name,
-                  radius: 18,
+                  radius: 14,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -929,7 +929,7 @@ class _BillingTabState extends State<BillingTab> {
                               customer.name,
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                               maxLines: 1,
@@ -968,7 +968,7 @@ class _BillingTabState extends State<BillingTab> {
                                     'ARCHIVED',
                                     style: TextStyle(
                                       color: AppColors.dynamicPending,
-                                      fontSize: 13,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.4,
                                     ),
@@ -995,7 +995,7 @@ class _BillingTabState extends State<BillingTab> {
                               '$presentDays days attended in ${GymDateUtils.formatMonthYearKey(monthKey).split(' ').first}',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontSize: 13,
+                                fontSize: 11,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1018,7 +1018,7 @@ class _BillingTabState extends State<BillingTab> {
                         ),
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1079,7 +1079,7 @@ class _BillingTabState extends State<BillingTab> {
                                   : (isDue
                                         ? AppColors.dynamicPending
                                         : AppColors.textMuted),
-                              fontSize: 13,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -1091,12 +1091,12 @@ class _BillingTabState extends State<BillingTab> {
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Container(
               height: 1,
               color: AppColors.surfaceBorder.withValues(alpha: 0.6),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
 
             // Bottom Section: Payment Mode / Status info + Action Button
             Row(
@@ -1117,7 +1117,7 @@ class _BillingTabState extends State<BillingTab> {
                                 '${payment.paidAt != null ? ' (${GymDateUtils.formatShortDate(payment.paidAt!)})' : ''}',
                                 style: TextStyle(
                                   color: AppColors.dynamicPaid,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 maxLines: 1,
@@ -1148,7 +1148,7 @@ class _BillingTabState extends State<BillingTab> {
                                   color: isDue
                                       ? AppColors.dynamicPending
                                       : AppColors.textMuted,
-                                  fontSize: 13,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 maxLines: 1,
@@ -1194,7 +1194,7 @@ class _BillingTabState extends State<BillingTab> {
                     label: const Text(
                       'Remind',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppColors.whatsapp,
                       ),
@@ -1234,7 +1234,7 @@ class _BillingTabState extends State<BillingTab> {
                     label: Text(
                       'Bill',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppColors.dynamicPaid,
                       ),
@@ -1271,7 +1271,7 @@ class _BillingTabState extends State<BillingTab> {
                     label: Text(
                       'Edit',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textSecondary,
                       ),
@@ -1309,7 +1309,7 @@ class _BillingTabState extends State<BillingTab> {
                     label: Text(
                       'Mark Paid',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primaryOn,
                       ),
@@ -1320,7 +1320,7 @@ class _BillingTabState extends State<BillingTab> {
             ),
             FeeAdjustmentButton(payment: payment, topSpacing: 10, expand: true),
             if (isPaid && payment.balanceDue > 0) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -1344,7 +1344,7 @@ class _BillingTabState extends State<BillingTab> {
                     ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 8,
+                      vertical: 6,
                     ),
                     minimumSize: const Size(0, 36),
                   ),
@@ -1352,7 +1352,7 @@ class _BillingTabState extends State<BillingTab> {
                   label: Text(
                     'Collect Balance ${GymDateUtils.formatCurrency(payment.balanceDue, symbol: currency)}',
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

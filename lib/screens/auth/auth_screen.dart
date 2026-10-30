@@ -238,7 +238,7 @@ class _AuthScreenState extends State<AuthScreen>
           'GYM MANAGER',
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 26,
+            fontSize: 22,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.2,
           ),
@@ -247,7 +247,7 @@ class _AuthScreenState extends State<AuthScreen>
         Text(
           'Manage members, attendance & subscriptions',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
       ],
     );
@@ -277,9 +277,9 @@ class _AuthScreenState extends State<AuthScreen>
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.textSecondary,
-        labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
         unselectedLabelStyle: const TextStyle(
-          fontSize: 15,
+          fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
         tabs: const [
@@ -422,7 +422,7 @@ class _AuthScreenState extends State<AuthScreen>
                             'Remember Me',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -456,7 +456,7 @@ class _AuthScreenState extends State<AuthScreen>
                     child: const Text(
                       'Forgot Password?',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -497,7 +497,7 @@ class _AuthScreenState extends State<AuthScreen>
                             Text(
                               'Sign In',
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -561,7 +561,7 @@ class _AuthScreenState extends State<AuthScreen>
                         color: _signUpSelectedImagePath != null
                             ? AppColors.primary
                             : AppColors.textPrimary,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -570,7 +570,7 @@ class _AuthScreenState extends State<AuthScreen>
                       'Will appear on Member Entry Cards & Receipts',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -734,7 +734,7 @@ class _AuthScreenState extends State<AuthScreen>
                             Text(
                               'Create Account',
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -772,12 +772,12 @@ class _AuthScreenState extends State<AuthScreen>
       obscureText: obscureText,
       keyboardType: keyboardType,
       autofillHints: autofillHints,
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+      style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
-        labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
+        labelStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
         suffixIcon: suffixIcon,
         filled: true,
@@ -825,7 +825,7 @@ class _AuthScreenState extends State<AuthScreen>
               message,
               style: TextStyle(
                 color: AppColors.absent,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 height: 1.3,
               ),

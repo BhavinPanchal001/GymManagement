@@ -95,7 +95,7 @@ class BalanceSheetTab extends StatelessWidget {
                             child: Text(
                               'No payments collected yet for ${GymDateUtils.formatMonthHeader(monthKey)}',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: AppColors.textMuted,
                               ),
                             ),
@@ -130,7 +130,7 @@ class BalanceSheetTab extends StatelessWidget {
                             subtitle: Text(
                               '${pct.toStringAsFixed(1)}% of total inflow',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: AppColors.textMuted,
                               ),
                             ),
@@ -140,7 +140,7 @@ class BalanceSheetTab extends StatelessWidget {
                                 symbol: currency,
                               ),
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                               ),
@@ -177,7 +177,7 @@ class BalanceSheetTab extends StatelessWidget {
                                   symbol: currency,
                                 ),
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w900,
                                   color: AppColors.paid,
                                 ),
@@ -217,7 +217,7 @@ class BalanceSheetTab extends StatelessWidget {
                                 Text(
                                   'No expenses logged for this month',
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     color: AppColors.textMuted,
                                   ),
                                 ),
@@ -273,7 +273,7 @@ class BalanceSheetTab extends StatelessWidget {
                             subtitle: Text(
                               '${pct.toStringAsFixed(1)}% of expenses',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: AppColors.textMuted,
                               ),
                             ),
@@ -283,7 +283,7 @@ class BalanceSheetTab extends StatelessWidget {
                                 symbol: currency,
                               ),
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                               ),
@@ -320,7 +320,7 @@ class BalanceSheetTab extends StatelessWidget {
                                   symbol: currency,
                                 ),
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w900,
                                   color: AppColors.absent,
                                 ),
@@ -361,7 +361,7 @@ class BalanceSheetTab extends StatelessWidget {
                                   ? 'NET OPERATING PROFIT'
                                   : 'NET OPERATING DEFICIT',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5,
                                 color: isProfit
@@ -375,7 +375,7 @@ class BalanceSheetTab extends StatelessWidget {
                             Text(
                               'Margin: ${profitMargin.toStringAsFixed(1)}% • ${isProfit ? 'Healthy gym surplus' : 'Expenses exceed income'}',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: AppColors.textMuted,
                               ),
                               maxLines: 2,
@@ -393,7 +393,7 @@ class BalanceSheetTab extends StatelessWidget {
                             symbol: currency,
                           ),
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 20,
                             fontWeight: FontWeight.w900,
                             color: isProfit ? AppColors.paid : AppColors.absent,
                           ),
@@ -428,7 +428,7 @@ class BalanceSheetTab extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
@@ -437,7 +437,7 @@ class BalanceSheetTab extends StatelessWidget {
               ),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

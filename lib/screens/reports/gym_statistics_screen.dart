@@ -104,7 +104,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                       style: TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -359,7 +359,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                                         Text(
                                           '$presentToday Members Present Today',
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.textPrimary,
                                           ),
@@ -369,7 +369,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                                         Text(
                                           'Out of $totalActive active members',
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            fontSize: 12,
                                             color: AppColors.textSecondary,
                                           ),
                                           maxLines: 1,
@@ -394,7 +394,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                               child: Text(
                                 '$attendanceRate% Turnout',
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.paid,
                                 ),
@@ -606,7 +606,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     Text(
                       f.$2,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: isSelected
                             ? FontWeight.bold
                             : FontWeight.w600,
@@ -678,7 +678,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     Text(
                       gymName.isNotEmpty ? gymName : 'My Gym',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
@@ -688,7 +688,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                     Text(
                       'Membership & Financial Intelligence',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -710,7 +710,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                 child: Text(
                   '$activeRate% Active',
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: AppColors.paid,
                   ),
@@ -774,7 +774,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
             AnimatedCounter(
               value: count,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
               ),
@@ -785,7 +785,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             color: AppColors.textMuted,
             fontWeight: FontWeight.w600,
           ),
@@ -810,7 +810,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               child: Text(
                 title,
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
@@ -825,7 +825,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           padding: const EdgeInsets.only(left: 26),
           child: Text(
             subtitle,
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
         ),
       ],
@@ -887,7 +887,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: Text(
                           title,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
                           ),
@@ -908,7 +908,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                         child: Text(
                           badgeText,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: accentColor,
                           ),
@@ -920,7 +920,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
                     maxLines: 1,
@@ -939,7 +939,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               child: Text(
                 '$count',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: FontWeight.w900,
                   color: accentColor,
                 ),
@@ -999,7 +999,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
               value: amount,
               prefix: '$currency ',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w900,
                 color: color,
               ),
@@ -1009,7 +1009,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
@@ -1018,7 +1018,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
           ),
           Text(
             subtitle,
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1067,7 +1067,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
@@ -1075,7 +1075,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -1087,7 +1087,7 @@ class _GymStatisticsScreenState extends State<GymStatisticsScreen> {
             child: Text(
               '${isPositive ? '+' : '-'}$amount',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w900,
                 color: color,
               ),

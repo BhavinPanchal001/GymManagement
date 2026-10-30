@@ -71,7 +71,7 @@ class BalanceSheetCard extends StatelessWidget {
                     Text(
                       'Gym Balance Sheet',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
@@ -81,7 +81,7 @@ class BalanceSheetCard extends StatelessWidget {
                     Text(
                       'P&L Statement for ${GymDateUtils.formatMonthHeader(monthYear)}',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textMuted,
                       ),
                       maxLines: 1,
@@ -116,7 +116,7 @@ class BalanceSheetCard extends StatelessWidget {
                           ? '+${profitMargin.toStringAsFixed(1)}% Net'
                           : '${profitMargin.toStringAsFixed(1)}% Deficit',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: profitColor,
                       ),
@@ -159,7 +159,7 @@ class BalanceSheetCard extends StatelessWidget {
                             child: Text(
                               'Fee Income',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: AppColors.textMuted,
                               ),
                               maxLines: 1,
@@ -178,7 +178,7 @@ class BalanceSheetCard extends StatelessWidget {
                             symbol: currency,
                           ),
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
                           ),
@@ -219,7 +219,7 @@ class BalanceSheetCard extends StatelessWidget {
                                   ? 'Expenses ($expensesCount)'
                                   : 'Expenses',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: AppColors.textMuted,
                               ),
                               maxLines: 1,
@@ -238,7 +238,7 @@ class BalanceSheetCard extends StatelessWidget {
                             symbol: currency,
                           ),
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
                           ),
@@ -275,7 +275,7 @@ class BalanceSheetCard extends StatelessWidget {
                             child: Text(
                               isProfit ? 'Net Profit' : 'Net Loss',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: profitColor,
                               ),
@@ -295,7 +295,7 @@ class BalanceSheetCard extends StatelessWidget {
                             symbol: currency,
                           ),
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: profitColor,
                           ),
@@ -315,7 +315,7 @@ class BalanceSheetCard extends StatelessWidget {
             Text(
               'Major Expense Distribution',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
               ),
@@ -381,7 +381,7 @@ class BalanceSheetCard extends StatelessWidget {
                             child: Text(
                               '${entry.key.label}: ${GymDateUtils.formatCurrency(entry.value, symbol: currency)} ($pct%)',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: AppColors.textSecondary,
                               ),
                               maxLines: 1,
@@ -401,7 +401,7 @@ class BalanceSheetCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'No expenses recorded for this month yet.',
-                  style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
               ),
             ),
@@ -416,7 +416,7 @@ class BalanceSheetCard extends StatelessWidget {
                 icon: const Icon(Icons.receipt_long, size: 16),
                 label: const Text(
                   'Manage Expenses Ledger',
-                  style: TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: 12),
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,

@@ -101,7 +101,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                 widget.title,
                 style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -138,7 +138,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                 'Or choose a fitness avatar:',
                 style: TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -194,7 +194,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
                       'Remove Photo',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                     onPressed: () {
@@ -248,7 +248,7 @@ class _AvatarSelectorState extends State<AvatarSelector> {
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
-                fontSize: 14,
+                fontSize: 12,
               ),
             ),
           ],

@@ -142,7 +142,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
                     'DANGER ZONE',
                     style: TextStyle(
                       color: AppColors.absent,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.8,
                     ),
@@ -153,7 +153,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
                   widget.title,
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -171,7 +171,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
               widget.description,
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 height: 1.4,
               ),
             ),
@@ -206,7 +206,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
                           color: isDark
                               ? const Color(0xFFFF8A80)
                               : const Color(0xFFBE123C),
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -252,7 +252,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
             // Confirmation phrase prompt
             RichText(
               text: TextSpan(
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 12),
                 children: [
                   const TextSpan(text: 'To confirm, type '),
                   TextSpan(
@@ -364,7 +364,7 @@ class _DangerConfirmationDialogState extends State<DangerConfirmationDialog> {
             '$count $label',
             style: TextStyle(
               color: AppColors.textPrimary,
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),

@@ -72,7 +72,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                     Text(
                       'Expense Breakdown',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
@@ -80,7 +80,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                     Text(
                       'Monthly Cost Allocation by Category',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -99,7 +99,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                     symbol: widget.currency,
                   ),
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: AppColors.absent,
                   ),
@@ -200,7 +200,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                             child: Text(
                               category.label,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                               ),
@@ -217,7 +217,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                                   symbol: widget.currency,
                                 ),
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.textPrimary,
                                 ),
@@ -225,7 +225,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                               Text(
                                 '$pct% of total',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   color: AppColors.textMuted,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -277,7 +277,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
           Text(
             GymDateUtils.formatCurrency(entry.value, symbol: widget.currency),
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w900,
               color: entry.key.color,
             ),
@@ -285,7 +285,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
           Text(
             '$pct%',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -303,7 +303,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
             symbol: widget.currency,
           ),
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 13,
             fontWeight: FontWeight.w900,
             color: AppColors.textPrimary,
           ),
@@ -311,7 +311,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
         Text(
           'Total Expenses',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             color: AppColors.textMuted,
           ),
@@ -336,7 +336,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
           Text(
             'No Expenses Recorded This Month',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               color: AppColors.textSecondary,
             ),
@@ -345,7 +345,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
           Text(
             'Add rent, salaries, or utility costs to visualize category breakdown.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
         ],
       ),

@@ -70,13 +70,12 @@ void main() {
             );
             await tester.pumpAndSettle();
             expect(find.text('Alexander Robertson Patel'), findsOneWidget);
-            expect(find.text('Add Member'), findsOneWidget);
+            expect(find.byTooltip('Add Member'), findsOneWidget);
             expect(tester.takeException(), isNull);
             final list = tester.getRect(find.byType(ListView));
-            final add = tester.getRect(
-              find.byWidgetPredicate((widget) => widget is FilledButton),
-            );
-            expect(list.bottom, lessThanOrEqualTo(add.top));
+            final add = tester.getRect(find.byTooltip('Add Member'));
+            expect(add.bottom, lessThanOrEqualTo(list.top));
+            expect(find.byTooltip('Add Member').hitTestable(), findsOneWidget);
             await tester.pumpWidget(const SizedBox());
           },
         );

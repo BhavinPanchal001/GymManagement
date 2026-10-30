@@ -205,7 +205,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                         const Text(
                           'Payment Bill & Receipt',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.3,
                           ),
@@ -218,7 +218,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                     : 'Gym Management'),
                           style: TextStyle(
                             color: AppColors.dynamicTextSecondary(),
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -326,7 +326,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                     bill.billNumber,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -380,7 +380,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                         chipLabel,
                                         style: TextStyle(
                                           color: chipColor,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: 0.8,
                                         ),
@@ -419,7 +419,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                   label,
                                   style: TextStyle(
                                     color: AppColors.pending,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -430,7 +430,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                           'Payment completed on $formattedDate',
                           style: TextStyle(
                             color: AppColors.dynamicTextSecondary(),
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -470,7 +470,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                     bill.customerPhone,
                                     style: TextStyle(
                                       color: AppColors.dynamicTextPrimary(),
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -499,7 +499,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                           'Call',
                                           style: TextStyle(
                                             color: AppColors.primary,
-                                            fontSize: 14,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -557,7 +557,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                 '✓ $presentDays Days Attended in $formattedCycle',
                                 style: const TextStyle(
                                   color: AppColors.paid,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -596,7 +596,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                                     color: isDark
                                         ? Colors.white
                                         : Colors.black87,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -667,7 +667,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                             'View Full Tax Invoice / Bill PDF',
                             style: TextStyle(
                               color: AppColors.primary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -716,7 +716,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                       label: Text(
                         _isGeneratingPdf ? 'Preparing...' : 'Print / Save PDF',
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -743,7 +743,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                       label: const Text(
                         'Share PDF Bill',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -789,7 +789,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                       label: const Text(
                         'WhatsApp Alert',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -882,7 +882,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                   style: TextStyle(
                     color: AppColors.dynamicTextSecondary(),
                     fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -913,7 +913,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
               label,
               style: TextStyle(
                 color: AppColors.dynamicTextSecondary(),
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -929,7 +929,7 @@ class _BillReceiptDialogState extends State<BillReceiptDialog> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: 12,
                 ),
               ),
         ),

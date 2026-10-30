@@ -391,7 +391,7 @@ class _PendingPaymentsReportScreenState
                     ? AppColors.primaryOn
                     : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 14,
+                fontSize: 12,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -432,7 +432,7 @@ class _PendingPaymentsReportScreenState
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
-                fontSize: 14,
+                fontSize: 12,
               ),
             ),
           ),
@@ -458,7 +458,7 @@ class _PendingPaymentsReportScreenState
                     'Change',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -508,7 +508,7 @@ class _PendingPaymentsReportScreenState
                       'TOTAL PENDING',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
@@ -520,7 +520,7 @@ class _PendingPaymentsReportScreenState
                   GymDateUtils.formatCurrency(totalPending, symbol: currency),
                   style: const TextStyle(
                     color: AppColors.pending,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -538,7 +538,7 @@ class _PendingPaymentsReportScreenState
                   'MEMBERS',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),
@@ -548,7 +548,7 @@ class _PendingPaymentsReportScreenState
                   '$unpaidMembersCount',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -566,7 +566,7 @@ class _PendingPaymentsReportScreenState
                   'MONTHS DUE',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),
@@ -576,7 +576,7 @@ class _PendingPaymentsReportScreenState
                   '$pendingRecordsCount',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -603,14 +603,14 @@ class _PendingPaymentsReportScreenState
                     controller: _searchController,
                     onChanged: (val) => setState(() => _searchQuery = val),
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: AppColors.textPrimary,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Search member or phone...',
                       hintStyle: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                       prefixIcon: Icon(
                         Icons.search_rounded,
@@ -680,7 +680,7 @@ class _PendingPaymentsReportScreenState
                           order.label,
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -720,7 +720,7 @@ class _PendingPaymentsReportScreenState
                       : '$totalCount members with dues',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -788,7 +788,7 @@ class _PendingPaymentsReportScreenState
                 color: isSelected
                     ? AppColors.primaryOn
                     : AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
@@ -861,7 +861,7 @@ class _PendingPaymentsReportScreenState
                                   customer.phone,
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -885,7 +885,7 @@ class _PendingPaymentsReportScreenState
                         ),
                         style: const TextStyle(
                           color: AppColors.pending,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -893,7 +893,7 @@ class _PendingPaymentsReportScreenState
                         '${item.pendingRecords.length} ${item.pendingRecords.length == 1 ? 'period' : 'periods'} due',
                         style: TextStyle(
                           color: AppColors.textMuted,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -926,7 +926,7 @@ class _PendingPaymentsReportScreenState
                           GymDateUtils.formatMonthYearKey(rec.monthYear),
                           style: const TextStyle(
                             color: AppColors.pending,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -938,7 +938,7 @@ class _PendingPaymentsReportScreenState
                           ),
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1020,7 +1020,7 @@ class _PendingPaymentsReportScreenState
                         label: const Text(
                           'WhatsApp',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -1063,7 +1063,7 @@ class _PendingPaymentsReportScreenState
                               ? 'Collect Balance ${GymDateUtils.formatCurrency(item.pendingRecords.first.balanceDue, symbol: currency)}'
                               : 'Record Payment',
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -1160,7 +1160,7 @@ class _PendingPaymentsReportScreenState
                       formattedMonth,
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1178,7 +1178,7 @@ class _PendingPaymentsReportScreenState
                         '${GymDateUtils.formatCurrency(group.totalAmount, symbol: currency)} due (${group.items.length})',
                         style: const TextStyle(
                           color: AppColors.pending,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1220,14 +1220,14 @@ class _PendingPaymentsReportScreenState
                               children: [
                                 _memberName(
                                   customer,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                                 Text(
                                   customer.phone,
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1249,7 +1249,7 @@ class _PendingPaymentsReportScreenState
                             style: const TextStyle(
                               color: AppColors.pending,
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -1370,7 +1370,7 @@ class _PendingPaymentsReportScreenState
                       isSearching ? 'No Matching Members' : 'All Clear!',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1382,7 +1382,7 @@ class _PendingPaymentsReportScreenState
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],

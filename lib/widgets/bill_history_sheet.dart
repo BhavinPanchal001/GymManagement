@@ -96,7 +96,7 @@ class BillHistorySheet extends StatelessWidget {
                         title,
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
                         maxLines: 1,
@@ -107,7 +107,7 @@ class BillHistorySheet extends StatelessWidget {
                       '${bills.length}',
                       style: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -121,7 +121,7 @@ class BillHistorySheet extends StatelessWidget {
                         'No bills issued yet.',
                         style: TextStyle(
                           color: AppColors.textMuted,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     ),
@@ -174,7 +174,7 @@ class BillHistorySheet extends StatelessWidget {
                     bill.billNumber,
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
@@ -185,7 +185,7 @@ class BillHistorySheet extends StatelessWidget {
                     '${GymDateUtils.formatMonthYearKey(bill.monthYear)} · Issued ${GymDateUtils.formatShortDate(bill.issuedAt)}',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -203,7 +203,7 @@ class BillHistorySheet extends StatelessWidget {
                     color: isCancelled
                         ? AppColors.textMuted
                         : AppColors.textPrimary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w900,
                     decoration: isCancelled ? TextDecoration.lineThrough : null,
                   ),
@@ -237,7 +237,7 @@ class BillHistorySheet extends StatelessWidget {
         label,
         style: TextStyle(
           color: color,
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: FontWeight.w900,
         ),
       ),

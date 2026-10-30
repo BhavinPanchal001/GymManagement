@@ -180,7 +180,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                         'WhatsApp Fee Reminder',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -191,7 +191,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                             widget.customer.name,
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -200,7 +200,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                             '•',
                             style: TextStyle(
                               color: AppColors.textMuted,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -212,7 +212,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                               color: widget.customer.phone.isNotEmpty
                                   ? AppColors.whatsapp
                                   : AppColors.absent,
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -254,7 +254,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                           '$formattedMonth Due',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -263,7 +263,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                           '${GymService().settings.gymName.isNotEmpty ? GymService().settings.gymName : "Gym"} • Fee Reminder',
                           style: TextStyle(
                             color: AppColors.textMuted,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -280,7 +280,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                         ),
                         style: const TextStyle(
                           color: AppColors.pending,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -301,7 +301,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                           'PENDING',
                           style: TextStyle(
                             color: AppColors.pending,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -318,7 +318,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
               'Message Template',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -357,7 +357,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                             fontWeight: isSelected
                                 ? FontWeight.bold
                                 : FontWeight.w500,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -376,7 +376,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                   'Message Preview & Customization',
                   style: TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -390,7 +390,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                   label: Text(
                     'Copy Text',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -434,7 +434,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                           'WhatsApp Message • ${GymService().settings.gymName.isNotEmpty ? GymService().settings.gymName : "Gym"}',
                           style: const TextStyle(
                             color: AppColors.whatsapp,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -448,7 +448,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                     maxLines: 7,
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 14,
+                      fontSize: 12,
                       height: 1.45,
                     ),
                     decoration: InputDecoration(
@@ -462,7 +462,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                       hintText: 'Type your message...',
                       hintStyle: TextStyle(
                         color: AppColors.textMuted,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -492,7 +492,7 @@ class _WhatsAppReminderSheetState extends State<WhatsAppReminderSheet> {
                     label: Text(
                       _isSending ? 'Opening...' : 'Open in WhatsApp',
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.3,
                       ),

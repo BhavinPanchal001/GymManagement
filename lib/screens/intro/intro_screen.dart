@@ -136,7 +136,7 @@ class _IntroScreenState extends State<IntroScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.5,
                       ),
@@ -166,7 +166,7 @@ class _IntroScreenState extends State<IntroScreen> {
                       child: const Text(
                         'Skip',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -308,7 +308,7 @@ class _IntroScreenState extends State<IntroScreen> {
                                     item.badge,
                                     style: TextStyle(
                                       color: item.accentColor,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 1.1,
                                     ),
@@ -489,7 +489,7 @@ class _IntroScreenState extends State<IntroScreen> {
                             Text(
                               isLast ? 'Get Started' : 'Next',
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.2,
                               ),

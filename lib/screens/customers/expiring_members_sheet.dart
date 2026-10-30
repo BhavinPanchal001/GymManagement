@@ -105,7 +105,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                           Text(
                             title,
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
                             ),
@@ -114,7 +114,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                           Text(
                             subtitle,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               color: AppColors.textMuted,
                             ),
                           ),
@@ -136,7 +136,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                       child: Text(
                         '${members.length} Members',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: accentColor,
                         ),
@@ -163,7 +163,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                             Text(
                               'No members in this category',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textSecondary,
                               ),
@@ -172,7 +172,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                             Text(
                               'All members in this bucket are up to date.',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: AppColors.textMuted,
                               ),
                             ),
@@ -241,7 +241,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                             Text(
                                               customer.name,
                                               style: TextStyle(
-                                                fontSize: 15,
+                                                fontSize: 13,
                                                 fontWeight: FontWeight.w700,
                                                 color: AppColors.textPrimary,
                                               ),
@@ -269,7 +269,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                                   Text(
                                                     customer.phone,
                                                     style: TextStyle(
-                                                      fontSize: 14,
+                                                      fontSize: 12,
                                                       color: AppColors
                                                           .textSecondary,
                                                     ),
@@ -300,7 +300,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                                       customer.planType,
                                                     ),
                                                     style: TextStyle(
-                                                      fontSize: 14,
+                                                      fontSize: 12,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       color: AppColors
@@ -327,7 +327,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                                   child: Text(
                                                     expiryLabel,
                                                     style: TextStyle(
-                                                      fontSize: 14,
+                                                      fontSize: 12,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       color: accentColor,
@@ -347,7 +347,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                           Text(
                                             'Renewal Fee',
                                             style: TextStyle(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               color: AppColors.textMuted,
                                             ),
                                           ),
@@ -358,7 +358,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                               symbol: currency,
                                             ),
                                             style: TextStyle(
-                                              fontSize: 15,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w800,
                                               color: AppColors.textPrimary,
                                             ),
@@ -368,7 +368,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                               expiryDate,
                                             ),
                                             style: TextStyle(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               color: AppColors.textMuted,
                                             ),
                                           ),
@@ -425,7 +425,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                           label: const Text(
                                             'WhatsApp',
                                             style: TextStyle(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.w700,
                                             ),
                                             maxLines: 1,
@@ -465,7 +465,7 @@ class ExpiringMembersSheet extends StatelessWidget {
                                           label: const Text(
                                             'Renew',
                                             style: TextStyle(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.w700,
                                             ),
                                             maxLines: 1,

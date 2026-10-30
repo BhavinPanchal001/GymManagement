@@ -257,7 +257,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                           Text(
                             _isEditing ? 'Edit Gym Expense' : 'Add Gym Expense',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
@@ -265,7 +265,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                           Text(
                             'Track operating costs & overheads',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               color: AppColors.textMuted,
                             ),
                           ),
@@ -286,7 +286,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                 Text(
                   'Expense Category',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary,
                   ),
@@ -308,7 +308,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                       label: Text(
                         cat.label,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: isSelected
                               ? FontWeight.w700
                               : FontWeight.w500,
@@ -353,7 +353,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     hintText: 'e.g. Gym Rent, Electricity, Treadmill Belt',
                     hintStyle: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                     labelStyle: TextStyle(color: AppColors.textSecondary),
                     filled: true,
@@ -400,7 +400,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                         ),
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w700,
                         ),
                         decoration: InputDecoration(
@@ -412,7 +412,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                           prefixStyle: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: 14,
                           ),
                           filled: true,
                           fillColor: AppColors.surfaceElevated,
@@ -480,7 +480,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                                     Text(
                                       'Date',
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         color: AppColors.textMuted,
                                       ),
                                     ),
@@ -489,7 +489,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                                         _selectedDate,
                                       ),
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                         color: AppColors.textPrimary,
                                       ),
@@ -536,7 +536,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                         PaymentRecord.methodLabel(method),
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     );
@@ -559,7 +559,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     hintText: 'e.g. Paid to Landlord, Bill No #4829',
                     hintStyle: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                     labelStyle: TextStyle(color: AppColors.textSecondary),
                     filled: true,

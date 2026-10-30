@@ -214,7 +214,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                         'Mark Month Attendance',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -225,7 +225,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                             : 'All Active Members ($totalMembers) • $monthName',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -270,7 +270,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                         'Attendance cannot be marked for future months.',
                         style: TextStyle(
                           color: AppColors.pending,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -286,7 +286,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
               'SELECT STATUS TO MARK',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
               ),
@@ -330,7 +330,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
               'RULES & RANGE',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
               ),
@@ -358,7 +358,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                           'Keep Sundays as Rest Day',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -366,7 +366,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                           'Sundays are marked as Rest instead of Present',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                         secondary: Container(
@@ -427,7 +427,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                   'Marking up to today (Day 1 to ${DateTime.now().day})',
                                   style: TextStyle(
                                     color: AppColors.textPrimary,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -436,7 +436,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                   'Future dates in this month cannot be marked in advance.',
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ],
@@ -475,7 +475,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                           '${preview['total']} days will be updated${!isSingleCustomer ? ' for $totalMembers members' : ''}:',
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -488,7 +488,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                 '${preview['present']} Present',
                                 style: const TextStyle(
                                   color: AppColors.paid,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -497,7 +497,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                 '${preview['absent']} Absent',
                                 style: const TextStyle(
                                   color: AppColors.absent,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -506,7 +506,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                 '${preview['rest']} Rest Day',
                                 style: const TextStyle(
                                   color: AppColors.rest,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -540,7 +540,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                       'Cancel',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -589,7 +589,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                                 : 'Apply to Month'),
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -640,7 +640,7 @@ class _MarkMonthAttendanceDialogState extends State<MarkMonthAttendanceDialog> {
                 color: isSelected
                     ? (AppColors.isDark ? Colors.white : color)
                     : AppColors.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
               ),
             ),
