@@ -713,6 +713,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   labelColor: AppColors.primaryOn,
                   unselectedLabelColor: AppColors.textSecondary,
                   labelStyle: const TextStyle(
+                    fontFamily: 'Roboto',
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                   ),
@@ -892,627 +893,306 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   Widget _buildProfileCard(Customer customer) {
+    final gym = GymService();
+    final settings = gym.settings;
+    final price = settings.getPriceForDuration(
+      customer.planType,
+      customer.planDurationMonths,
+    );
+    final duration = customer.planDurationMonths > 1
+        ? '${customer.planDurationMonths} Mo'
+        : 'Monthly';
+    final hasPaid = gym.hasPaidMembership(customer);
+    final stage = gym.getMemberLifecycleStage(
+      customer,
+      GymDateUtils.toMonthKey(DateTime.now()),
+    );
+    final isNew = stage == MemberLifecycleStage.newMember;
+    final expiry = gym.getCustomerExpiryDate(customer);
+    final days = gym.getDaysUntilExpiry(customer);
+    final validityColor = !hasPaid
+        ? (isNew ? AppColors.secondary : AppColors.dynamicAbsent)
+        : days < 0
+        ? AppColors.dynamicAbsent
+        : days <= 7
+        ? AppColors.dynamicPending
+        : AppColors.dynamicPaid;
+    final validity = !hasPaid
+        ? (isNew ? 'New Member • Payment Pending' : 'Membership Unpaid • Due')
+        : days < 0
+        ? 'Expired on ${GymDateUtils.formatDate(expiry)} (${days.abs()}d ago)'
+        : 'Valid until ${GymDateUtils.formatDate(expiry)} (${days}d left)';
+    final cardNumber = customer.cardNumber.isNotEmpty
+        ? customer.cardNumber
+        : customer.id.replaceAll(RegExp(r'\D'), '').padLeft(3, '0');
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      key: const ValueKey('member-summary-card'),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.surfaceBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CustomerAvatar(
                 imagePath: customer.imagePath,
                 imageBase64: customer.imageBase64,
                 name: customer.name,
-                radius: 34,
+                radius: 23,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            customer.name,
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 19,
-                              fontWeight: FontWeight.bold,
-                              height: 1.2,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: customer.isActive
-                                ? AppColors.paid.withValues(alpha: 0.15)
-                                : AppColors.textMuted.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            customer.isActive ? 'ACTIVE' : 'INACTIVE',
-                            style: TextStyle(
-                              color: customer.isActive
-                                  ? AppColors.paid
-                                  : AppColors.textMuted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            PhoneService().makeCall(
-                              customer.phone,
-                              context: context,
-                              memberName: customer.name,
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(6),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.phone_outlined,
-                                color: AppColors.secondary,
-                                size: 15,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                customer.phone,
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (customer.phone.isNotEmpty) ...[
-                          // Call button pill
-                          InkWell(
-                            onTap: () {
-                              PhoneService().makeCall(
-                                customer.phone,
-                                context: context,
-                                memberName: customer.name,
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(
-                                  alpha: 0.15,
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.35,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.call_rounded,
-                                    size: 11,
-                                    color: AppColors.primary,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Call',
-                                    style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          // WhatsApp pill
-                          InkWell(
-                            onTap: () {
-                              final gymName = GymService().settings.gymName;
-                              WhatsAppService().openWhatsApp(
-                                phone: customer.phone,
-                                message:
-                                    'Hello ${customer.name}! Greetings from $gymName.',
-                                context: context,
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.whatsapp.withValues(
-                                  alpha: 0.15,
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: AppColors.whatsapp.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                ),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.chat_bubble_rounded,
-                                    size: 10,
-                                    color: AppColors.whatsapp,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'WhatsApp',
-                                    style: TextStyle(
-                                      color: AppColors.whatsapp,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_outlined,
-                          color: AppColors.textMuted,
-                          size: 15,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Joined ${GymDateUtils.formatDate(customer.joinDate)}',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Builder(
-                      builder: (context) {
-                        final settings = GymService().settings;
-                        final currency = settings.currencySymbol;
-                        final price = settings.getPriceForDuration(
-                          customer.planType,
-                          customer.planDurationMonths,
-                        );
-                        Color planColor;
-                        IconData planIcon;
-
-                        switch (customer.planType) {
-                          case CustomerPlan.personalTraining:
-                            planColor = AppColors.secondary;
-                            planIcon = Icons.sports_martial_arts_rounded;
-                            break;
-                          case CustomerPlan.personalTrainingDiet:
-                            planColor = const Color(0xFFA66510);
-                            planIcon = Icons.restaurant_menu_rounded;
-                            break;
-                          case CustomerPlan.normal:
-                          default:
-                            planColor = AppColors.primary;
-                            planIcon = Icons.fitness_center_rounded;
-                            break;
-                        }
-
-                        final durationText = customer.planDurationMonths > 1
-                            ? '${customer.planDurationMonths} Mo'
-                            : 'Monthly';
-
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: planColor.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: planColor.withValues(alpha: 0.45),
-                            ),
-                          ),
-                          child: Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            runSpacing: 4,
-                            children: [
-                              Icon(planIcon, size: 14, color: planColor),
-                              const SizedBox(width: 6),
-                              Text(
-                                CustomerPlan.getLabel(customer.planType),
-                                style: TextStyle(
-                                  color: planColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                width: 3,
-                                height: 3,
-                                decoration: BoxDecoration(
-                                  color: planColor,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${GymDateUtils.formatCurrency(price, symbol: currency)} ($durationText)',
-                                style: TextStyle(
-                                  color: planColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    Builder(
-                      builder: (context) {
-                        final gym = GymService();
-                        final hasPaid = gym.hasPaidMembership(customer);
-
-                        if (!hasPaid) {
-                          final stage = gym.getMemberLifecycleStage(
-                            customer,
-                            GymDateUtils.toMonthKey(DateTime.now()),
-                          );
-                          final isNew = stage == MemberLifecycleStage.newMember;
-                          final statusColor = isNew
-                              ? AppColors.secondary
-                              : AppColors.absent;
-
-                          return Container(
-                            margin: const EdgeInsets.only(top: 6),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 9,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: statusColor.withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Icon(
-                                  isNew
-                                      ? Icons.fiber_new_rounded
-                                      : Icons.warning_amber_rounded,
-                                  size: 12,
-                                  color: statusColor,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  isNew
-                                      ? 'New Member • Payment Pending'
-                                      : 'Membership Unpaid • Due',
-                                  style: TextStyle(
-                                    color: statusColor,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        final expiry = gym.getCustomerExpiryDate(customer);
-                        final days = gym.getDaysUntilExpiry(customer);
-                        final isExpired = days < 0;
-                        final isDueSoon = days >= 0 && days <= 7;
-                        final statusColor = isExpired
-                            ? AppColors.absent
-                            : (isDueSoon ? AppColors.pending : AppColors.paid);
-
-                        return Container(
-                          margin: const EdgeInsets.only(top: 6),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: statusColor.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          child: Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.event_available_rounded,
-                                size: 12,
-                                color: statusColor,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                isExpired
-                                    ? 'Expired on ${GymDateUtils.formatDate(expiry)} (${days.abs()}d ago)'
-                                    : 'Valid until ${GymDateUtils.formatDate(expiry)} (${days}d left)',
-                                style: TextStyle(
-                                  color: statusColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    if (customer.notes.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        customer.notes,
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  customer.name,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                customer.isActive ? 'ACTIVE' : 'INACTIVE',
+                style: TextStyle(
+                  color: customer.isActive
+                      ? AppColors.dynamicPaid
+                      : AppColors.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Divider(height: 1, color: AppColors.surfaceBorder),
           const SizedBox(height: 10),
+          if (customer.phone.isNotEmpty) ...[
+            Wrap(
+              spacing: 12,
+              runSpacing: 2,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.phone_outlined,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      customer.phone,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: () => PhoneService().makeCall(
+                    customer.phone,
+                    context: context,
+                    memberName: customer.name,
+                  ),
+                  icon: const Icon(Icons.call_rounded, size: 14),
+                  label: const Text('Call'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    foregroundColor: AppColors.primary,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => WhatsAppService().openWhatsApp(
+                    phone: customer.phone,
+                    message:
+                        'Hello ${customer.name}! Greetings from ${settings.gymName}.',
+                    context: context,
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
+                  label: const Text('WhatsApp'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    foregroundColor: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
+          _profileInfoRow(
+            Icons.event_outlined,
+            'Joined ${GymDateUtils.formatDate(customer.joinDate)}',
+          ),
+          const SizedBox(height: 8),
+          _profileInfoRow(
+            Icons.fitness_center_rounded,
+            '${CustomerPlan.getLabel(customer.planType)} · ${GymDateUtils.formatCurrency(price, symbol: settings.currencySymbol)} ($duration)',
+          ),
+          const SizedBox(height: 8),
+          _profileInfoRow(
+            !hasPaid
+                ? Icons.info_outline_rounded
+                : Icons.event_available_outlined,
+            validity,
+            color: validityColor,
+          ),
+          if (customer.notes.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              customer.notes,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 12),
+          Divider(height: 1, color: AppColors.surfaceBorder),
           InkWell(
             onTap: () => MemberCardScreen.push(context, customer: customer),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFB71C1C).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFB71C1C).withValues(alpha: 0.4),
-                  width: 1.2,
-                ),
-              ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFB71C1C).withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.badge_rounded,
-                      color: Color(0xFFB71C1C),
-                      size: 20,
-                    ),
+                  Icon(
+                    Icons.badge_outlined,
+                    size: 19,
+                    color: AppColors.primary,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 2,
                           children: [
-                            const Flexible(
-                              child: Text(
-                                'Member Entry Card & Ledger',
-                                style: TextStyle(
-                                  color: Color(0xFFB71C1C),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                            Text(
+                              'Member Entry Card & Ledger',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFB71C1C),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '#${customer.cardNumber.isNotEmpty ? customer.cardNumber : customer.id.replaceAll(RegExp(r'\D'), '').padLeft(3, '0')}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                            Text(
+                              '#$cardNumber',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 11,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           'View physical card, 12-month dues, measurements & export PDF',
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(
+                  const SizedBox(width: 6),
+                  Icon(
                     Icons.chevron_right_rounded,
-                    color: Color(0xFFB71C1C),
-                    size: 20,
+                    size: 18,
+                    color: AppColors.textMuted,
                   ),
                 ],
               ),
             ),
           ),
+          Divider(height: 1, color: AppColors.surfaceBorder),
           if (!customer.isActive) ...[
             const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.textMuted.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.archive_outlined,
-                    size: 14,
-                    color: AppColors.textMuted,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Archived member • History preserved',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+            _profileInfoRow(
+              Icons.archive_outlined,
+              'Archived member • History preserved',
             ),
           ],
-          const SizedBox(height: 10),
-          Row(
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
             children: [
-              if (customer.isActive &&
-                  GymService().hasPaidMembership(customer)) ...[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 8,
-                        horizontal: 8,
-                      ),
-                      side: BorderSide(
-                        color: AppColors.primary.withValues(alpha: 0.5),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () => MarkPaymentDialog.showRenewal(
-                      context,
-                      customer: customer,
-                    ),
-                    icon: const Icon(Icons.autorenew, size: 15),
-                    label: const Text(
-                      'Renew Plan',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              if (customer.isActive && hasPaid)
+                TextButton.icon(
+                  onPressed: () => MarkPaymentDialog.showRenewal(
+                    context,
+                    customer: customer,
+                  ),
+                  icon: const Icon(Icons.autorenew, size: 15),
+                  label: const Text('Renew Plan'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    foregroundColor: AppColors.primary,
                   ),
                 ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 8,
-                    ),
-                    foregroundColor: customer.isActive
-                        ? AppColors.absent
-                        : AppColors.paid,
-                    side: BorderSide(
-                      color:
-                          (customer.isActive
-                                  ? AppColors.absent
-                                  : AppColors.paid)
-                              .withValues(alpha: 0.4),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: Icon(
-                    customer.isActive
-                        ? Icons.person_remove_outlined
-                        : Icons.settings_backup_restore_rounded,
-                    size: 15,
-                  ),
-                  label: Text(
-                    _isRemovingMember
-                        ? 'Saving...'
-                        : (customer.isActive
-                              ? 'Remove Member'
-                              : 'Restore / Delete'),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  onPressed: _isRemovingMember
-                      ? null
-                      : () => _showRemovalMenu(customer),
+              TextButton.icon(
+                onPressed: _isRemovingMember
+                    ? null
+                    : () => _showRemovalMenu(customer),
+                icon: Icon(
+                  customer.isActive
+                      ? Icons.person_remove_outlined
+                      : Icons.settings_backup_restore_rounded,
+                  size: 15,
+                ),
+                label: Text(
+                  _isRemovingMember
+                      ? 'Saving...'
+                      : customer.isActive
+                      ? 'Remove Member'
+                      : 'Restore / Delete',
+                ),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  foregroundColor: customer.isActive
+                      ? AppColors.dynamicAbsent
+                      : AppColors.dynamicPaid,
                 ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _profileInfoRow(IconData icon, String text, {Color? color}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(icon, size: 14, color: color ?? AppColors.textMuted),
+        ),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: color ?? AppColors.textSecondary,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

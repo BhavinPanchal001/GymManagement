@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gym/screens/customers/customers_tab.dart';
+import 'package:gym/screens/customers/customer_detail_screen.dart';
 import 'package:gym/screens/attendance/daily_attendance_tab.dart';
 import 'package:gym/screens/billing/billing_tab.dart';
 import 'package:gym/screens/settings/settings_tab.dart';
@@ -80,6 +81,7 @@ void main() {
     for (final scale in [1.0, 1.5]) {
       for (final entry in <String, Widget>{
         'members': const CustomersTab(),
+        'member-details': const SizedBox(),
         'attendance': const DailyAttendanceTab(),
         'payments': const BillingTab(),
         'settings': const SettingsTab(),
@@ -117,6 +119,22 @@ void main() {
               paidAmount: name == 'Anash' ? 150 : 600,
             );
           }
+          Widget content = entry.value;
+          if (entry.key == 'member-details') {
+            final member = await gym.addCustomer(
+              name: 'Anash Patel',
+              phone: '9494959598',
+              cardNumber: '208',
+              joinDate: DateTime.now().subtract(const Duration(days: 25)),
+              membershipStartDate: DateTime.now().subtract(
+                const Duration(days: 25),
+              ),
+              membershipFee: 600,
+              markAsPaidNow: true,
+              paidAmount: 600,
+            );
+            content = CustomerDetailScreen(customerId: member.id);
+          }
           final boundaryKey = GlobalKey();
           await tester.pumpWidget(
             MaterialApp(
@@ -135,8 +153,9 @@ void main() {
               home: RepaintBoundary(
                 key: boundaryKey,
                 child: Scaffold(
-                  body: entry.value,
-                  bottomNavigationBar: entry.key == 'sign-in'
+                  body: content,
+                  bottomNavigationBar:
+                      ['sign-in', 'member-details'].contains(entry.key)
                       ? null
                       : NavigationBar(
                           height: 56,
@@ -222,6 +241,23 @@ void main() {
               await file.writeAsBytes(bytes!.buffer.asUint8List());
               image.dispose();
             });
+          }
+          if (entry.key == 'member-details' &&
+              mode == ThemeMode.light &&
+              scale == 1) {
+            await tester.ensureVisible(find.text('Renew Plan'));
+            await tester.tap(find.text('Renew Plan'));
+            await tester.pumpAndSettle();
+            expect(find.text('Renew Membership'), findsOneWidget);
+            Navigator.of(tester.element(find.text('Renew Membership'))).pop();
+            await tester.pumpAndSettle();
+            await tester.ensureVisible(find.text('Member Entry Card & Ledger'));
+            await tester.tap(find.text('Member Entry Card & Ledger'));
+            // The PDF preview can keep animating while its platform renderer loads.
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 500));
+            expect(find.text('Member Entry Card'), findsOneWidget);
+            expect(tester.takeException(), isNull);
           }
           await tester.pumpWidget(const SizedBox());
         });

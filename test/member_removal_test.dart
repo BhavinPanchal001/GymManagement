@@ -352,7 +352,11 @@ void main() {
   }
 
   Future<void> openRemovalMenu(WidgetTester tester) async {
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Remove Member'));
+    final action = find.text('Remove Member').evaluate().isNotEmpty
+        ? find.text('Remove Member')
+        : find.text('Restore / Delete');
+    await tester.ensureVisible(action);
+    await tester.tap(action);
     await tester.pumpAndSettle();
   }
 

@@ -27,9 +27,9 @@ Reference-scale revision following phone review: 30 October 2026.
 
 ## Build and delivery
 
-- Android version: `1.0.0+3` (version code 3 includes the member-action spacing correction).
-- Replacement APK: `build/app/outputs/flutter-apk/gym-manager-dense-v3.apk` (also emitted as `app-release.apk`).
-- The local Flutter SDK migrates Android minSdk to its supported default (24 / Android 7). NDK is aligned to installed 28.2.13676358 required by speech_to_text.
+- Android version: `1.0.0+4` (version code 4 includes the simplified Member Details summary).
+- Replacement APK: `build/app/outputs/flutter-apk/gym-manager-clean-summary-v4.apk` (also emitted as `app-release.apk`).
+- This revision uses the project-configured Flutter 3.32.5 SDK and its existing Android minSdk 23 configuration. Generated package paths were aligned to that SDK using the existing dependency lock. Pre-existing local build configuration and fee-adjustment changes are preserved.
 - Existing release signing configuration uses the debug signing key; production signing was not changed.
 - No cloud deployment, merge or push is performed by this change. No real member/payment/attendance records were edited.
 - No Android device was connected during the reference-scale revision, so the replacement APK is supplied for installation. Both saved dark and light preferences remain supported.
@@ -38,3 +38,11 @@ Reference-scale revision following phone review: 30 October 2026.
 
 - Increased the gap between the payment pill and call/message/receipt actions from 4 to 10 dp, and action wrapping spacing from 2 to 6 dp.
 - All 31 targeted member-layout checks passed, including unpaid, fully paid and partially paid members at 360/384/412 dp with 100/130/150% text and rendered member screens in both themes. The existing 84 dp normal-card limit and six-visible-identities checks still pass.
+
+## Simplified Member Details summary ? 31 October 2026
+
+- Kept one neutral outer card and removed nested backgrounds/borders from active status, contact actions, plan, validity, card number, ledger and footer actions.
+- Information uses small icons and plain text rows; thin dividers separate the ledger and footer. Removed the summary shadow and reduced the avatar.
+- Call, WhatsApp, ledger/PDF, renewal and member-removal actions retain their existing handlers. Archived status and restore/delete remain available.
+- 80 focused checks passed: 61 rendered-layout/calendar checks plus all 19 member-removal/archive/restore checks. Renewal and ledger navigation are covered in the detail preview test. Analysis reports no issues.
+- Light/dark previews at 100% and 150% text: `build/ui-review/dense-member-details-<light|dark>-<100|150>.png`. Fixtures contain test records only.
