@@ -52,3 +52,12 @@ Reference-scale revision following phone review: 30 October 2026.
 - Call, WhatsApp, Renew Plan and Remove Member/Restore now use compact outlined buttons with a subtle tint, 8 dp corners and a 32 dp minimum height. Information rows remain plain.
 - Eight targeted checks cover both themes at 100/150% text, small phones at 130% text, renewal/ledger navigation, removal cancellation/deletion, and archive/restore.
 - Source-only revision for review through VS Code; no APK build or Drive upload.
+
+## Payment sheet fields and fixed actions
+
+- The add/update payment form scrolls independently from a fixed action footer. Confirm/Update stays visible; unpaid records also keep the WhatsApp reminder in the footer. The footer stays above the keyboard and system gesture area.
+- Reference input has a 48 dp minimum height. Remarks has a 64 dp minimum and two to three visible lines.
+- Primary actions use a 40 dp minimum and the reminder uses 36 dp, with wrapping labels for enlarged text. Update-only supporting actions remain in the scrollable form and use compact minimum heights.
+- Partial-payment balance hints wrap on narrow phones.
+- All 73 focused checks passed, including 12 new add/update layout cases at 320/360 dp and 100/130/150% text, keyboard/scroll pinning, field heights and note preservation, phone layouts, critical workflows and payment date guards. Analysis reports no issues.
+- Source-only change for VS Code review; no APK or Drive upload.
