@@ -299,14 +299,14 @@ class _CustomersTabState extends State<CustomersTab> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
+        Icon(icon, size: 14, color: color ?? AppColors.textSecondary),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
             text,
             style: TextStyle(
               color: color ?? AppColors.textSecondary,
-              fontSize: 14,
+              fontSize: 12,
             ),
           ),
         ),
@@ -355,7 +355,7 @@ class _CustomersTabState extends State<CustomersTab> {
       child: InkWell(
         onTap: () => _openMember(customer),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -371,7 +371,7 @@ class _CustomersTabState extends State<CustomersTab> {
                           customer.name,
                           style: TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 18,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -380,7 +380,7 @@ class _CustomersTabState extends State<CustomersTab> {
                           customer.phone,
                           style: TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 14,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -398,12 +398,12 @@ class _CustomersTabState extends State<CustomersTab> {
                 ],
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Divider(height: 1, color: AppColors.surfaceBorder),
               ),
               Wrap(
                 spacing: 16,
-                runSpacing: 10,
+                runSpacing: 8,
                 children: [
                   _metadata(
                     Icons.fitness_center_outlined,
@@ -450,7 +450,7 @@ class _CustomersTabState extends State<CustomersTab> {
                       status,
                       style: TextStyle(
                         color: statusColor,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -463,7 +463,10 @@ class _CustomersTabState extends State<CustomersTab> {
                         payment,
                         currentMonth,
                       ),
-                      child: const Text('Collect balance'),
+                      child: const Text(
+                        'Collect balance',
+                        style: TextStyle(fontSize: 12),
+                      ),
                     ),
                 ],
               ),
@@ -501,26 +504,26 @@ class _CustomersTabState extends State<CustomersTab> {
               ? AppColors.dynamicAbsent
               : AppColors.primary;
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(vertical: 2),
             leading: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: color),
+              child: Icon(icon, color: color, size: 20),
             ),
             title: Text(
               title,
               style: TextStyle(
                 color: destructive ? color : AppColors.textPrimary,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
             subtitle: Text(
               subtitle,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
             trailing: Icon(Icons.chevron_right, color: AppColors.textMuted),
             onTap: () => Navigator.pop(sheetContext, action),
@@ -547,13 +550,16 @@ class _CustomersTabState extends State<CustomersTab> {
                             customer.name,
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 20,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           Text(
                             customer.phone,
-                            style: TextStyle(color: AppColors.textSecondary),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -653,7 +659,7 @@ class _CustomersTabState extends State<CustomersTab> {
                       minimumSize: const Size(0, 52),
                     ),
                     onPressed: () => Navigator.pop(sheetContext),
-                    child: const Text('Cancel'),
+                    child: const Text('Cancel', style: TextStyle(fontSize: 14)),
                   ),
                 ),
               ],
