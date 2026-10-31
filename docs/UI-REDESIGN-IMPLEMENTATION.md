@@ -41,8 +41,14 @@ Reference-scale revision following phone review: 30 October 2026.
 
 ## Simplified Member Details summary ? 31 October 2026
 
-- Kept one neutral outer card and removed nested backgrounds/borders from active status, contact actions, plan, validity, card number, ledger and footer actions.
+- Kept one neutral outer card and removed nested backgrounds/borders from active status, plan, validity, card number and ledger.
 - Information uses small icons and plain text rows; thin dividers separate the ledger and footer. Removed the summary shadow and reduced the avatar.
 - Call, WhatsApp, ledger/PDF, renewal and member-removal actions retain their existing handlers. Archived status and restore/delete remain available.
 - 80 focused checks passed: 61 rendered-layout/calendar checks plus all 19 member-removal/archive/restore checks. Renewal and ledger navigation are covered in the detail preview test. Analysis reports no issues.
 - Light/dark previews at 100% and 150% text: `build/ui-review/dense-member-details-<light|dark>-<100|150>.png`. Fixtures contain test records only.
+
+## Member summary action buttons
+
+- Call, WhatsApp, Renew Plan and Remove Member/Restore now use compact outlined buttons with a subtle tint, 8 dp corners and a 32 dp minimum height. Information rows remain plain.
+- Eight targeted checks cover both themes at 100/150% text, small phones at 130% text, renewal/ledger navigation, removal cancellation/deletion, and archive/restore.
+- Source-only revision for review through VS Code; no APK build or Drive upload.

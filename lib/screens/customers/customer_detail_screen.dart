@@ -995,7 +995,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     ),
                   ],
                 ),
-                TextButton.icon(
+                OutlinedButton.icon(
                   onPressed: () => PhoneService().makeCall(
                     customer.phone,
                     context: context,
@@ -1003,12 +1003,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   ),
                   icon: const Icon(Icons.call_rounded, size: 14),
                   label: const Text('Call'),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    foregroundColor: AppColors.primary,
-                  ),
+                  style: _profileActionStyle(AppColors.primary),
                 ),
-                TextButton.icon(
+                OutlinedButton.icon(
                   onPressed: () => WhatsAppService().openWhatsApp(
                     phone: customer.phone,
                     message:
@@ -1017,10 +1014,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   ),
                   icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
                   label: const Text('WhatsApp'),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    foregroundColor: AppColors.primary,
-                  ),
+                  style: _profileActionStyle(AppColors.primary),
                 ),
               ],
             ),
@@ -1130,19 +1124,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             runSpacing: 4,
             children: [
               if (customer.isActive && hasPaid)
-                TextButton.icon(
+                OutlinedButton.icon(
                   onPressed: () => MarkPaymentDialog.showRenewal(
                     context,
                     customer: customer,
                   ),
                   icon: const Icon(Icons.autorenew, size: 15),
                   label: const Text('Renew Plan'),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    foregroundColor: AppColors.primary,
-                  ),
+                  style: _profileActionStyle(AppColors.primary),
                 ),
-              TextButton.icon(
+              OutlinedButton.icon(
                 onPressed: _isRemovingMember
                     ? null
                     : () => _showRemovalMenu(customer),
@@ -1159,9 +1150,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       ? 'Remove Member'
                       : 'Restore / Delete',
                 ),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  foregroundColor: customer.isActive
+                style: _profileActionStyle(
+                  customer.isActive
                       ? AppColors.dynamicAbsent
                       : AppColors.dynamicPaid,
                 ),
@@ -1170,6 +1160,23 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           ),
         ],
       ),
+    );
+  }
+
+  ButtonStyle _profileActionStyle(Color color) {
+    return OutlinedButton.styleFrom(
+      foregroundColor: color,
+      backgroundColor: color.withValues(alpha: 0.06),
+      side: BorderSide(color: color.withValues(alpha: 0.45)),
+      minimumSize: const Size(0, 32),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      textStyle: const TextStyle(
+        fontFamily: 'Roboto',
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
