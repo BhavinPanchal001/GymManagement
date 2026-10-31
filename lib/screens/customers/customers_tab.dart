@@ -23,16 +23,7 @@ import '../../widgets/animations/animated_fade_slide.dart';
 import '../../widgets/animations/animated_pressable.dart';
 import '../../widgets/animations/app_page_route.dart';
 
-enum _MemberAction {
-  details,
-  edit,
-  payment,
-  editPayment,
-  receipts,
-  call,
-  message,
-  archive,
-}
+enum _MemberAction { details, edit, payment, receipts, call, message, archive }
 
 enum CustomerFilter { all, active, pendingPayment, archived }
 
@@ -596,22 +587,12 @@ class _CustomersTabState extends State<CustomersTab> {
                   'Update profile and membership details',
                 ),
                 Divider(height: 1, color: AppColors.surfaceBorder),
-                row(
-                  _MemberAction.payment,
-                  Icons.payments_outlined,
-                  stage.isPaid
-                      ? (payment.balanceDue > 0
-                            ? 'Collect balance'
-                            : 'View / edit payment')
-                      : 'Record payment',
-                  'Manage this month’s membership payment',
-                ),
-                if (stage.isPaid && payment.balanceDue > 0)
+                if (!stage.isPaid || payment.balanceDue > 0)
                   row(
-                    _MemberAction.editPayment,
-                    Icons.edit_note_outlined,
-                    'Edit payment',
-                    'Review or update the original payment',
+                    _MemberAction.payment,
+                    Icons.payments_outlined,
+                    stage.isPaid ? 'Collect balance' : 'Record payment',
+                    'Manage this month’s membership payment',
                   ),
                 if (stage.isPaid)
                   row(
@@ -698,13 +679,6 @@ class _CustomersTabState extends State<CustomersTab> {
             currentRecord: current,
           );
         }
-      case _MemberAction.editPayment:
-        await MarkPaymentDialog.show(
-          context,
-          customer: customer,
-          monthYear: month,
-          currentRecord: payment,
-        );
       case _MemberAction.receipts:
         await BillHistorySheet.showForPayment(
           context,
