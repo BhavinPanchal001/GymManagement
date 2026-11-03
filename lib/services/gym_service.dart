@@ -3732,10 +3732,26 @@ class GymService extends ChangeNotifier {
   }
 
   /// Returns outstanding debt, including archived members, in the date range.
-  List<MemberPendingSummary> getPendingDuesByMember(DateTime start, DateTime end) {
-    final index = _duesIndex;
+  /// With [exactDates], filters by inclusive billing period start dates;
+  /// otherwise includes all billing months touched by the range.
+  List<MemberPendingSummary> getPendingDuesByMember(
+    DateTime start,
+    DateTime end, {
+    bool exactDates = false,
+  }) {
+    final first = start.isBefore(end) ? start : end;
+    final last = start.isBefore(end) ? end : start;
+    final startDay = DateTime(first.year, first.month, first.day);
+    final afterEnd = DateTime(last.year, last.month, last.day + 1);
     final monthKeys = getMonthKeysInRange(start, end);
-    final rangeKey = '${monthKeys.first}:${monthKeys.last}';
+    bool inRange(PaymentRecord record) => exactDates
+        ? !record.effectiveStartDate.isBefore(startDay) &&
+              record.effectiveStartDate.isBefore(afterEnd)
+        : monthKeys.contains(record.monthYear);
+    final index = _duesIndex;
+    final rangeKey = exactDates
+        ? 'dates:$startDay:$afterEnd'
+        : '${monthKeys.first}:${monthKeys.last}';
     final cached = _pendingByRange[rangeKey];
     if (cached != null) return List.of(cached);
     final results = <MemberPendingSummary>[];
@@ -3745,7 +3761,7 @@ class GymService extends ChangeNotifier {
       final addedIds = <String>{};
       for (final agreement in index.membershipRecords(customer.id)) {
         if (agreement.balanceDue > 0 &&
-            monthKeys.contains(agreement.monthYear) &&
+            inRange(agreement) &&
             addedIds.add(agreement.id)) {
           pendingRecords.add(agreement);
         }
@@ -3755,7 +3771,7 @@ class GymService extends ChangeNotifier {
       // start month falls inside the range still owe money.
       for (final p in index.payments[customer.id] ?? <PaymentRecord>[]) {
         if (p.balanceDue > 0 &&
-            monthKeys.contains(p.monthYear) && addedIds.add(p.id)) {
+            inRange(p) && addedIds.add(p.id)) {
           pendingRecords.add(p);
         }
       }
@@ -3818,9 +3834,13 @@ class GymService extends ChangeNotifier {
   }
 
   /// Returns pending dues grouped by each month in the date range.
-  List<MonthPendingGroup> getPendingDuesByMonth(DateTime start, DateTime end) {
+  List<MonthPendingGroup> getPendingDuesByMonth(
+    DateTime start,
+    DateTime end, {
+    bool exactDates = false,
+  }) {
     final byMonth = <String, List<MonthPendingItem>>{};
-    for (final member in getPendingDuesByMember(start, end)) {
+    for (final member in getPendingDuesByMember(start, end, exactDates: exactDates)) {
       for (final payment in member.pendingRecords) {
         (byMonth[payment.monthYear] ??= []).add(
           MonthPendingItem(customer: member.customer, payment: payment),

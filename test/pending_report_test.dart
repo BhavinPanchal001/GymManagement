@@ -5,6 +5,7 @@ import 'package:gym/services/gym_service.dart';
 import 'package:gym/models/payment.dart';
 import 'package:gym/screens/reports/pending_payments_report_screen.dart';
 import 'package:gym/screens/reports/export_report_dialog.dart';
+import 'package:gym/screens/billing/pending_members_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -40,43 +41,68 @@ void main() {
     expect(monthGroups.isNotEmpty, true);
   });
 
-  testWidgets('PendingPaymentsReportScreen renders preset chips, KPIs and views', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: PendingPaymentsReportScreen()));
+  testWidgets(
+    'PendingPaymentsReportScreen renders preset chips, KPIs and views',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: PendingPaymentsReportScreen()),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify Title and AppBar
+      expect(find.text('Pending Dues Report'), findsWidgets);
+      expect(find.byIcon(Icons.share_outlined), findsOneWidget);
+
+      await tester.tap(find.text('By Member'));
+      await tester.pumpAndSettle();
+
+      // Verify Preset Chips
+      expect(find.text('This Month'), findsOneWidget);
+      expect(find.text('Last 3 Months'), findsOneWidget);
+      expect(find.text('Last 6 Months'), findsOneWidget);
+      expect(find.text('This Year'), findsOneWidget);
+      expect(find.text('Custom'), findsOneWidget);
+
+      // Verify KPI Card
+      expect(find.text('TOTAL PENDING'), findsOneWidget);
+      expect(find.text('MEMBERS'), findsOneWidget);
+      expect(find.text('MONTHS DUE'), findsOneWidget);
+
+      // Verify View Switcher
+      expect(find.text('By Member'), findsOneWidget);
+      expect(find.text('By Month'), findsOneWidget);
+
+      // Tap 'By Month' toggle
+      await tester.tap(find.text('By Month'));
+      await tester.pumpAndSettle();
+
+      // Verify Search Bar is present
+      expect(find.byType(TextField), findsOneWidget);
+
+      // Enter search query
+      await tester.enterText(find.byType(TextField), 'NonExistentMemberXYZ');
+      await tester.pumpAndSettle();
+
+      // Verify empty state appears
+      expect(find.text('No Matching Members'), findsOneWidget);
+    },
+  );
+
+  testWidgets('report opens the separate card page and returns to the report', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: PendingPaymentsReportScreen()),
+    );
     await tester.pumpAndSettle();
-
-    // Verify Title and AppBar
-    expect(find.text('Pending Dues Report'), findsWidgets);
-    expect(find.byIcon(Icons.share_outlined), findsOneWidget);
-
-    // Verify Preset Chips
-    expect(find.text('This Month'), findsOneWidget);
-    expect(find.text('Last 3 Months'), findsOneWidget);
-    expect(find.text('Last 6 Months'), findsOneWidget);
-    expect(find.text('This Year'), findsOneWidget);
-    expect(find.text('Custom'), findsOneWidget);
-
-    // Verify KPI Card
-    expect(find.text('TOTAL PENDING'), findsOneWidget);
-    expect(find.text('MEMBERS'), findsOneWidget);
-    expect(find.text('MONTHS DUE'), findsOneWidget);
-
-    // Verify View Switcher
+    await tester.tap(find.byTooltip('Pending member cards'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PendingMembersScreen), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(PendingPaymentsReportScreen), findsOneWidget);
     expect(find.text('By Member'), findsOneWidget);
-    expect(find.text('By Month'), findsOneWidget);
-
-    // Tap 'By Month' toggle
-    await tester.tap(find.text('By Month'));
-    await tester.pumpAndSettle();
-
-    // Verify Search Bar is present
-    expect(find.byType(TextField), findsOneWidget);
-
-    // Enter search query
-    await tester.enterText(find.byType(TextField), 'NonExistentMemberXYZ');
-    await tester.pumpAndSettle();
-
-    // Verify empty state appears
-    expect(find.text('No Matching Members'), findsOneWidget);
   });
 
   testWidgets('ExportReportDialog shows CSV and Text options', (tester) async {

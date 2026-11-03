@@ -16,6 +16,7 @@ import '../../widgets/bill_receipt_dialog.dart';
 import '../../widgets/user_profile_menu_button.dart';
 import 'add_customer_sheet.dart';
 import 'customer_detail_screen.dart';
+import '../billing/pending_members_screen.dart';
 import '../../widgets/dashboard_metrics_grid.dart';
 import '../../widgets/voice_search_suffix.dart';
 import '../../widgets/animations/animated_empty_state.dart';
@@ -73,6 +74,16 @@ class _CustomersTabState extends State<CustomersTab> {
           appBar: AppBar(
             title: const Text('Gym Members'),
             actions: [
+              IconButton(
+                tooltip: 'Pending member cards',
+                icon: Icon(Icons.view_carousel_outlined, color: AppColors.primary),
+                onPressed: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  Navigator.of(context).push(AppPageRoute<void>(
+                    builder: (_) => const PendingMembersScreen(),
+                  ));
+                },
+              ),
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

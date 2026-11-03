@@ -14,6 +14,7 @@ import '../../widgets/collect_balance_dialog.dart';
 import '../../widgets/bill_receipt_dialog.dart';
 import '../customers/customer_detail_screen.dart';
 import '../reports/pending_payments_report_screen.dart';
+import 'pending_members_screen.dart';
 import '../reports/gym_statistics_screen.dart';
 import 'expense_tab.dart';
 import 'balance_sheet_tab.dart';
@@ -465,7 +466,7 @@ class _BillingTabState extends State<BillingTab> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => const PendingPaymentsReportScreen(),
+                                      builder: (_) => const PendingMembersScreen(),
                                     ),
                                   );
                                 },
@@ -493,7 +494,7 @@ class _BillingTabState extends State<BillingTab> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'Overdue & Pending Tracker',
+                                              'Pending member cards',
                                               style: TextStyle(
                                                 color: AppColors.textPrimary,
                                                 fontSize: 13,
@@ -501,7 +502,7 @@ class _BillingTabState extends State<BillingTab> {
                                               ),
                                             ),
                                             Text(
-                                              'Track pending dues across months with 1-tap reminders',
+                                              'Choose dates and swipe through pending members',
                                               style: TextStyle(
                                                 color: AppColors.textMuted,
                                                 fontSize: 11,
